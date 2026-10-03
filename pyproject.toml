@@ -1,0 +1,70 @@
+# Project metadata.
+[project]
+
+# Package name
+name = "sandbox"
+
+# Package version.
+version = "0.0.1"
+
+# Package description.
+description = "Sandbox projects for isolated development."
+
+# Package keywords.
+keywords = [
+    "development",
+    "sandbox",
+    "projects",
+    "AI",
+    "agents"
+]
+
+# Package authors.
+authors = [
+    { name = "Mihai Constantin", email = "mihai@mihaiconstantin.com" }
+]
+
+# Package maintainers.
+maintainers = [
+    { name = "Mihai Constantin", email = "mihai@mihaiconstantin.com" }
+]
+
+# The `README.md` file.
+readme = "README.md"
+
+# Package license type and file.
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+
+# The classifiers for the package.
+classifiers = [
+    # Package maturity.
+    "Development Status :: 4 - Beta",
+
+    # Package audience.
+    "Intended Audience :: Developers",
+
+    # Package topic.
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: User Interfaces",
+    "Topic :: Software Development :: Build Tools",
+
+    # Package `python` support.
+    "Programming Language :: Python :: 3.11",
+
+    # Package typing support.
+    "Typing :: Typed",
+
+    # Package `OS` support.
+    "Operating System :: OS Independent"
+]
+
+# Python version requirements.
+requires-python = ">=3.11"
+
+# Package dependencies.
+dependencies = [
+    "click>=8.5.0",
+    "rich>=15.0.0",
+    "tomlkit>=0.15.2",
+]
