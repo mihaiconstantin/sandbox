@@ -68,3 +68,23 @@ dependencies = [
     "rich>=15.0.0",
     "tomlkit>=0.15.2",
 ]
+
+# The package `sandbox` command-line interface.
+[project.scripts]
+sandbox = "sandbox.composition.main:main"
+sb = "sandbox.composition.main:main"
+
+# Package URLs.
+[project.urls]
+Homepage = "https://sandbox.mihaiconstantin.com"
+Repository = "https://github.com/mihaiconstantin/sandbox"
+Issues = "https://github.com/mihaiconstantin/sandbox/issues"
+Changelog = "https://github.com/mihaiconstantin/sandbox/blob/main/CHANGELOG.md"
+
+
+# Build system.
+[build-system]
+
+# Build backend.
+requires = ["hatchling"]
+build-backend = "hatchling.build"
