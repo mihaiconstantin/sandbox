@@ -1,0 +1,125 @@
+# Project metadata.
+[project]
+
+# Package name
+name = "sandbox"
+
+# Package version.
+version = "0.0.1"
+
+# Package description.
+description = "Sandbox projects for isolated development."
+
+# Package keywords.
+keywords = [
+    "development",
+    "sandbox",
+    "projects",
+    "AI",
+    "agents"
+]
+
+# Package authors.
+authors = [
+    { name = "Mihai Constantin", email = "mihai@mihaiconstantin.com" }
+]
+
+# Package maintainers.
+maintainers = [
+    { name = "Mihai Constantin", email = "mihai@mihaiconstantin.com" }
+]
+
+# The `README.md` file.
+readme = "README.md"
+
+# Package license type and file.
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+
+# The classifiers for the package.
+classifiers = [
+    # Package maturity.
+    "Development Status :: 4 - Beta",
+
+    # Package audience.
+    "Intended Audience :: Developers",
+
+    # Package topic.
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: User Interfaces",
+    "Topic :: Software Development :: Build Tools",
+
+    # Package `python` support.
+    "Programming Language :: Python :: 3.11",
+
+    # Package typing support.
+    "Typing :: Typed",
+
+    # Package `OS` support.
+    "Operating System :: OS Independent"
+]
+
+# Python version requirements.
+requires-python = ">=3.11"
+
+# Package dependencies.
+dependencies = [
+    "click>=8.5.0",
+    "rich>=15.0.0",
+    "tomlkit>=0.15.2",
+]
+
+# The package `sandbox` command-line interface.
+[project.scripts]
+sandbox = "sandbox.composition.main:main"
+sb = "sandbox.composition.main:main"
+
+# Package URLs.
+[project.urls]
+Homepage = "https://sandbox.mihaiconstantin.com"
+Repository = "https://github.com/mihaiconstantin/sandbox"
+Issues = "https://github.com/mihaiconstantin/sandbox/issues"
+Changelog = "https://github.com/mihaiconstantin/sandbox/blob/main/CHANGELOG.md"
+
+
+# Build system.
+[build-system]
+
+# Build backend.
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+# Tool configuration.
+[tool]
+
+# `Hatch` configuration.
+[tool.hatch]
+
+# Keep folder structure for the `.tar.gz` and include files tracked by `git`.
+[tool.hatch.build.targets.sdist]
+sources = []
+
+# Things to exclude from the `.tar.gz`.
+exclude = [
+    "CNAME"
+]
+
+# Flatten folder structure for the `.whl`.
+[tool.hatch.build.targets.wheel]
+sources = ["src"]
+
+# Additionally, include the catalogues in the package wheel.
+[tool.hatch.build.targets.wheel.force-include]
+"catalogues" = "sandbox/catalogues"
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.40.2",
+    "pytest>=9.1.1",
+    "ruff>=0.17.1",
+]
+
+# The tests import their path-based helpers from the `tests` directory, which pytest adds to `sys.path`.
+[tool.basedpyright]
+extraPaths = ["tests"]
