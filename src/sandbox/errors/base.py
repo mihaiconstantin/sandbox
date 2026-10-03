@@ -8,3 +8,9 @@ from dataclasses import dataclass
 class SandboxError(Exception):
     # No additional behavior.
     pass
+
+
+# Represent invalid caller input with the documented builtin compatibility base.
+class InputError(SandboxError, ValueError):
+    # No additional behavior.
+    pass
