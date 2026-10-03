@@ -150,6 +150,9 @@ node_modules/
 # Docs artifacts.
 cache/
 
+# Ignore `.vscode/`.
+.vscode/
+
 # Archives.
 archive/
 
@@ -162,8 +165,11 @@ GLOSSARY.md
 # Ignore `AGENTS.md`.
 AGENTS.md
 
-# Ignore `.scratch` files.
+# Ignore `.scratch/`.
 .scratch
+
+# Ignore `.worktrees/`.
+.worktrees/
 
 # Ignore catalogues.
 catalogues/
