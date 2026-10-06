@@ -34,3 +34,16 @@ class BoxNotFound(BoxLookupError):
 
         # Initialize the error with a neutral missing-box message.
         super().__init__(f"Box `{name}` was not found.")
+
+
+# Represent more than one managed instance for one box name.
+class BoxAmbiguous(BoxLookupError):
+    # Construct the error from the box name, candidate count, and optional backend label.
+    def __init__(self, name: str, count: int, backend: str | None = None) -> None:
+        # Record the box identity, candidate count, and backend label.
+        self.name: str = name
+        self.count: int = count
+        self.backend: str | None = backend
+
+        # Initialize the error with a neutral ambiguity message.
+        super().__init__(f"Multiple boxes exist for project `{name}`.")
