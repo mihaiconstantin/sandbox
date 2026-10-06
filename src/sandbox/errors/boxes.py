@@ -22,3 +22,15 @@ class BoxStateError(SandboxError):
 
         # Initialize the error with a neutral fallback message.
         super().__init__(detail or f"Box `{name}` is not in the required state.")
+
+
+# Represent a box that inspection proves absent.
+class BoxNotFound(BoxLookupError):
+    # Construct the error from the box name and optional backend label.
+    def __init__(self, name: str, backend: str | None = None) -> None:
+        # Record the box identity and backend label.
+        self.name: str = name
+        self.backend: str | None = backend
+
+        # Initialize the error with a neutral missing-box message.
+        super().__init__(f"Box `{name}` was not found.")
