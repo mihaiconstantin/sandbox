@@ -32,3 +32,17 @@ class NetworkInUse(RemovalError):
 
         # Initialize the error with a neutral attached-container message.
         super().__init__(f"Network `{name}` still has attached containers.")
+
+
+# Represent resources that survive a removal attempt.
+class IncompleteRemoval(RemovalError, RuntimeError):
+    # Construct the error from the resource facts.
+    def __init__(self, resource_kind: str, identifier: str, detail: str = "", backend: str | None = None) -> None:
+        # Record the removal facts.
+        self.resource_kind: str = resource_kind
+        self.identifier: str = identifier
+        self.detail: str = detail
+        self.backend: str | None = backend
+
+        # Initialize the error with a neutral postcondition message.
+        super().__init__(detail or f"Incomplete removal of {resource_kind} `{identifier}`.")
