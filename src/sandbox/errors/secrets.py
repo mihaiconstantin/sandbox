@@ -24,3 +24,15 @@ class MissingSecret(SecretError):
 
         # Initialize the error with the neutral missing-secret text.
         super().__init__(f"Secret `{alias}` in catalogue `{catalogue}` is not configured.")
+
+
+# Represent an unusable secret file binding.
+class SecretFileError(SecretError):
+    # Construct the error from its path and reason.
+    def __init__(self, path: Path, reason: str) -> None:
+        # Record the secret file facts.
+        self.path: Path = path
+        self.reason: str = reason
+
+        # Initialize the error with the neutral unusable-file text.
+        super().__init__(f"Secret file `{path}` is unusable: {reason}.")
