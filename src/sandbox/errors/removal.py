@@ -20,3 +20,15 @@ class NothingToRemove(RemovalError):
 
         # Initialize the error with a neutral missing-resource message.
         super().__init__(f"No sandbox resources exist for project `{name}`.")
+
+
+# Represent an observed network with attached containers.
+class NetworkInUse(RemovalError):
+    # Construct the error from the network name and optional backend label.
+    def __init__(self, name: str, backend: str | None = None) -> None:
+        # Record the network identity and backend label.
+        self.name: str = name
+        self.backend: str | None = backend
+
+        # Initialize the error with a neutral attached-container message.
+        super().__init__(f"Network `{name}` still has attached containers.")
