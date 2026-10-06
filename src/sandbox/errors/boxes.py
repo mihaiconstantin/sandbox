@@ -47,3 +47,9 @@ class BoxAmbiguous(BoxLookupError):
 
         # Initialize the error with a neutral ambiguity message.
         super().__init__(f"Multiple boxes exist for project `{name}`.")
+
+
+# Represent a partially created box that cannot start.
+class BoxNotReady(BoxStateError):
+    # No additional behavior.
+    pass
