@@ -3,3 +3,9 @@ from __future__ import annotations
 
 # Import the public root and command failure facts.
 from sandbox.errors.base import CommandFailure, SandboxError
+
+
+# Represent a failed recipe image build.
+class BuildError(SandboxError):
+    # No additional behavior.
+    pass
