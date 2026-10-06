@@ -20,3 +20,16 @@ class EngineFailure(EngineError):
 
         # Initialize the error with a neutral operation message.
         super().__init__(f"Operation `{failure.operation}` failed with exit code {failure.exit_code}.")
+
+
+# Represent engine output that is not parseable structured data.
+class EngineOutputInvalid(EngineError):
+    # Construct the error from the backend, operation, and bounded output sample.
+    def __init__(self, backend: str | None, operation: str, sample: str) -> None:
+        # Record the structured-output facts.
+        self.backend: str | None = backend
+        self.operation: str = operation
+        self.sample: str = sample[:200]
+
+        # Initialize the error with a neutral invalid-output message.
+        super().__init__(f"Runtime returned invalid JSON: {self.sample!r}")
