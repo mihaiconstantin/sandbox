@@ -23,3 +23,16 @@ class ConfigurationError(InputError):
 
         # Return a new error so the original keeps its attribution.
         return ConfigurationError(field, self.message)
+
+
+# Represent root execution rejected by the root policy.
+class RootExecutionNotAllowed(ConfigurationError):
+    # Construct the error from the effective user and its source.
+    def __init__(self, uid: int | None, source: str, image: str | None = None) -> None:
+        # Record the root policy facts.
+        self.uid: int | None = uid
+        self.source: str = source
+        self.image: str | None = image
+
+        # Initialize the configuration error with the neutral user field.
+        super().__init__("user", "Root execution is not allowed.")
