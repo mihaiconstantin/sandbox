@@ -33,3 +33,25 @@ class UnsupportedOperation(UnsupportedFeature):
 
         # Initialize the capability error for the operation.
         super().__init__(operation, detail or f"Operation `{operation}` is not supported by the configured runtime.", backend)
+
+
+# Represent a build artifact the runtime cannot accept.
+class ArtifactRejected(CapabilityError):
+    # Construct the error from the artifact facts.
+    def __init__(
+        self,
+        transport: str,
+        reference: str | None = None,
+        expected_platform: str | None = None,
+        actual_platform: str | None = None,
+        detail: str = "",
+        backend: str | None = None,
+    ) -> None:
+        # Record the artifact facts.
+        self.transport: str = transport
+        self.reference: str | None = reference
+        self.expected_platform: str | None = expected_platform
+        self.actual_platform: str | None = actual_platform
+
+        # Initialize the capability error for the artifact.
+        super().__init__("artifact", detail or "The build artifact cannot be used by the runtime.", backend)
