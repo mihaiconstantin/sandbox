@@ -53,3 +53,9 @@ class BoxAmbiguous(BoxLookupError):
 class BoxNotReady(BoxStateError):
     # No additional behavior.
     pass
+
+
+# Represent a box that is not live for an operation.
+class BoxNotRunning(BoxStateError):
+    # No additional behavior.
+    pass
