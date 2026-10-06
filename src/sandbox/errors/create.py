@@ -20,3 +20,15 @@ class CreateFailed(CreateError):
 
         # Initialize the error with a neutral creation message.
         super().__init__(f"Box creation failed with exit code {failure.exit_code}.")
+
+
+# Represent a box creation that did not satisfy its postcondition.
+class CreatePostconditionFailed(CreateError):
+    # Construct the error from the box name and optional backend label.
+    def __init__(self, name: str, backend: str | None = None) -> None:
+        # Record the box identity and backend label.
+        self.name: str = name
+        self.backend: str | None = backend
+
+        # Initialize the error with a neutral postcondition message.
+        super().__init__(f"Box `{name}` was not created: no managed instance was observed.")
