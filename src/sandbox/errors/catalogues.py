@@ -20,3 +20,14 @@ class CatalogueInstallError(CatalogueError):
 
         # Initialize the error with the message.
         super().__init__(message)
+
+
+# Represent an invalid catalogue registry.
+class RegistryError(CatalogueError):
+    # Construct the error from its message.
+    def __init__(self, message: str) -> None:
+        # Record the failure message.
+        self.message: str = message
+
+        # Initialize the error with the message.
+        super().__init__(message)
