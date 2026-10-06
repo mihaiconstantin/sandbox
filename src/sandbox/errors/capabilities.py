@@ -16,3 +16,9 @@ class CapabilityError(SandboxError):
 
         # Initialize the error with a neutral capability message.
         super().__init__(detail or f"The configured runtime does not support {feature}.")
+
+
+# Represent a runtime feature that is not supported.
+class UnsupportedFeature(CapabilityError):
+    # No additional behavior.
+    pass
