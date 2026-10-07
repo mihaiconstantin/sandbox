@@ -29,3 +29,20 @@ def _require_path(value: object, field: str) -> Path:
 
     # Return the validated path.
     return value
+
+
+# Require an absolute normalized POSIX guest path.
+def _require_guest_path(value: object, field: str) -> str:
+    # Require a nonblank string value first.
+    value = _require_nonblank(value, field)
+
+    # Interpret the value using container rather than host path rules.
+    path: PurePosixPath = PurePosixPath(value)
+
+    # If the value is relative, traverses parents, or cannot remain a literal POSIX destination.
+    if not path.is_absolute() or ".." in path.parts or "\\" in value or "\x00" in value:
+        # Throw.
+        raise ValueError(f"{field} must be an absolute POSIX path without parent traversal, backslashes, or NUL bytes.")
+
+    # Return the validated guest path.
+    return value
