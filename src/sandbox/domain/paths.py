@@ -30,3 +30,17 @@ def secret_target(alias: str) -> str:
 
     # Return the secret mount target inside the box.
     return f"{SECRET_ROOT}/{alias}"
+
+
+# Normalize an absolute Linux guest target for collision and containment comparisons.
+def guest_target_key(value: str) -> str:
+    # Collapse redundant separators and dot components.
+    target: str = str(PurePosixPath(value))
+
+    # Use Linux's single-root identity for a double root slash.
+    if target.startswith("//"):
+        # Normalize the root prefix only.
+        target = "/" + target.lstrip("/")
+
+    # Return the comparison key.
+    return target
