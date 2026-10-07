@@ -57,3 +57,15 @@ class VolumeOwnershipError(OwnershipViolation):
 
         # Initialize the ownership error for a volume.
         super().__init__("volume", name)
+
+
+# Represent a failed volume creation with its command facts.
+class VolumeCreateFailed(VolumeError):
+    # Construct the error from the volume name and optional command failure.
+    def __init__(self, name: str, failure: CommandFailure | None = None) -> None:
+        # Record the volume identity and command facts.
+        self.name: str = name
+        self.failure: CommandFailure | None = failure
+
+        # Initialize the error with a neutral creation message.
+        super().__init__(f"Volume `{name}` could not be created.")
