@@ -44,3 +44,18 @@ def guest_target_key(value: str) -> str:
 
     # Return the comparison key.
     return target
+
+
+# Represent the project directory as visible inside a box.
+@dataclass(frozen = True)
+class Workspace:
+    # Record the live project bind source.
+    host_directory: Path
+
+    # Record the fixed guest target derived from the box name.
+    target: str
+
+    def __post_init__(self) -> None:
+        # Require a host directory and the fixed project target shape.
+        _require_path(self.host_directory, "Workspace.host_directory")
+        _require_workspace_target(self.target, "Workspace.target")
