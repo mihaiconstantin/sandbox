@@ -59,3 +59,7 @@ class Workspace:
         # Require a host directory and the fixed project target shape.
         _require_path(self.host_directory, "Workspace.host_directory")
         _require_workspace_target(self.target, "Workspace.target")
+
+
+# Export the guest-path constants, helpers, and workspace value.
+__all__: list[str] = ["PROJECT_ROOT", "SECRET_ROOT", "Workspace", "guest_target_key", "project_target", "secret_target"]
