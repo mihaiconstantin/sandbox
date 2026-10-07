@@ -62,3 +62,18 @@ class Provenance:
         if self.recipe is not None:
             # Require a nonblank recipe name.
             _require_nonblank(self.recipe, "Provenance.recipe")
+
+
+# Represent an opaque runtime instance reference.
+@dataclass(frozen = True)
+class RuntimeRef:
+    # Record the backend identifier.
+    id: str
+
+    # Record the backend display name.
+    name: str
+
+    def __post_init__(self) -> None:
+        # Require both reference parts for display.
+        _require_nonblank(self.id, "RuntimeRef.id")
+        _require_nonblank(self.name, "RuntimeRef.name")
