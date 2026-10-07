@@ -12,3 +12,12 @@ PROJECT_ROOT: str = "/projects"
 
 # The container directory containing secret bind mounts.
 SECRET_ROOT: str = "/run/secrets"
+
+
+# Compute the container directory associated with a project.
+def project_target(project: str) -> str:
+    # Require a project name.
+    _require_nonblank(project, "project")
+
+    # Return the project mount target inside the box.
+    return f"{PROJECT_ROOT}/{project}"
