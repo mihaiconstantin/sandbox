@@ -21,3 +21,12 @@ def project_target(project: str) -> str:
 
     # Return the project mount target inside the box.
     return f"{PROJECT_ROOT}/{project}"
+
+
+# Compute the container path associated with a secret alias.
+def secret_target(alias: str) -> str:
+    # Require a secret alias.
+    _require_nonblank(alias, "alias")
+
+    # Return the secret mount target inside the box.
+    return f"{SECRET_ROOT}/{alias}"
