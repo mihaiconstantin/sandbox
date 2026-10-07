@@ -63,3 +63,7 @@ def _require_workspace_target(value: object, field: str) -> str:
 
     # Return the validated target.
     return value
+
+
+# Define the API of the shared domain invariant helpers.
+__all__: list[str] = ["_require_guest_path", "_require_nonblank", "_require_path", "_require_workspace_target"]
