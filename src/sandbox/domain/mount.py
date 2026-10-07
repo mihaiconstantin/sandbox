@@ -49,3 +49,44 @@ class Network:
         if not isinstance(self.ip_address, str):
             # Throw.
             raise ValueError("Network.ip_address must be a string.")
+
+
+# Represent the neutral declaration of one effective mount before a create.
+@dataclass(frozen = True, slots = True)
+class MountSpec:
+    # Record whether the source is a host bind or a physical volume.
+    kind: Literal["bind", "volume"]
+
+    # Record the absolute host path or physical volume name.
+    source: Path | str
+
+    # Record the guest target.
+    target: str
+
+    # Record whether the mount is read-only.
+    read_only: bool
+
+    def __post_init__(self) -> None:
+        # Require a supported mount kind.
+        if self.kind not in ("bind", "volume"):
+            # Throw.
+            raise ValueError("MountSpec.kind must be `bind` or `volume`.")
+
+        # If the source is a host path.
+        if isinstance(self.source, Path):
+            # Require an absolute host path.
+            if not self.source.is_absolute():
+                # Throw.
+                raise ValueError("MountSpec.source must be an absolute host path or a physical volume name.")
+        # Otherwise require a physical volume name.
+        else:
+            # Require a nonblank string source.
+            _require_nonblank(self.source, "MountSpec.source")
+
+        # Require an absolute guest target.
+        _require_guest_path(self.target, "MountSpec.target")
+
+        # Require an exact Boolean read-only flag.
+        if type(self.read_only) is not bool:
+            # Throw.
+            raise ValueError("MountSpec.read_only must be a Boolean.")
