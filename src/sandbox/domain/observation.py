@@ -41,3 +41,24 @@ class BoxState(StrEnum):
     def is_live(self) -> bool:
         # Treat only running instances as live; starting is not live for this provider.
         return self is BoxState.RUNNING
+
+
+# Represent the read-only origin record of a box.
+@dataclass(frozen = True)
+class Provenance:
+    # Record the catalogue name when the runtime exposes it.
+    catalogue: str | None
+
+    # Record the recipe name when the runtime exposes it.
+    recipe: str | None
+
+    def __post_init__(self) -> None:
+        # If a catalogue name is present.
+        if self.catalogue is not None:
+            # Require a nonblank catalogue name.
+            _require_nonblank(self.catalogue, "Provenance.catalogue")
+
+        # If a recipe name is present.
+        if self.recipe is not None:
+            # Require a nonblank recipe name.
+            _require_nonblank(self.recipe, "Provenance.recipe")
