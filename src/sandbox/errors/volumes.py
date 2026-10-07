@@ -23,3 +23,15 @@ class VolumeNotFound(VolumeError):
 
         # Initialize the error with a neutral missing-volume message.
         super().__init__(f"Volume `{name}` no longer exists.")
+
+
+# Represent a volume referenced by containers.
+class VolumeInUse(VolumeError):
+    # Construct the error from the volume name and optional backend label.
+    def __init__(self, name: str, backend: str | None = None) -> None:
+        # Record the volume identity and backend label.
+        self.name: str = name
+        self.backend: str | None = backend
+
+        # Initialize the error with a neutral in-use message.
+        super().__init__(f"Volume `{name}` is still referenced.")
