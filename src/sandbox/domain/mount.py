@@ -30,3 +30,22 @@ class Mount:
         # Require a source and an absolute guest target.
         _require_nonblank(self.source, "Mount.source")
         _require_guest_path(self.target, "Mount.target")
+
+
+# Represent an observed network attachment.
+@dataclass(frozen = True)
+class Network:
+    # Record the network name.
+    name: str
+
+    # Record the assigned address, or an empty string when unassigned.
+    ip_address: str
+
+    def __post_init__(self) -> None:
+        # Require a network name and a string address.
+        _require_nonblank(self.name, "Network.name")
+
+        # If the address is not a string.
+        if not isinstance(self.ip_address, str):
+            # Throw.
+            raise ValueError("Network.ip_address must be a string.")
