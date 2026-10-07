@@ -36,3 +36,43 @@ class CatalogueBinding:
         # Require a usable alias and host file.
         _require_alias(self.alias, "CatalogueBinding.alias")
         _require_path(self.path, "CatalogueBinding.path")
+
+
+# Represent a registered catalogue and its configured location.
+@dataclass(frozen = True, slots = True)
+class CatalogueRegistration:
+    # Record the registered catalogue name.
+    name: str
+
+    # Record the registered origin.
+    type: str
+
+    # Record the resolved catalogue directory.
+    path: Path
+
+    # Record the catalogue-scoped secret bindings when loaded for removal.
+    bindings: tuple[CatalogueBinding, ...] = ()
+
+    def __post_init__(self) -> None:
+        # Require catalogue identity and a resolved location.
+        _require_nonblank(self.name, "CatalogueRegistration.name")
+        _require_nonblank(self.type, "CatalogueRegistration.type")
+        _require_path(self.path, "CatalogueRegistration.path")
+
+        # Require an immutable tuple of bindings.
+        if not isinstance(self.bindings, tuple) or any(not isinstance(binding, CatalogueBinding) for binding in self.bindings):
+            # Throw.
+            raise ValueError("CatalogueRegistration.bindings must be a tuple of CatalogueBinding values.")
+
+        # Require unique binding aliases.
+        aliases: set[str] = set()
+
+        # For each binding.
+        for binding in self.bindings:
+            # If the alias repeats.
+            if binding.alias in aliases:
+                # Throw.
+                raise ValueError("CatalogueRegistration.bindings must have unique aliases.")
+
+            # Record the alias.
+            aliases.add(binding.alias)
