@@ -12,3 +12,14 @@ from sandbox.errors.ownership import OwnershipViolation
 class VolumeError(SandboxError):
     # No additional behavior.
     pass
+
+
+# Represent a volume that inspection proves absent.
+class VolumeNotFound(VolumeError):
+    # Construct the error from the volume name.
+    def __init__(self, name: str) -> None:
+        # Record the volume identity.
+        self.name: str = name
+
+        # Initialize the error with a neutral missing-volume message.
+        super().__init__(f"Volume `{name}` no longer exists.")
