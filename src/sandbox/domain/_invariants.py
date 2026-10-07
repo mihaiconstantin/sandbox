@@ -46,3 +46,20 @@ def _require_guest_path(value: object, field: str) -> str:
 
     # Return the validated guest path.
     return value
+
+
+# Require the fixed project target for a box.
+def _require_workspace_target(value: object, field: str) -> str:
+    # Require an absolute guest path first.
+    value = _require_guest_path(value, field)
+
+    # Interpret the target as a container path.
+    path: PurePosixPath = PurePosixPath(value)
+
+    # Require the fixed `/projects/<box name>` shape.
+    if len(path.parts) != 3 or path.parts[1] != "projects":
+        # Throw.
+        raise ValueError(f"{field} must be the fixed project target `/projects/<box name>`.")
+
+    # Return the validated target.
+    return value
