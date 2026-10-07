@@ -69,3 +69,24 @@ class SandboxSpec:
         if not isinstance(self.mounts, tuple) or any(not isinstance(mount, MountSpec) for mount in self.mounts):
             # Throw.
             raise ValueError("SandboxSpec.mounts must be a tuple of MountSpec values.")
+
+
+# Represent the neutral facts a runtime requires before a create.
+@dataclass(frozen = True, slots = True)
+class RuntimeRequirements:
+    # Record the effective sandbox facts.
+    spec: SandboxSpec
+
+    # Record the image requirement the builder must satisfy.
+    artifact: ArtifactRequirement
+
+    def __post_init__(self) -> None:
+        # Require one sandbox spec.
+        if not isinstance(self.spec, SandboxSpec):
+            # Throw.
+            raise ValueError("RuntimeRequirements.spec must be a SandboxSpec value.")
+
+        # Require one artifact requirement.
+        if not isinstance(self.artifact, ArtifactRequirement):
+            # Throw.
+            raise ValueError("RuntimeRequirements.artifact must be an ArtifactRequirement value.")
