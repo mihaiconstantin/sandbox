@@ -46,3 +46,14 @@ class VolumeReferencesUnavailable(VolumeError):
 
         # Initialize the error with a neutral unavailable-reference message.
         super().__init__(f"Volume `{name}` reference information is unavailable.")
+
+
+# Represent a shared volume whose ownership cannot be verified.
+class VolumeOwnershipError(OwnershipViolation):
+    # Construct the error from the volume name.
+    def __init__(self, name: str) -> None:
+        # Record the volume identity.
+        self.name: str = name
+
+        # Initialize the ownership error for a volume.
+        super().__init__("volume", name)
