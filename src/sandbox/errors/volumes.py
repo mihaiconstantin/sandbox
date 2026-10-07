@@ -6,3 +6,9 @@ from sandbox.errors.base import CommandFailure, SandboxError
 
 # Import the shared ownership category.
 from sandbox.errors.ownership import OwnershipViolation
+
+
+# Represent a failed shared-volume operation.
+class VolumeError(SandboxError):
+    # No additional behavior.
+    pass
