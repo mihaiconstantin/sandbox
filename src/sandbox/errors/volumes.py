@@ -35,3 +35,14 @@ class VolumeInUse(VolumeError):
 
         # Initialize the error with a neutral in-use message.
         super().__init__(f"Volume `{name}` is still referenced.")
+
+
+# Represent a volume whose references are unavailable.
+class VolumeReferencesUnavailable(VolumeError):
+    # Construct the error from the volume name.
+    def __init__(self, name: str) -> None:
+        # Record the volume identity.
+        self.name: str = name
+
+        # Initialize the error with a neutral unavailable-reference message.
+        super().__init__(f"Volume `{name}` reference information is unavailable.")
