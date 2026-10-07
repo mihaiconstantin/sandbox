@@ -95,3 +95,22 @@ class SecretBinding:
         _require_nonblank(self.catalogue, "SecretBinding.catalogue")
         _require_alias(self.alias, "SecretBinding.alias")
         _require_path(self.host_path, "SecretBinding.host_path")
+
+
+# Represent a registered catalogue scheduled for removal.
+@dataclass(frozen = True, slots = True)
+class CatalogueRemovalPlan:
+    # Record the configuration home the registration belongs to.
+    home: Path
+
+    # Record the registered catalogue and its bindings.
+    registration: CatalogueRegistration
+
+    def __post_init__(self) -> None:
+        # Require the configuration home.
+        _require_path(self.home, "CatalogueRemovalPlan.home")
+
+        # Require the loaded registration.
+        if not isinstance(self.registration, CatalogueRegistration):
+            # Throw.
+            raise ValueError("CatalogueRemovalPlan.registration must be a CatalogueRegistration value.")
