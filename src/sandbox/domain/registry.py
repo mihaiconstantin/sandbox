@@ -21,3 +21,18 @@ def _require_alias(value: object, field: str) -> str:
 
     # Return the validated alias.
     return value
+
+
+# Represent a catalogue-scoped secret binding loaded for an operation.
+@dataclass(frozen = True, slots = True)
+class CatalogueBinding:
+    # Record the catalogue-local secret alias.
+    alias: str
+
+    # Record the resolved host secret file.
+    path: Path
+
+    def __post_init__(self) -> None:
+        # Require a usable alias and host file.
+        _require_alias(self.alias, "CatalogueBinding.alias")
+        _require_path(self.path, "CatalogueBinding.path")
