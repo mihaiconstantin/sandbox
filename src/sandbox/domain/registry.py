@@ -76,3 +76,22 @@ class CatalogueRegistration:
 
             # Record the alias.
             aliases.add(binding.alias)
+
+
+# Represent a secret binding stored for one catalogue alias.
+@dataclass(frozen = True, slots = True)
+class SecretBinding:
+    # Record the catalogue that scopes the binding.
+    catalogue: str
+
+    # Record the catalogue-local secret alias.
+    alias: str
+
+    # Record the resolved host secret file.
+    host_path: Path
+
+    def __post_init__(self) -> None:
+        # Require the catalogue identity, a usable alias, and a host file.
+        _require_nonblank(self.catalogue, "SecretBinding.catalogue")
+        _require_alias(self.alias, "SecretBinding.alias")
+        _require_path(self.host_path, "SecretBinding.host_path")
