@@ -114,3 +114,7 @@ class CatalogueRemovalPlan:
         if not isinstance(self.registration, CatalogueRegistration):
             # Throw.
             raise ValueError("CatalogueRemovalPlan.registration must be a CatalogueRegistration value.")
+
+
+# Export the registry-facing values.
+__all__: list[str] = ["CatalogueBinding", "CatalogueRegistration", "CatalogueRemovalPlan", "SecretBinding"]
