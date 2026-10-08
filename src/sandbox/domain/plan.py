@@ -46,3 +46,22 @@ class Secret:
 
         # Require the resolved host file path.
         _require_path(self.host_path, "Secret.host_path")
+
+
+# Represent the neutral intent for one box creation.
+@dataclass(frozen = True)
+class SandboxPlan:
+    # Record the project identity and host directory.
+    project: Project
+
+    # Record the live project bind and fixed target.
+    workspace: Workspace
+
+    # Record the required shared volumes.
+    volumes: tuple[VolumeDeclaration, ...]
+
+    # Record the resolved secret bindings.
+    secrets: tuple[Secret, ...]
+
+    # Record the recipe root policy.
+    allow_root: bool
