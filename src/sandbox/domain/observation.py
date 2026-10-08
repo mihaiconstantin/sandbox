@@ -162,3 +162,30 @@ class BoxObservation:
         if self.backend is not None and not isinstance(self.backend, RuntimeRef):
             # Throw.
             raise ValueError("BoxObservation.backend must be `None` or a RuntimeRef.")
+
+
+# Represent a read-only preview of the resources removed with a box.
+@dataclass(frozen = True)
+class RemovalPlan:
+    # Record the box identity.
+    box: str
+
+    # Record the display references for planned containers.
+    containers: tuple[RuntimeRef, ...]
+
+    # Record the display references for planned networks.
+    networks: tuple[RuntimeRef, ...]
+
+    def __post_init__(self) -> None:
+        # Require the box identity and immutable reference tuples.
+        _require_nonblank(self.box, "RemovalPlan.box")
+
+        # If the container references are not an immutable tuple.
+        if not isinstance(self.containers, tuple) or any(not isinstance(reference, RuntimeRef) for reference in self.containers):
+            # Throw.
+            raise ValueError("RemovalPlan.containers must be a tuple of RuntimeRef values.")
+
+        # If the network references are not an immutable tuple.
+        if not isinstance(self.networks, tuple) or any(not isinstance(reference, RuntimeRef) for reference in self.networks):
+            # Throw.
+            raise ValueError("RemovalPlan.networks must be a tuple of RuntimeRef values.")
