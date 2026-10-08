@@ -102,3 +102,7 @@ class EnsuredVolume:
         if type(self.created) is not bool:
             # Throw.
             raise ValueError("EnsuredVolume.created must be a Boolean.")
+
+
+# Export the volume values.
+__all__: list[str] = ["EnsuredVolume", "VolumeDeclaration", "VolumeInfo"]
