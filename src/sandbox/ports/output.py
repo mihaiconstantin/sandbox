@@ -4,3 +4,30 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Protocol, runtime_checkable
+
+
+# Represent the closed, backend-neutral progress vocabulary.
+class ProgressPhase(StrEnum):
+    # The caller is about to prepare the image through the builder.
+    PREPARE_IMAGE = "prepare-image"
+
+    # The builder started an actual build, never a pull or reuse.
+    BUILD_IMAGE = "build-image"
+
+    # The caller is ensuring one declared shared volume.
+    ENSURE_VOLUME = "ensure-volume"
+
+    # The caller is about to create and start the box.
+    CREATE = "create"
+
+    # The caller is about to start a box.
+    START = "start"
+
+    # The caller is about to stop a box.
+    STOP = "stop"
+
+    # The caller is about to remove a box.
+    REMOVE = "remove"
+
+    # The caller is about to remove a shared volume.
+    REMOVE_VOLUME = "remove-volume"
