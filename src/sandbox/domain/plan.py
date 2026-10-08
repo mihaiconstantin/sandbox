@@ -162,3 +162,45 @@ class RecipeDefinition:
         for path in self.files:
             # Require a path.
             _require_path(path, "RecipeDefinition.files")
+
+
+# Represent the neutral volume-initialization intent.
+@dataclass(frozen = True)
+class Initialization:
+    # Record the effective numeric service UID.
+    uid: int
+
+    # Record the ordered eligible volume targets.
+    targets: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        # Require an integer UID in the supported range.
+        if type(self.uid) is not int or self.uid < 0 or self.uid >= 2**32 - 1:
+            # Throw.
+            raise ValueError("Initialization.uid must be an integer between `0` and `2**32 - 2`.")
+
+        # Require an immutable tuple of guest targets.
+        if not isinstance(self.targets, tuple):
+            # Throw.
+            raise ValueError("Initialization.targets must be a tuple of guest paths.")
+
+        # Require normalized, unique, absolute guest targets.
+        seen: set[str] = set()
+
+        # For each target.
+        for target in self.targets:
+            # Require an absolute guest path.
+            _require_guest_path(target, "Initialization.targets")
+
+            # Require the normalized target form.
+            if str(PurePosixPath(target)) != target:
+                # Throw.
+                raise ValueError("Initialization.targets must contain normalized guest paths.")
+
+            # If the target repeats.
+            if target in seen:
+                # Throw.
+                raise ValueError("Initialization.targets must be unique.")
+
+            # Record the target.
+            seen.add(target)
