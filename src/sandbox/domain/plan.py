@@ -87,3 +87,22 @@ class SandboxPlan:
         volume_targets: set[str] = set()
 
         # For each volume declaration.
+        for declaration in self.volumes:
+            # If the declaration is not a volume declaration.
+            if not isinstance(declaration, VolumeDeclaration):
+                # Throw.
+                raise ValueError("SandboxPlan.volumes must contain VolumeDeclaration values.")
+
+            # If the physical name or target repeats.
+            if declaration.name in volume_names or declaration.target in volume_targets:
+                # Throw.
+                raise ValueError("SandboxPlan.volumes must have unique physical names and guest targets.")
+
+            # Record the declaration keys.
+            volume_names.add(declaration.name)
+            volume_targets.add(declaration.target)
+
+        # Reject duplicate secret aliases.
+        secret_aliases: set[str] = set()
+
+        # For each secret binding.
