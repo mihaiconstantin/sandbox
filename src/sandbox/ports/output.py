@@ -47,3 +47,6 @@ class OutputChannel(StrEnum):
 class OutputSink(Protocol):
     # Report one advisory progress phase with an optional untrusted subject.
     def progress(self, phase: ProgressPhase, *, subject: str | None = None) -> None: ...
+
+    # Forward one opaque child-process chunk on its original channel.
+    def process_output(self, channel: OutputChannel, data: bytes) -> None: ...
