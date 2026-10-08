@@ -50,3 +50,12 @@ class OutputSink(Protocol):
 
     # Forward one opaque child-process chunk on its original channel.
     def process_output(self, channel: OutputChannel, data: bytes) -> None: ...
+
+
+# Represent a stateless sink that discards every advisory event.
+@dataclass(frozen = True, slots = True)
+class _SilentOutput:
+    # Discard one progress phase.
+    def progress(self, phase: ProgressPhase, *, subject: str | None = None) -> None:
+        # Do nothing; the silent sink is a no-op.
+        return None
