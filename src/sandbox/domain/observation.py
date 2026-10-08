@@ -138,3 +138,27 @@ class BoxObservation:
                 raise ValueError(f"{field_name} must be a string or `None`.")
 
         # If a workspace is reported.
+        if self.workspace is not None:
+            # Require the fixed target for this box.
+            if not isinstance(self.workspace, Workspace) or self.workspace.target != f"{PROJECT_ROOT}/{self.name}":
+                # Throw.
+                raise ValueError("BoxObservation.workspace must use the fixed target for the observed box.")
+
+        # If mounts are reported.
+        if self.mounts is not None:
+            # Require an immutable tuple of mounts.
+            if not isinstance(self.mounts, tuple) or any(not isinstance(mount, Mount) for mount in self.mounts):
+                # Throw.
+                raise ValueError("BoxObservation.mounts must be `None` or a tuple of Mount values.")
+
+        # If networks are reported.
+        if self.networks is not None:
+            # Require an immutable tuple of networks.
+            if not isinstance(self.networks, tuple) or any(not isinstance(network, Network) for network in self.networks):
+                # Throw.
+                raise ValueError("BoxObservation.networks must be `None` or a tuple of Network values.")
+
+        # If a backend reference is reported.
+        if self.backend is not None and not isinstance(self.backend, RuntimeRef):
+            # Throw.
+            raise ValueError("BoxObservation.backend must be `None` or a RuntimeRef.")
