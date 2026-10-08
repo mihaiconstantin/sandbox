@@ -40,3 +40,10 @@ class OutputChannel(StrEnum):
 
     # The child wrote to standard error.
     STDERR = "stderr"
+
+
+# Represent the optional receiver for advisory progress and child-process output.
+@runtime_checkable
+class OutputSink(Protocol):
+    # Report one advisory progress phase with an optional untrusted subject.
+    def progress(self, phase: ProgressPhase, *, subject: str | None = None) -> None: ...
