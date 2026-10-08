@@ -31,3 +31,12 @@ class ProgressPhase(StrEnum):
 
     # The caller is about to remove a shared volume.
     REMOVE_VOLUME = "remove-volume"
+
+
+# Represent the child stream an opaque process chunk arrived on.
+class OutputChannel(StrEnum):
+    # The child wrote to standard output.
+    STDOUT = "stdout"
+
+    # The child wrote to standard error.
+    STDERR = "stderr"
