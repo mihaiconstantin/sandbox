@@ -59,3 +59,8 @@ class _SilentOutput:
     def progress(self, phase: ProgressPhase, *, subject: str | None = None) -> None:
         # Do nothing; the silent sink is a no-op.
         return None
+
+    # Discard one child-process chunk.
+    def process_output(self, channel: OutputChannel, data: bytes) -> None:
+        # Do nothing; the silent sink is a no-op.
+        return None
