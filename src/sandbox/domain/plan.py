@@ -124,3 +124,41 @@ class SandboxPlan:
         if type(self.allow_root) is not bool:
             # Throw.
             raise ValueError("SandboxPlan.allow_root must be a Boolean.")
+
+
+# Represent the opaque recipe source passed to the builder and runtime.
+@dataclass(frozen = True)
+class RecipeDefinition:
+    # Record the source catalogue name for provenance.
+    catalogue: str
+
+    # Record the effective recipe name for provenance.
+    recipe: str
+
+    # Record the catalogue root used as the project directory.
+    catalogue_root: Path
+
+    # Record the parent-first recipe source files.
+    files: tuple[Path, ...]
+
+    # Record the selected service selector, opaque to the core.
+    service: str
+
+    def __post_init__(self) -> None:
+        # Require the source identity and selected service.
+        _require_nonblank(self.catalogue, "RecipeDefinition.catalogue")
+        _require_nonblank(self.recipe, "RecipeDefinition.recipe")
+        _require_nonblank(self.service, "RecipeDefinition.service")
+
+        # Require the catalogue root and a nonempty ordered file chain.
+        _require_path(self.catalogue_root, "RecipeDefinition.catalogue_root")
+
+        # If the file chain is not a nonempty tuple.
+        if not isinstance(self.files, tuple) or not self.files:
+            # Throw.
+            raise ValueError("RecipeDefinition.files must be a nonempty tuple of paths.")
+
+        # For each recipe source file.
+        for path in self.files:
+            # Require a path.
+            _require_path(path, "RecipeDefinition.files")
