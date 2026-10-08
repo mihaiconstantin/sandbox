@@ -65,3 +65,25 @@ class SandboxPlan:
 
     # Record the recipe root policy.
     allow_root: bool
+
+    def __post_init__(self) -> None:
+        # Require the plan parts.
+        if not isinstance(self.project, Project) or not isinstance(self.workspace, Workspace):
+            # Throw.
+            raise ValueError("SandboxPlan.project and SandboxPlan.workspace must be domain values.")
+
+        # Require the workspace to describe the project directory at the fixed target.
+        if self.workspace.host_directory != self.project.directory or self.workspace.target != f"{PROJECT_ROOT}/{self.project.name}":
+            # Throw.
+            raise ValueError("SandboxPlan.workspace must bind the project directory at the fixed project target.")
+
+        # Require immutable volume and secret tuples.
+        if not isinstance(self.volumes, tuple) or not isinstance(self.secrets, tuple):
+            # Throw.
+            raise ValueError("SandboxPlan.volumes and SandboxPlan.secrets must be tuples.")
+
+        # Reject duplicate physical volume names and guest targets.
+        volume_names: set[str] = set()
+        volume_targets: set[str] = set()
+
+        # For each volume declaration.
