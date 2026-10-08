@@ -77,3 +77,37 @@ class RuntimeRef:
         # Require both reference parts for display.
         _require_nonblank(self.id, "RuntimeRef.id")
         _require_nonblank(self.name, "RuntimeRef.name")
+
+
+# Represent an observed box as the runtime reports it.
+@dataclass(frozen = True)
+class BoxObservation:
+    # Guarantee the box identity.
+    name: str
+
+    # Guarantee the observed lifecycle state.
+    state: BoxState
+
+    # Guarantee the origin record for a managed box.
+    provenance: Provenance
+
+    # Report the adapter-native display label.
+    status_text: str | None = None
+
+    # Report the resolved image reference.
+    image: str | None = None
+
+    # Report the configured working directory.
+    working_directory: str | None = None
+
+    # Report the project bind at the expected target.
+    workspace: Workspace | None = None
+
+    # Report observed mounts, or `None` when unavailable.
+    mounts: tuple[Mount, ...] | None = None
+
+    # Report observed networks, or `None` when unavailable.
+    networks: tuple[Network, ...] | None = None
+
+    # Report the opaque backend reference.
+    backend: RuntimeRef | None = None
