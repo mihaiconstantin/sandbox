@@ -44,3 +44,40 @@ class VolumeDeclaration:
         if "$" in self.target:
             # Throw.
             raise ValueError("VolumeDeclaration.target must be a literal guest path without dollar signs.")
+
+
+# Represent the runtime's report of a shared volume.
+@dataclass(frozen = True)
+class VolumeInfo:
+    # Identify the physical runtime volume.
+    name: str
+
+    # Report the driver when available.
+    driver: str | None
+
+    # Report the display mountpoint when available.
+    mountpoint: str | None
+
+    # Report the referencing runtime instances, or `None` when unavailable.
+    in_use_by: tuple[RuntimeRef, ...] | None
+
+    def __post_init__(self) -> None:
+        # Require a physical volume name.
+        _require_nonblank(self.name, "VolumeInfo.name")
+
+        # If a driver is reported.
+        if self.driver is not None:
+            # Require a nonblank driver name.
+            _require_nonblank(self.driver, "VolumeInfo.driver")
+
+        # If a mountpoint is reported.
+        if self.mountpoint is not None:
+            # Require a nonblank display path.
+            _require_nonblank(self.mountpoint, "VolumeInfo.mountpoint")
+
+        # If references are reported.
+        if self.in_use_by is not None:
+            # Require an immutable tuple of runtime references.
+            if not isinstance(self.in_use_by, tuple) or any(not isinstance(reference, RuntimeRef) for reference in self.in_use_by):
+                # Throw.
+                raise ValueError("VolumeInfo.in_use_by must be `None` or a tuple of RuntimeRef values.")
