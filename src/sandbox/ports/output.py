@@ -64,3 +64,11 @@ class _SilentOutput:
     def process_output(self, channel: OutputChannel, data: bytes) -> None:
         # Do nothing; the silent sink is a no-op.
         return None
+
+
+# Define the shared stateless silent default.
+SILENT: OutputSink = _SilentOutput()
+
+
+# Define the public API of the `sandbox.ports.output` module.
+__all__: list[str] = ["OutputChannel", "OutputSink", "ProgressPhase", "SILENT"]
