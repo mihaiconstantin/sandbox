@@ -81,3 +81,24 @@ class VolumeInfo:
             if not isinstance(self.in_use_by, tuple) or any(not isinstance(reference, RuntimeRef) for reference in self.in_use_by):
                 # Throw.
                 raise ValueError("VolumeInfo.in_use_by must be `None` or a tuple of RuntimeRef values.")
+
+
+# Represent the creation outcome of one shared-volume ensure operation.
+@dataclass(frozen = True)
+class EnsuredVolume:
+    # Report the observed volume.
+    info: VolumeInfo
+
+    # Report whether this call created the volume.
+    created: bool
+
+    def __post_init__(self) -> None:
+        # Require an observed volume.
+        if not isinstance(self.info, VolumeInfo):
+            # Throw.
+            raise ValueError("EnsuredVolume.info must be a VolumeInfo value.")
+
+        # Require a Boolean creation flag.
+        if type(self.created) is not bool:
+            # Throw.
+            raise ValueError("EnsuredVolume.created must be a Boolean.")
