@@ -106,3 +106,21 @@ class SandboxPlan:
         secret_aliases: set[str] = set()
 
         # For each secret binding.
+        for secret in self.secrets:
+            # If the binding is not a secret.
+            if not isinstance(secret, Secret):
+                # Throw.
+                raise ValueError("SandboxPlan.secrets must contain Secret values.")
+
+            # If the alias repeats.
+            if secret.alias in secret_aliases:
+                # Throw.
+                raise ValueError("SandboxPlan.secrets must have unique aliases.")
+
+            # Record the alias.
+            secret_aliases.add(secret.alias)
+
+        # Require an exact Boolean root policy.
+        if type(self.allow_root) is not bool:
+            # Throw.
+            raise ValueError("SandboxPlan.allow_root must be a Boolean.")
