@@ -111,3 +111,30 @@ class BoxObservation:
 
     # Report the opaque backend reference.
     backend: RuntimeRef | None = None
+
+    def __post_init__(self) -> None:
+        # Require guaranteed observation fields.
+        _require_nonblank(self.name, "BoxObservation.name")
+
+        # Require an observed state because absence is `None` from inspection.
+        if not isinstance(self.state, BoxState) or self.state is BoxState.MISSING:
+            # Throw.
+            raise ValueError("BoxObservation.state must be an observed BoxState other than `missing`.")
+
+        # Require provenance for a managed box.
+        if not isinstance(self.provenance, Provenance):
+            # Throw.
+            raise ValueError("BoxObservation.provenance must be a Provenance value.")
+
+        # Require every reported display string to be a string, allowing observed empty values.
+        for field_name, value in (
+            ("BoxObservation.status_text", self.status_text),
+            ("BoxObservation.image", self.image),
+            ("BoxObservation.working_directory", self.working_directory),
+        ):
+            # If the value is reported with a non-string type.
+            if value is not None and not isinstance(value, str):
+                # Throw.
+                raise ValueError(f"{field_name} must be a string or `None`.")
+
+        # If a workspace is reported.
