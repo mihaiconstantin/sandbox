@@ -111,3 +111,6 @@ class Runtime(Protocol):
 
     # Start an existing box and report whether this call changed its state.
     def start(self, name: str) -> bool: ...
+
+    # Stop an existing box and report whether this call changed its state.
+    def stop(self, name: str) -> bool: ...
