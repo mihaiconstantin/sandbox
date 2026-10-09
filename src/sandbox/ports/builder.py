@@ -25,3 +25,7 @@ class Builder(Protocol):
         staging_dir: Path | None = None,
         output: OutputSink = SILENT,
     ) -> BuildArtifact: ...
+
+
+# Define the public API of the `sandbox.ports.builder` module.
+__all__: list[str] = ["Builder"]
