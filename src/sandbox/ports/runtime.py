@@ -102,3 +102,6 @@ class Runtime(Protocol):
         *,
         output: OutputSink = SILENT,
     ) -> BoxObservation: ...
+
+    # Observe one managed box by name, or report absence.
+    def inspect(self, name: str) -> BoxObservation | None: ...
