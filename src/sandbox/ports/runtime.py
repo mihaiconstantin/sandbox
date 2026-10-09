@@ -114,3 +114,6 @@ class Runtime(Protocol):
 
     # Stop an existing box and report whether this call changed its state.
     def stop(self, name: str) -> bool: ...
+
+    # Enter a live box and return the shell exit status.
+    def enter(self, name: str, shell: str, login: bool) -> int: ...
