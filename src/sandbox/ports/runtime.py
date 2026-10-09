@@ -108,3 +108,6 @@ class Runtime(Protocol):
 
     # List every managed box in name order.
     def list(self) -> tuple[BoxObservation, ...]: ...
+
+    # Start an existing box and report whether this call changed its state.
+    def start(self, name: str) -> bool: ...
