@@ -89,3 +89,6 @@ class RuntimePreparation(Protocol):
 class Runtime(Protocol):
     # Resolve read-only runtime state and expose neutral requirements.
     def prepare(self, plan: SandboxPlan, definition: RecipeDefinition) -> RuntimePreparation: ...
+
+    # Plan the effective UID and eligible volume targets without mutation.
+    def plan_initialization(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> Initialization: ...
