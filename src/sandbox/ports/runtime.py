@@ -105,3 +105,6 @@ class Runtime(Protocol):
 
     # Observe one managed box by name, or report absence.
     def inspect(self, name: str) -> BoxObservation | None: ...
+
+    # List every managed box in name order.
+    def list(self) -> tuple[BoxObservation, ...]: ...
