@@ -92,3 +92,13 @@ class Runtime(Protocol):
 
     # Plan the effective UID and eligible volume targets without mutation.
     def plan_initialization(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> Initialization: ...
+
+    # Create and start one box from a prepared artifact without building or pulling.
+    def create(
+        self,
+        preparation: RuntimePreparation,
+        artifact: BuildArtifact,
+        initialization: Initialization | None = None,
+        *,
+        output: OutputSink = SILENT,
+    ) -> BoxObservation: ...
