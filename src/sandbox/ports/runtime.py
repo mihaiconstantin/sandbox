@@ -120,3 +120,6 @@ class Runtime(Protocol):
 
     # Preview the resources removed with a box without mutating them.
     def plan_removal(self, name: str) -> RemovalPlan: ...
+
+    # Remove a box and its owned runtime resources by name.
+    def remove(self, name: str) -> None: ...
