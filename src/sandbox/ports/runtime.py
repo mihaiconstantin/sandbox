@@ -126,3 +126,6 @@ class Runtime(Protocol):
 
     # Ensure one declared shared volume exists and report whether this call created it.
     def ensure_volume(self, name: str) -> EnsuredVolume: ...
+
+    # Observe one managed shared volume by name, or report absence.
+    def inspect_volume(self, name: str) -> VolumeInfo | None: ...
