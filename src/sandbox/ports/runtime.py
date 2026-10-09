@@ -123,3 +123,6 @@ class Runtime(Protocol):
 
     # Remove a box and its owned runtime resources by name.
     def remove(self, name: str) -> None: ...
+
+    # Ensure one declared shared volume exists and report whether this call created it.
+    def ensure_volume(self, name: str) -> EnsuredVolume: ...
