@@ -74,3 +74,11 @@ def require_compatible_artifact(requirement: ArtifactRequirement, artifact: Buil
 
     # Return the verified artifact.
     return artifact
+
+
+# Represent a typed, read-only runtime-owned preparation token.
+@runtime_checkable
+class RuntimePreparation(Protocol):
+    # Read the neutral requirements the runtime exposes to the caller.
+    @property
+    def requirements(self) -> RuntimeRequirements: ...
