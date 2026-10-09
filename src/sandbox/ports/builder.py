@@ -9,3 +9,19 @@ from sandbox.domain import ArtifactRequirement, BuildArtifact, RecipeDefinition,
 
 # Import the neutral output sink and its silent default.
 from sandbox.ports.output import SILENT, OutputSink
+
+
+# Represent the port that prepares a typed build artifact for a runtime requirement.
+@runtime_checkable
+class Builder(Protocol):
+    # Ensure the required image exists and return the typed artifact.
+    def prepare(
+        self,
+        plan: SandboxPlan,
+        definition: RecipeDefinition,
+        requirement: ArtifactRequirement,
+        *,
+        rebuild: bool = False,
+        staging_dir: Path | None = None,
+        output: OutputSink = SILENT,
+    ) -> BuildArtifact: ...
