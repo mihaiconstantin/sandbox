@@ -129,3 +129,6 @@ class Runtime(Protocol):
 
     # Observe one managed shared volume by name, or report absence.
     def inspect_volume(self, name: str) -> VolumeInfo | None: ...
+
+    # List every managed shared volume in name order.
+    def list_volumes(self) -> tuple[VolumeInfo, ...]: ...
