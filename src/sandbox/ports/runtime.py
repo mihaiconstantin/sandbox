@@ -117,3 +117,6 @@ class Runtime(Protocol):
 
     # Enter a live box and return the shell exit status.
     def enter(self, name: str, shell: str, login: bool) -> int: ...
+
+    # Preview the resources removed with a box without mutating them.
+    def plan_removal(self, name: str) -> RemovalPlan: ...
