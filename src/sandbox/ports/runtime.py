@@ -53,3 +53,24 @@ def require_compatible_artifact(requirement: ArtifactRequirement, artifact: Buil
         )
 
     # Require the accepted transport.
+    if artifact.transport is not requirement.transport:
+        # Throw.
+        raise ArtifactRejected(
+            transport = artifact.transport.value,
+            reference = artifact.reference,
+            detail = "The artifact transport does not match the runtime requirement.",
+        )
+
+    # Require the archive bytes for a byte-carrying transport.
+    if artifact.transport is not ArtifactTransport.LOCAL_IMAGE and (
+        artifact.archive_path is None or not artifact.archive_path.is_file()
+    ):
+        # Throw.
+        raise ArtifactRejected(
+            transport = artifact.transport.value,
+            reference = artifact.reference,
+            detail = "The artifact archive is unavailable.",
+        )
+
+    # Return the verified artifact.
+    return artifact
