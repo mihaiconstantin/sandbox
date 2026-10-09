@@ -82,3 +82,10 @@ class RuntimePreparation(Protocol):
     # Read the neutral requirements the runtime exposes to the caller.
     @property
     def requirements(self) -> RuntimeRequirements: ...
+
+
+# Represent the port that creates and controls sandboxes from a prepared artifact.
+@runtime_checkable
+class Runtime(Protocol):
+    # Resolve read-only runtime state and expose neutral requirements.
+    def prepare(self, plan: SandboxPlan, definition: RecipeDefinition) -> RuntimePreparation: ...
