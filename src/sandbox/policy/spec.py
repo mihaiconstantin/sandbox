@@ -85,3 +85,8 @@ def _validate_volumes(plan: SandboxPlan, mounts: tuple[MountSpec, ...]) -> None:
         mounted.add(source)
 
     # Require every declared volume to be present.
+    for name in declared:
+        # If the declaration has no effective mount.
+        if name not in mounted:
+            # Throw.
+            raise ConfigurationError("volumes", "Every declared volume must be mounted.")
