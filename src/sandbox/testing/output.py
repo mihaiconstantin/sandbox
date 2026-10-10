@@ -15,3 +15,13 @@ class RecordedProgress:
 
     # Record the optional untrusted display subject.
     subject: str | None
+
+
+# Represent one recorded child-process chunk.
+@dataclass(frozen = True, slots = True)
+class RecordedOutput:
+    # Record the original child channel.
+    channel: OutputChannel
+
+    # Record the exact opaque bytes.
+    data: bytes
