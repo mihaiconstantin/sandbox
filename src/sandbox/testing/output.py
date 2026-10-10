@@ -46,3 +46,9 @@ class RecordingOutputSink:
     def output_events(self) -> tuple[RecordedOutput, ...]:
         # Return an immutable snapshot.
         return tuple(self._output)
+
+    # Read the reported phases in order.
+    @property
+    def progress_phases(self) -> tuple[ProgressPhase, ...]:
+        # Return the phase sequence.
+        return tuple(event.phase for event in self._progress)
