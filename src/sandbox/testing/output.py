@@ -34,3 +34,9 @@ class RecordingOutputSink:
         # Create the ordered event logs.
         self._progress: list[RecordedProgress] = []
         self._output: list[RecordedOutput] = []
+
+    # Read the recorded progress events.
+    @property
+    def progress_events(self) -> tuple[RecordedProgress, ...]:
+        # Return an immutable snapshot.
+        return tuple(self._progress)
