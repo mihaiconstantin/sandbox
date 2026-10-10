@@ -40,3 +40,9 @@ class RecordingOutputSink:
     def progress_events(self) -> tuple[RecordedProgress, ...]:
         # Return an immutable snapshot.
         return tuple(self._progress)
+
+    # Read the recorded child chunks.
+    @property
+    def output_events(self) -> tuple[RecordedOutput, ...]:
+        # Return an immutable snapshot.
+        return tuple(self._output)
