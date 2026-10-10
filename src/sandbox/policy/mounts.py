@@ -9,3 +9,6 @@ from sandbox.domain.paths import guest_target_key
 
 # Import the typed configuration error.
 from sandbox.errors.configuration import ConfigurationError
+
+# The Docker socket filename rejected by the security policy.
+DOCKER_SOCKET: str = "docker.sock"
