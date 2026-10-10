@@ -98,3 +98,7 @@ class RecordingOutputSink:
 
         # Record the chunk without decoding or scanning it.
         self._output.append(RecordedOutput(channel = channel, data = data))
+
+
+# Define the public API of the `sandbox.testing.output` module.
+__all__: list[str] = ["RecordedOutput", "RecordedProgress", "RecordingOutputSink"]
