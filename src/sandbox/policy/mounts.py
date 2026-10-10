@@ -108,3 +108,27 @@ def secret_deliveries(plan: SandboxPlan) -> tuple[MountSpec, ...]:
         MountSpec(kind = "bind", source = secret.host_path, target = secret_target(secret.alias), read_only = True)
         for secret in plan.secrets
     )
+
+
+# Validate that recipe mounts stay separate from secret file deliveries.
+def validate_secret_deliveries(plan: SandboxPlan, mounts: tuple[MountSpec, ...]) -> None:
+    # Collect the fixed secret targets and resolved host files.
+    secret_targets: set[str] = {guest_target_key(secret_target(secret.alias)) for secret in plan.secrets}
+    secret_files: set[Path] = {_resolved(secret.host_path) for secret in plan.secrets}
+
+    # Validate every recipe mount against the reserved secret namespace.
+    for index, mount in enumerate(mounts):
+        # If the recipe mount claims a secret delivery target.
+        if guest_target_key(mount.target) in secret_targets:
+            # Throw.
+            raise ConfigurationError("secrets", "Recipe mounts must not claim a secret delivery target.")
+
+        # Reject the whole reserved secret root for recipe-owned mounts.
+        if guest_target_key(mount.target).startswith(f"{guest_target_key(SECRET_ROOT)}/"):
+            # Throw.
+            raise ConfigurationError("secrets", "Recipe mounts must not target the reserved secret root.")
+
+        # If a bind exposes a secret host file outside the derived delivery.
+        if mount.kind == "bind" and isinstance(mount.source, Path) and _resolved(mount.source) in secret_files:
+            # Throw.
+            raise ConfigurationError("secrets", "Recipe binds must not expose a secret host file.")
