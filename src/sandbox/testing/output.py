@@ -83,3 +83,18 @@ class RecordingOutputSink:
 
         # Record the event.
         self._progress.append(RecordedProgress(phase = phase, subject = subject))
+
+    # Record one child-process chunk.
+    def process_output(self, channel: OutputChannel, data: bytes) -> None:
+        # Require the closed channel vocabulary.
+        if not isinstance(channel, OutputChannel):
+            # Throw.
+            raise ValueError("channel must be an OutputChannel.")
+
+        # Require opaque bytes.
+        if not isinstance(data, bytes):
+            # Throw.
+            raise ValueError("data must be bytes.")
+
+        # Record the chunk without decoding or scanning it.
+        self._output.append(RecordedOutput(channel = channel, data = data))
