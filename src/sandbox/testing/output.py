@@ -58,3 +58,13 @@ class RecordingOutputSink:
     def progress_subjects(self) -> tuple[str | None, ...]:
         # Return the subject sequence.
         return tuple(event.subject for event in self._progress)
+
+    # Join the exact bytes recorded on one channel.
+    def output_bytes(self, channel: OutputChannel) -> bytes:
+        # Require a known channel.
+        if not isinstance(channel, OutputChannel):
+            # Throw.
+            raise ValueError("channel must be an OutputChannel.")
+
+        # Join the matching chunks in arrival order.
+        return b"".join(event.data for event in self._output if event.channel is channel)
