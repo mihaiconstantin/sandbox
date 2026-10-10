@@ -132,3 +132,7 @@ def validate_secret_deliveries(plan: SandboxPlan, mounts: tuple[MountSpec, ...])
         if mount.kind == "bind" and isinstance(mount.source, Path) and _resolved(mount.source) in secret_files:
             # Throw.
             raise ConfigurationError("secrets", "Recipe binds must not expose a secret host file.")
+
+
+# Define the public API of the `sandbox.policy.mounts` module.
+__all__: list[str] = ["DOCKER_SOCKET", "secret_deliveries", "validate_mounts", "validate_secret_deliveries"]
