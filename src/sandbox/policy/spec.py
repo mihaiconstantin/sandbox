@@ -90,3 +90,38 @@ def _validate_volumes(plan: SandboxPlan, mounts: tuple[MountSpec, ...]) -> None:
         if name not in mounted:
             # Throw.
             raise ConfigurationError("volumes", "Every declared volume must be mounted.")
+
+
+# Validate a plan and its effective neutral spec.
+def validate_spec(plan: SandboxPlan, spec: SandboxSpec, *, catalogue_root: Path | None = None) -> None:
+    # Require the plan workspace to describe the project directory at the fixed target.
+    if plan.workspace.host_directory != plan.project.directory or plan.workspace.target != project_target(plan.project.name):
+        # Throw.
+        raise ConfigurationError("workspace", "The workspace must bind the project directory at the fixed project target.")
+
+    # Require the fixed working directory.
+    if spec.working_directory != plan.workspace.target:
+        # Throw.
+        raise ConfigurationError("working_directory", f"Must be `{plan.workspace.target}`.")
+
+    # Apply the root policy to the explicit service user.
+    _validate_user(spec.user, plan.allow_root, spec.image)
+
+    # Reject privileged execution.
+    if spec.privileged:
+        # Throw.
+        raise ConfigurationError("privileged", "Privileged sandboxes are not allowed.")
+
+    # Reject host networking.
+    if spec.host_network:
+        # Throw.
+        raise ConfigurationError("host_network", "Host networking is not allowed.")
+
+    # Require secret files to stay outside the recipe mount set before containment checks.
+    validate_secret_deliveries(plan, spec.mounts)
+
+    # Validate mount containment, uniqueness, and the project bind.
+    validate_mounts(plan, spec.mounts, catalogue_root)
+
+    # Validate the declared volumes and their effective mounts.
+    _validate_volumes(plan, spec.mounts)
