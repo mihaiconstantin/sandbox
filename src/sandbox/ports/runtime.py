@@ -135,3 +135,7 @@ class Runtime(Protocol):
 
     # Remove a managed shared volume by name.
     def remove_volume(self, name: str) -> None: ...
+
+
+# Define the public API of the `sandbox.ports.runtime` module.
+__all__: list[str] = ["Runtime", "RuntimePreparation"]
