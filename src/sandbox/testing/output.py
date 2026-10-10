@@ -25,3 +25,12 @@ class RecordedOutput:
 
     # Record the exact opaque bytes.
     data: bytes
+
+
+# Represent a test sink that records progress and child output in order.
+class RecordingOutputSink:
+    # Construct an empty recording sink.
+    def __init__(self) -> None:
+        # Create the ordered event logs.
+        self._progress: list[RecordedProgress] = []
+        self._output: list[RecordedOutput] = []
