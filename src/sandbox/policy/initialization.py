@@ -37,3 +37,7 @@ def validate_initialization(plan: SandboxPlan, initialization: Initialization, m
         if key not in declared_targets or key not in writable_targets:
             # Throw.
             raise ConfigurationError("initialization.targets", "Initialization targets must be declared, writable volume mounts.")
+
+
+# Define the public API of the `sandbox.policy.initialization` module.
+__all__: list[str] = ["validate_initialization"]
