@@ -99,3 +99,12 @@ def validate_mounts(plan: SandboxPlan, mounts: tuple[MountSpec, ...], catalogue_
     if project_mounts != 1:
         # Throw.
         raise ConfigurationError("mounts", f"Must contain exactly one project bind at `{expected_target}`.")
+
+
+# Derive the read-only secret file deliveries for a plan.
+def secret_deliveries(plan: SandboxPlan) -> tuple[MountSpec, ...]:
+    # Derive one fixed read-only delivery per bound secret.
+    return tuple(
+        MountSpec(kind = "bind", source = secret.host_path, target = secret_target(secret.alias), read_only = True)
+        for secret in plan.secrets
+    )
