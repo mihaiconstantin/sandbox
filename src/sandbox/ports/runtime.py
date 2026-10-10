@@ -132,3 +132,6 @@ class Runtime(Protocol):
 
     # List every managed shared volume in name order.
     def list_volumes(self) -> tuple[VolumeInfo, ...]: ...
+
+    # Remove a managed shared volume by name.
+    def remove_volume(self, name: str) -> None: ...
