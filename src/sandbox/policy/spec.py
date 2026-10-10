@@ -125,3 +125,7 @@ def validate_spec(plan: SandboxPlan, spec: SandboxSpec, *, catalogue_root: Path 
 
     # Validate the declared volumes and their effective mounts.
     _validate_volumes(plan, spec.mounts)
+
+
+# Define the public API of the `sandbox.policy.spec` module.
+__all__: list[str] = ["validate_spec"]
