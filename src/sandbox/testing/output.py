@@ -52,3 +52,9 @@ class RecordingOutputSink:
     def progress_phases(self) -> tuple[ProgressPhase, ...]:
         # Return the phase sequence.
         return tuple(event.phase for event in self._progress)
+
+    # Read the reported subjects in order.
+    @property
+    def progress_subjects(self) -> tuple[str | None, ...]:
+        # Return the subject sequence.
+        return tuple(event.subject for event in self._progress)
