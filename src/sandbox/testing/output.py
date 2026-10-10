@@ -68,3 +68,18 @@ class RecordingOutputSink:
 
         # Join the matching chunks in arrival order.
         return b"".join(event.data for event in self._output if event.channel is channel)
+
+    # Record one progress phase.
+    def progress(self, phase: ProgressPhase, *, subject: str | None = None) -> None:
+        # Require the closed phase vocabulary.
+        if not isinstance(phase, ProgressPhase):
+            # Throw.
+            raise ValueError("phase must be a ProgressPhase.")
+
+        # Require a display subject when one is supplied.
+        if subject is not None and not isinstance(subject, str):
+            # Throw.
+            raise ValueError("subject must be a string or `None`.")
+
+        # Record the event.
+        self._progress.append(RecordedProgress(phase = phase, subject = subject))
