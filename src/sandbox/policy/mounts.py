@@ -96,3 +96,6 @@ def validate_mounts(plan: SandboxPlan, mounts: tuple[MountSpec, ...], catalogue_
             raise ConfigurationError(f"mounts[{index}].kind", "The project mount must be a bind mount.")
 
     # Require exactly one project bind at the fixed target.
+    if project_mounts != 1:
+        # Throw.
+        raise ConfigurationError("mounts", f"Must contain exactly one project bind at `{expected_target}`.")
