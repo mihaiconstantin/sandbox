@@ -54,3 +54,34 @@ def _validate_volumes(plan: SandboxPlan, mounts: tuple[MountSpec, ...]) -> None:
     mounted: set[str] = set()
 
     # Validate every named volume mount.
+    for mount in mounts:
+        # Skip host binds; they are validated by the mount policy.
+        if mount.kind != "volume":
+            # Continue to the next mount.
+            continue
+
+        # Require a physical volume name from the mount.
+        source: Path | str = mount.source
+        if not isinstance(source, str):
+            # Throw.
+            raise ConfigurationError("volumes", "Named volume mounts must use a physical volume name.")
+
+        # If the volume is not declared by the plan.
+        if source not in declared:
+            # Throw.
+            raise ConfigurationError("volumes", "Named volumes must be declared by the plan.")
+
+        # If the mount does not use the declared target.
+        if guest_target_key(mount.target) != declared[source]:
+            # Throw.
+            raise ConfigurationError("volumes", "Declared volumes must be mounted at their declared targets.")
+
+        # Initialization must not be bypassed by a read-only declared volume.
+        if mount.read_only:
+            # Throw.
+            raise ConfigurationError("volumes", "Declared persistent volumes must be writable.")
+
+        # Record the confirmed volume.
+        mounted.add(source)
+
+    # Require every declared volume to be present.
