@@ -28,3 +28,29 @@ def _validate_user(value: str | int | None, allow_root: bool, image: str) -> Non
     if not allow_root and account in ("root", "0"):
         # Throw with the typed root-policy error.
         raise RootExecutionNotAllowed(uid = 0 if account == "0" else None, source = "recipe", image = image)
+
+
+# Require the declared volumes to be mounted writable at their declared targets.
+def _validate_volumes(plan: SandboxPlan, mounts: tuple[MountSpec, ...]) -> None:
+    # Index the declarations by physical name and reject ambiguous targets.
+    declared: dict[str, str] = {}
+    seen_targets: set[str] = set()
+
+    # For each declaration in plan order.
+    for declaration in plan.volumes:
+        # Normalize the declared target.
+        target: str = guest_target_key(declaration.target)
+
+        # Reject two declarations for the same directory.
+        if target in seen_targets:
+            # Throw.
+            raise ConfigurationError("volumes", "Declared volumes must use distinct targets.")
+
+        # Record the declaration.
+        seen_targets.add(target)
+        declared[declaration.name] = target
+
+    # Track the declared volumes confirmed by the effective mounts.
+    mounted: set[str] = set()
+
+    # Validate every named volume mount.
