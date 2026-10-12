@@ -148,3 +148,31 @@ class FakeRuntime:
                 raise ValueError("create_output must contain (OutputChannel, bytes) pairs.")
 
         # Require a typed removal preview when supplied.
+        if removal_plan is not None and not isinstance(removal_plan, RemovalPlan):
+            # Throw.
+            raise ValueError("removal_plan must be a RemovalPlan value or `None`.")
+
+        # Store the scenario configuration.
+        self.requirements: RuntimeRequirements | None = requirements
+        self.uid: int = uid
+        self.initialization_targets: tuple[str, ...] | None = initialization_targets
+        self.enter_status: int = enter_status
+        self.create_output: tuple[tuple[OutputChannel, bytes], ...] = tuple(create_output)
+        self.removal_plan: RemovalPlan | None = removal_plan
+
+        # Create the mutable runtime state.
+        self._boxes: dict[str, BoxObservation] = {}
+        self._volumes: dict[str, VolumeInfo] = {}
+        self._faults: deque[SandboxError] = deque()
+
+        # Create the recorded request logs.
+        self.prepare_requests: list[RuntimePrepareRequest] = []
+        self.initialization_requests: list[InitializationRequest] = []
+        self.create_requests: list[CreateRequest] = []
+        self.enter_requests: list[EnterRequest] = []
+        self.start_requests: list[str] = []
+        self.stop_requests: list[str] = []
+        self.removal_requests: list[str] = []
+        self.remove_requests: list[str] = []
+        self.ensure_volume_requests: list[str] = []
+        self.remove_volume_requests: list[str] = []
