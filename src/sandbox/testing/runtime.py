@@ -186,3 +186,13 @@ class FakeRuntime:
 
         # Record the failure.
         self._faults.append(error)
+
+    # Seed a box observation for lifecycle tests.
+    def add_box(self, observation: BoxObservation) -> None:
+        # Require a box observation.
+        if not isinstance(observation, BoxObservation):
+            # Throw.
+            raise ValueError("observation must be a BoxObservation value.")
+
+        # Record the observation.
+        self._boxes[observation.name] = observation
