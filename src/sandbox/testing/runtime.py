@@ -357,3 +357,4 @@ class FakeRuntime:
 
         # Store the box and return the observation.
         self._boxes[observation.name] = observation
+        return observation
