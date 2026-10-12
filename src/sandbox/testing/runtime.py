@@ -53,6 +53,16 @@ class RuntimePrepareRequest:
     definition: RecipeDefinition
 
 
+# Represent one recorded initialization-planning request.
+@dataclass(frozen = True, slots = True)
+class InitializationRequest:
+    # Record the returned preparation token.
+    preparation: FakeRuntimePreparation
+
+    # Record the accepted artifact.
+    artifact: BuildArtifact
+
+
 # Represent one recorded interactive enter request.
 @dataclass(frozen = True, slots = True)
 class EnterRequest:
