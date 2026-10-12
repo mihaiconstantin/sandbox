@@ -484,3 +484,32 @@ class FakeRuntime:
 
         # Delete the box.
         del self._boxes[name]
+
+    # Ensure one declared shared volume exists.
+    def ensure_volume(self, name: str) -> EnsuredVolume:
+        # Apply any queued fault and require a physical volume name.
+        self._begin()
+        if not isinstance(name, str) or not name.strip():
+            # Throw.
+            raise ValueError("name must be a nonblank physical volume name.")
+
+        # Record the request.
+        self.ensure_volume_requests.append(name)
+
+        # Reuse an existing volume without claiming creation.
+        existing: VolumeInfo | None = self._volumes.get(name)
+        if existing is not None:
+            # Return the existing volume.
+            return EnsuredVolume(info = existing, created = False)
+
+        # Create a local volume with no holders.
+        info: VolumeInfo = VolumeInfo(
+            name = name,
+            driver = "local",
+            mountpoint = f"/var/lib/docker/volumes/{name}/_data",
+            in_use_by = (),
+        )
+
+        # Record the volume.
+        self._volumes[name] = info
+        return EnsuredVolume(info = info, created = True)
