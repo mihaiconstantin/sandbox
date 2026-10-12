@@ -139,3 +139,11 @@ class FakeBuilder:
             archive_path.write_bytes(self.archive_contents)
 
         # Return the artifact matching the requirement.
+        return BuildArtifact(
+            reference = requirement.reference,
+            platform = requirement.platform,
+            digest = None,
+            transport = requirement.transport,
+            archive_path = archive_path,
+            created = created,
+        )
