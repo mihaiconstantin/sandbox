@@ -250,3 +250,16 @@ class FakeRuntime:
 
         # Return the neutral requirements.
         return RuntimeRequirements(spec = spec, artifact = artifact)
+
+    # Verify the preparation token and artifact before any mutation.
+    def _accept(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> FakeRuntimePreparation:
+        # Reject a token this fake did not issue.
+        if not isinstance(preparation, FakeRuntimePreparation) or preparation._owner is not self:
+            # Throw a typed capability error.
+            raise UnsupportedFeature("runtime-preparation", "The preparation token belongs to another runtime.")
+
+        # Require the artifact to satisfy the neutral requirement before mutation.
+        require_compatible_artifact(preparation.requirements.artifact, artifact)
+
+        # Return the narrowed, verified token.
+        return preparation
