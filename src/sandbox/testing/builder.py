@@ -69,3 +69,46 @@ class FakeBuilder:
 
         # Record the failure.
         self._faults.append(error)
+
+    # Ensure the required image exists and return the typed artifact.
+    def prepare(
+        self,
+        plan: SandboxPlan,
+        definition: RecipeDefinition,
+        requirement: ArtifactRequirement,
+        *,
+        rebuild: bool = False,
+        staging_dir: Path | None = None,
+        output: OutputSink = SILENT,
+    ) -> BuildArtifact:
+        # Apply a queued fault before preparation.
+        if self._faults:
+            # Raise the next fault.
+            raise self._faults.popleft()
+
+        # Require the neutral request values.
+        if not isinstance(requirement, ArtifactRequirement):
+            # Throw.
+            raise ValueError("requirement must be an ArtifactRequirement.")
+        if type(rebuild) is not bool:
+            # Throw.
+            raise ValueError("rebuild must be a Boolean.")
+        if staging_dir is not None and not isinstance(staging_dir, Path):
+            # Throw.
+            raise ValueError("staging_dir must be a path or `None`.")
+
+        # Reject an unimplemented transport before preparing any image.
+        if requirement.transport is ArtifactTransport.OCI_ARCHIVE:
+            # Throw.
+            raise ArtifactRejected(transport = requirement.transport.value, reference = requirement.reference, detail = "OCI archives are not implemented.")
+
+        # Require operation-scoped staging for a byte-carrying transport.
+        archive_dir: Path | None = staging_dir if requirement.transport is not ArtifactTransport.LOCAL_IMAGE else None
+        if requirement.transport is not ArtifactTransport.LOCAL_IMAGE and archive_dir is None:
+            # Throw.
+            raise ValueError("Archive transports require a staging directory.")
+
+        # Record the request.
+        self.requests.append(PrepareRequest(plan = plan, definition = definition, requirement = requirement, rebuild = rebuild, staging_dir = staging_dir))
+
+        # Report whether this call must make the image exist.
