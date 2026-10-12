@@ -196,3 +196,21 @@ class FakeRuntime:
 
         # Record the observation.
         self._boxes[observation.name] = observation
+
+    # Seed a volume observation for table and removal tests.
+    def add_volume(
+        self,
+        name: str,
+        *,
+        driver: str | None = "local",
+        mountpoint: str | None = None,
+        in_use_by: tuple[RuntimeRef, ...] | None = (),
+    ) -> VolumeInfo:
+        # Build the volume observation with the supplied display facts.
+        info: VolumeInfo = VolumeInfo(name = name, driver = driver, mountpoint = mountpoint, in_use_by = in_use_by)
+
+        # Record the observation.
+        self._volumes[name] = info
+
+        # Return the seeded observation.
+        return info
