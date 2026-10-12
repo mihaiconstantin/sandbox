@@ -545,3 +545,14 @@ class FakeRuntime:
 
         # Delete the volume.
         del self._volumes[name]
+
+
+# Define the public API of the `sandbox.testing.runtime` module.
+__all__: list[str] = [
+    "CreateRequest",
+    "EnterRequest",
+    "FakeRuntime",
+    "FakeRuntimePreparation",
+    "InitializationRequest",
+    "RuntimePrepareRequest",
+]
