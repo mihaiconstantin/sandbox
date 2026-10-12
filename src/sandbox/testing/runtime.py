@@ -513,3 +513,9 @@ class FakeRuntime:
         # Record the volume.
         self._volumes[name] = info
         return EnsuredVolume(info = info, created = True)
+
+    # Observe one managed shared volume by name, or report absence.
+    def inspect_volume(self, name: str) -> VolumeInfo | None:
+        # Apply any queued fault and return the observation.
+        self._begin()
+        return self._volumes.get(name)
