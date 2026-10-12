@@ -39,3 +39,23 @@ class PrepareRequest:
 
     # Record the caller-owned staging directory.
     staging_dir: Path | None
+
+
+# Represent a stateful fake builder that records artifact preparations.
+class FakeBuilder:
+    # Construct a builder with an optional build declaration and archive contents.
+    def __init__(self, *, buildable: bool = True, archive_contents: bytes = b"fake archive") -> None:
+        # Require exact configuration facts.
+        if type(buildable) is not bool:
+            # Throw.
+            raise ValueError("buildable must be a Boolean.")
+        if not isinstance(archive_contents, bytes):
+            # Throw.
+            raise ValueError("archive_contents must be bytes.")
+
+        # Store the behavior configuration and the prepared image store.
+        self.buildable: bool = buildable
+        self.archive_contents: bytes = archive_contents
+        self.images: set[str] = set()
+        self.requests: list[PrepareRequest] = []
+        self._faults: deque[SandboxError] = deque()
