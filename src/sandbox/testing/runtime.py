@@ -358,3 +358,9 @@ class FakeRuntime:
         # Store the box and return the observation.
         self._boxes[observation.name] = observation
         return observation
+
+    # Observe one managed box by name, or report absence.
+    def inspect(self, name: str) -> BoxObservation | None:
+        # Apply any queued fault and return the observation.
+        self._begin()
+        return self._boxes.get(name)
