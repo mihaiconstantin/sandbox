@@ -525,3 +525,23 @@ class FakeRuntime:
         # Apply any queued fault and return the observations in name order.
         self._begin()
         return tuple(self._volumes[name] for name in sorted(self._volumes))
+
+    # Remove a managed shared volume by name.
+    def remove_volume(self, name: str) -> None:
+        # Apply any queued fault and record the request.
+        self._begin()
+        self.remove_volume_requests.append(name)
+
+        # Require an existing volume.
+        info: VolumeInfo | None = self._volumes.get(name)
+        if info is None:
+            # Throw.
+            raise VolumeNotFound(name)
+
+        # Refuse removal while a runtime instance holds the volume.
+        if info.in_use_by is not None and info.in_use_by:
+            # Throw.
+            raise VolumeInUse(name)
+
+        # Delete the volume.
+        del self._volumes[name]
