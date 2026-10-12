@@ -51,3 +51,16 @@ class RuntimePrepareRequest:
 
     # Record the opaque recipe source.
     definition: RecipeDefinition
+
+
+# Represent one recorded interactive enter request.
+@dataclass(frozen = True, slots = True)
+class EnterRequest:
+    # Record the box identity.
+    name: str
+
+    # Record the requested shell.
+    shell: str
+
+    # Report whether a login shell was requested.
+    login: bool
