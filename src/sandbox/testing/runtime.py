@@ -214,3 +214,10 @@ class FakeRuntime:
 
         # Return the seeded observation.
         return info
+
+    # Apply a queued fault before the next port operation.
+    def _begin(self) -> None:
+        # If a fault is queued.
+        if self._faults:
+            # Raise the next fault.
+            raise self._faults.popleft()
