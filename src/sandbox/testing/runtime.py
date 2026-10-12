@@ -364,3 +364,9 @@ class FakeRuntime:
         # Apply any queued fault and return the observation.
         self._begin()
         return self._boxes.get(name)
+
+    # List every managed box in name order.
+    def list(self) -> tuple[BoxObservation, ...]:
+        # Apply any queued fault and return the observations in name order.
+        self._begin()
+        return tuple(self._boxes[name] for name in sorted(self._boxes))
