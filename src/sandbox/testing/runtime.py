@@ -63,6 +63,19 @@ class InitializationRequest:
     artifact: BuildArtifact
 
 
+# Represent one recorded create request.
+@dataclass(frozen = True, slots = True)
+class CreateRequest:
+    # Record the returned preparation token.
+    preparation: FakeRuntimePreparation
+
+    # Record the accepted artifact.
+    artifact: BuildArtifact
+
+    # Record the optional initialization.
+    initialization: Initialization | None
+
+
 # Represent one recorded interactive enter request.
 @dataclass(frozen = True, slots = True)
 class EnterRequest:
