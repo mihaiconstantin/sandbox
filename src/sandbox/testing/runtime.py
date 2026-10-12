@@ -263,3 +263,15 @@ class FakeRuntime:
 
         # Return the narrowed, verified token.
         return preparation
+
+    # Resolve read-only runtime state and expose neutral requirements.
+    def prepare(self, plan: SandboxPlan, definition: RecipeDefinition) -> FakeRuntimePreparation:
+        # Apply any queued fault and record the request.
+        self._begin()
+        self.prepare_requests.append(RuntimePrepareRequest(plan = plan, definition = definition))
+
+        # Use configured requirements or derive a plausible effective set.
+        requirements: RuntimeRequirements = self.requirements if self.requirements is not None else self._derive_requirements(plan)
+
+        # Return the typed preparation token.
+        return FakeRuntimePreparation(requirements = requirements, _plan = plan, _definition = definition, _owner = self)
