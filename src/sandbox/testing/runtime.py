@@ -459,3 +459,28 @@ class FakeRuntime:
             containers = () if observation.backend is None else (observation.backend,),
             networks = (),
         )
+
+    # Remove a box and its owned runtime resources by name.
+    def remove(self, name: str) -> None:
+        # Apply any queued fault and record the request.
+        self._begin()
+        self.remove_requests.append(name)
+
+        # Require an existing box.
+        observation: BoxObservation | None = self._boxes.get(name)
+        if observation is None:
+            # Throw.
+            raise NothingToRemove(name)
+
+        # Release every volume reference held by this box.
+        for mount in observation.mounts or ():
+            # If the mount uses a known managed volume.
+            if mount.kind == "volume" and mount.source in self._volumes and observation.backend is not None:
+                # Read the volume and drop this holder.
+                info: VolumeInfo = self._volumes[mount.source]
+                if info.in_use_by is not None:
+                    # Record the remaining references.
+                    self._volumes[mount.source] = replace(info, in_use_by = tuple(reference for reference in info.in_use_by if reference != observation.backend))
+
+        # Delete the box.
+        del self._boxes[name]
