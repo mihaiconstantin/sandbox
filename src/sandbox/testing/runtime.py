@@ -435,3 +435,27 @@ class FakeRuntime:
 
         # Preserve success and positive statuses and normalize signal termination.
         return self.enter_status if self.enter_status >= 0 else 1
+
+    # Preview the resources removed with a box.
+    def plan_removal(self, name: str) -> RemovalPlan:
+        # Apply any queued fault and record the request.
+        self._begin()
+        self.removal_requests.append(name)
+
+        # Require an existing box.
+        observation: BoxObservation | None = self._boxes.get(name)
+        if observation is None:
+            # Throw.
+            raise NothingToRemove(name)
+
+        # Return the configured preview or a default derived from the observation.
+        if self.removal_plan is not None:
+            # Return the configured preview.
+            return self.removal_plan
+
+        # Return the neutral preview.
+        return RemovalPlan(
+            box = name,
+            containers = () if observation.backend is None else (observation.backend,),
+            networks = (),
+        )
