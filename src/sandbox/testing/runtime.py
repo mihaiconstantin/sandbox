@@ -370,3 +370,29 @@ class FakeRuntime:
         # Apply any queued fault and return the observations in name order.
         self._begin()
         return tuple(self._boxes[name] for name in sorted(self._boxes))
+
+    # Start an existing box and report whether this call changed its state.
+    def start(self, name: str) -> bool:
+        # Apply any queued fault and record the request.
+        self._begin()
+        self.start_requests.append(name)
+
+        # Require an existing box.
+        observation: BoxObservation | None = self._boxes.get(name)
+        if observation is None:
+            # Throw.
+            raise BoxNotFound(name)
+
+        # Refuse a partially created box before mutation.
+        if observation.state is BoxState.CREATED:
+            # Throw.
+            raise BoxNotReady(name)
+
+        # Report the no-op transition for a live box.
+        if observation.state.is_live:
+            # Return no change.
+            return False
+
+        # Transition to running.
+        self._boxes[name] = replace(observation, state = BoxState.RUNNING)
+        return True
