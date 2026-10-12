@@ -59,3 +59,13 @@ class FakeBuilder:
         self.images: set[str] = set()
         self.requests: list[PrepareRequest] = []
         self._faults: deque[SandboxError] = deque()
+
+    # Queue a preparation failure.
+    def fail_next(self, error: SandboxError) -> None:
+        # Require a neutral error.
+        if not isinstance(error, SandboxError):
+            # Throw a programming error.
+            raise ValueError("Faults must be neutral sandbox errors.")
+
+        # Record the failure.
+        self._faults.append(error)
