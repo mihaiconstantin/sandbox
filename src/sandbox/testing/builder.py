@@ -147,3 +147,7 @@ class FakeBuilder:
             archive_path = archive_path,
             created = created,
         )
+
+
+# Define the public API of the `sandbox.testing.builder` module.
+__all__: list[str] = ["FakeBuilder", "PrepareRequest"]
