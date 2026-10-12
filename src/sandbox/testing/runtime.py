@@ -275,3 +275,20 @@ class FakeRuntime:
 
         # Return the typed preparation token.
         return FakeRuntimePreparation(requirements = requirements, _plan = plan, _definition = definition, _owner = self)
+
+    # Plan the effective UID and eligible volume targets without mutation.
+    def plan_initialization(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> Initialization:
+        # Apply any queued fault and verify the token and artifact.
+        self._begin()
+        token: FakeRuntimePreparation = self._accept(preparation, artifact)
+        self.initialization_requests.append(InitializationRequest(preparation = token, artifact = artifact))
+
+        # Select the configured targets or every declared volume target.
+        targets: tuple[str, ...] = (
+            self.initialization_targets
+            if self.initialization_targets is not None
+            else tuple(declaration.target for declaration in token._plan.volumes)
+        )
+
+        # Return the neutral initialization.
+        return Initialization(uid = self.uid, targets = targets)
