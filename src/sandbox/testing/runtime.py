@@ -41,3 +41,13 @@ from sandbox.errors.capabilities import UnsupportedFeature
 # Import the runtime preparation protocol and output port values.
 from sandbox.ports.output import SILENT, OutputChannel, OutputSink
 from sandbox.ports.runtime import RuntimePreparation, require_compatible_artifact
+
+
+# Represent one recorded preparation request.
+@dataclass(frozen = True, slots = True)
+class RuntimePrepareRequest:
+    # Record the neutral plan.
+    plan: SandboxPlan
+
+    # Record the opaque recipe source.
+    definition: RecipeDefinition
