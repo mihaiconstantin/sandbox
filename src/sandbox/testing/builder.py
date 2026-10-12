@@ -20,3 +20,22 @@ from sandbox.errors.capabilities import ArtifactRejected
 
 # Import the output port values.
 from sandbox.ports.output import SILENT, OutputSink, ProgressPhase
+
+
+# Represent one recorded artifact preparation request.
+@dataclass(frozen = True, slots = True)
+class PrepareRequest:
+    # Record the neutral plan.
+    plan: SandboxPlan
+
+    # Record the opaque recipe source.
+    definition: RecipeDefinition
+
+    # Record the runtime's artifact requirement.
+    requirement: ArtifactRequirement
+
+    # Report whether a rebuild was requested.
+    rebuild: bool
+
+    # Record the caller-owned staging directory.
+    staging_dir: Path | None
