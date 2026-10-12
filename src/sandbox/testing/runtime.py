@@ -396,3 +396,24 @@ class FakeRuntime:
         # Transition to running.
         self._boxes[name] = replace(observation, state = BoxState.RUNNING)
         return True
+
+    # Stop an existing box and report whether this call changed its state.
+    def stop(self, name: str) -> bool:
+        # Apply any queued fault and record the request.
+        self._begin()
+        self.stop_requests.append(name)
+
+        # Require an existing box.
+        observation: BoxObservation | None = self._boxes.get(name)
+        if observation is None:
+            # Throw.
+            raise BoxNotFound(name)
+
+        # Report the no-op transition for a box that is not live.
+        if not observation.state.is_live:
+            # Return no change.
+            return False
+
+        # Transition to stopped.
+        self._boxes[name] = replace(observation, state = BoxState.STOPPED)
+        return True
