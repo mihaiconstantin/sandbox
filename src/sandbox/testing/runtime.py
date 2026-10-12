@@ -292,3 +292,38 @@ class FakeRuntime:
 
         # Return the neutral initialization.
         return Initialization(uid = self.uid, targets = targets)
+
+    # Create and start one box from a prepared artifact.
+    def create(
+        self,
+        preparation: RuntimePreparation,
+        artifact: BuildArtifact,
+        initialization: Initialization | None = None,
+        *,
+        output: OutputSink = SILENT,
+    ) -> BoxObservation:
+        # Apply any queued fault and verify the token and artifact.
+        self._begin()
+        token: FakeRuntimePreparation = self._accept(preparation, artifact)
+
+        # Require every declared volume to be ensured before creation.
+        for declaration in token._plan.volumes:
+            # If the declared volume does not exist.
+            if declaration.name not in self._volumes:
+                # Throw.
+                raise VolumeNotFound(declaration.name)
+
+        # Record the accepted request.
+        self.create_requests.append(CreateRequest(preparation = token, artifact = artifact, initialization = initialization))
+
+        # Build the observed mounts from the plan and its read-only secret deliveries.
+        mounts: list[Mount] = [
+            Mount(kind = "bind", source = str(token._plan.workspace.host_directory), target = token._plan.workspace.target),
+            *(Mount(kind = "volume", source = declaration.name, target = declaration.target) for declaration in token._plan.volumes),
+            *(Mount(kind = "bind", source = str(secret.host_path), target = secret_target(secret.alias)) for secret in token._plan.secrets),
+        ]
+
+        # Build the display reference for this fake runtime instance.
+        backend: RuntimeRef = RuntimeRef(id = f"fake-{token._plan.project.name}", name = token._plan.project.name)
+
+        # Build the post-create observation.
