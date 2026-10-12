@@ -519,3 +519,9 @@ class FakeRuntime:
         # Apply any queued fault and return the observation.
         self._begin()
         return self._volumes.get(name)
+
+    # List every managed shared volume in name order.
+    def list_volumes(self) -> tuple[VolumeInfo, ...]:
+        # Apply any queued fault and return the observations in name order.
+        self._begin()
+        return tuple(self._volumes[name] for name in sorted(self._volumes))
