@@ -112,3 +112,30 @@ class FakeBuilder:
         self.requests.append(PrepareRequest(plan = plan, definition = definition, requirement = requirement, rebuild = rebuild, staging_dir = staging_dir))
 
         # Report whether this call must make the image exist.
+        created: bool = False
+
+        # If the image is missing.
+        if requirement.reference not in self.images:
+            # Record the prepared image.
+            self.images.add(requirement.reference)
+            created = True
+
+            # Emit the build phase only for an actual build, never a pull.
+            if self.buildable:
+                # Report the build.
+                output.progress(ProgressPhase.BUILD_IMAGE, subject = definition.service)
+
+        # If a buildable image is present and a rebuild was requested.
+        elif rebuild and self.buildable:
+            # Report the rebuild without treating the image as newly pulled.
+            created = True
+            output.progress(ProgressPhase.BUILD_IMAGE, subject = definition.service)
+
+        # Write one archive for a byte-carrying transport.
+        archive_path: Path | None = None
+        if archive_dir is not None:
+            # Write the operation-scoped archive.
+            archive_path = archive_dir / "artifact.tar"
+            archive_path.write_bytes(self.archive_contents)
+
+        # Return the artifact matching the requirement.
