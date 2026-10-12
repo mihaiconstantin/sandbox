@@ -103,3 +103,48 @@ class FakeRuntimePreparation:
 
     # Identify the owning fake runtime to reject foreign tokens.
     _owner: object = field(repr = False, compare = False)
+
+
+# Represent a stateful fake runtime implementing the neutral port.
+class FakeRuntime:
+    # Construct a runtime with optional requirements and scenario facts.
+    def __init__(
+        self,
+        *,
+        requirements: RuntimeRequirements | None = None,
+        uid: int = 1000,
+        initialization_targets: tuple[str, ...] | None = None,
+        enter_status: int = 0,
+        create_output: tuple[tuple[OutputChannel, bytes], ...] = (),
+        removal_plan: RemovalPlan | None = None,
+    ) -> None:
+        # Require a configured requirement when supplied.
+        if requirements is not None and not isinstance(requirements, RuntimeRequirements):
+            # Throw.
+            raise ValueError("requirements must be a RuntimeRequirements value or `None`.")
+
+        # Require a supported effective UID.
+        if type(uid) is not int or uid < 0 or uid >= 2**32 - 1:
+            # Throw.
+            raise ValueError("uid must be an integer between `0` and `2**32 - 2`.")
+
+        # Require configured initialization targets as an immutable tuple of strings.
+        if initialization_targets is not None and (
+            not isinstance(initialization_targets, tuple) or any(not isinstance(target, str) for target in initialization_targets)
+        ):
+            # Throw.
+            raise ValueError("initialization_targets must be a tuple of strings or `None`.")
+
+        # Require an integer shell status.
+        if type(enter_status) is not int:
+            # Throw.
+            raise ValueError("enter_status must be an integer.")
+
+        # Require typed child chunks.
+        for chunk in create_output:
+            # If the chunk is not a channel/bytes pair.
+            if not isinstance(chunk, tuple) or len(chunk) != 2 or not isinstance(chunk[0], OutputChannel) or not isinstance(chunk[1], bytes):
+                # Throw.
+                raise ValueError("create_output must contain (OutputChannel, bytes) pairs.")
+
+        # Require a typed removal preview when supplied.
