@@ -176,3 +176,13 @@ class FakeRuntime:
         self.remove_requests: list[str] = []
         self.ensure_volume_requests: list[str] = []
         self.remove_volume_requests: list[str] = []
+
+    # Queue a port failure.
+    def fail_next(self, error: SandboxError) -> None:
+        # Require a neutral error.
+        if not isinstance(error, SandboxError):
+            # Throw a programming error.
+            raise ValueError("Faults must be neutral sandbox errors.")
+
+        # Record the failure.
+        self._faults.append(error)
