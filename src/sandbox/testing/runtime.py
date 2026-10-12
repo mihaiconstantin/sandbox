@@ -221,3 +221,32 @@ class FakeRuntime:
         if self._faults:
             # Raise the next fault.
             raise self._faults.popleft()
+
+    # Derive realistic neutral requirements for a plan.
+    def _derive_requirements(self, plan: SandboxPlan) -> RuntimeRequirements:
+        # Build the effective mounts from the workspace and declared volumes.
+        mounts: list[MountSpec] = [
+            MountSpec(kind = "bind", source = plan.workspace.host_directory, target = plan.workspace.target, read_only = False),
+            *(MountSpec(kind = "volume", source = declaration.name, target = declaration.target, read_only = False) for declaration in plan.volumes),
+        ]
+
+        # Build the neutral spec.
+        spec: SandboxSpec = SandboxSpec(
+            image = f"sandbox/{plan.project.name}:latest",
+            platform = None,
+            user = None,
+            working_directory = plan.workspace.target,
+            privileged = False,
+            host_network = False,
+            mounts = tuple(mounts),
+        )
+
+        # Require a local image by default.
+        artifact: ArtifactRequirement = ArtifactRequirement(
+            reference = spec.image,
+            platform = None,
+            transport = ArtifactTransport.LOCAL_IMAGE,
+        )
+
+        # Return the neutral requirements.
+        return RuntimeRequirements(spec = spec, artifact = artifact)
