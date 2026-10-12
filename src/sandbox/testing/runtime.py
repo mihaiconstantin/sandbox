@@ -417,3 +417,21 @@ class FakeRuntime:
         # Transition to stopped.
         self._boxes[name] = replace(observation, state = BoxState.STOPPED)
         return True
+
+    # Enter a live box and return the shell exit status.
+    def enter(self, name: str, shell: str, login: bool) -> int:
+        # Apply any queued fault and record the request.
+        self._begin()
+        self.enter_requests.append(EnterRequest(name = name, shell = shell, login = login))
+
+        # Require an existing live box.
+        observation: BoxObservation | None = self._boxes.get(name)
+        if observation is None:
+            # Throw.
+            raise BoxNotFound(name)
+        if not observation.state.is_live:
+            # Throw.
+            raise BoxNotRunning(name)
+
+        # Preserve success and positive statuses and normalize signal termination.
+        return self.enter_status if self.enter_status >= 0 else 1
