@@ -64,3 +64,19 @@ class EnterRequest:
 
     # Report whether a login shell was requested.
     login: bool
+
+
+# Represent a fake runtime-owned preparation token with neutral requirements.
+@dataclass(frozen = True, slots = True)
+class FakeRuntimePreparation:
+    # Expose the neutral requirements the caller may read.
+    requirements: RuntimeRequirements
+
+    # Keep the fake-owned plan behind the token.
+    _plan: SandboxPlan = field(repr = False, compare = False)
+
+    # Keep the fake-owned opaque definition behind the token.
+    _definition: RecipeDefinition = field(repr = False, compare = False)
+
+    # Identify the owning fake runtime to reject foreign tokens.
+    _owner: object = field(repr = False, compare = False)
