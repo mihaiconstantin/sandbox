@@ -327,3 +327,33 @@ class FakeRuntime:
         backend: RuntimeRef = RuntimeRef(id = f"fake-{token._plan.project.name}", name = token._plan.project.name)
 
         # Build the post-create observation.
+        observation: BoxObservation = BoxObservation(
+            name = token._plan.project.name,
+            state = BoxState.RUNNING,
+            provenance = Provenance(catalogue = token._definition.catalogue, recipe = token._definition.recipe),
+            status_text = "running",
+            image = artifact.reference,
+            working_directory = token.requirements.spec.working_directory,
+            workspace = token._plan.workspace,
+            mounts = tuple(mounts),
+            networks = (),
+            backend = backend,
+        )
+
+        # Record the volume references held by the new box.
+        for declaration in token._plan.volumes:
+            # Read the ensured volume.
+            info: VolumeInfo = self._volumes[declaration.name]
+
+            # Append the holder when references are available.
+            if info.in_use_by is not None:
+                # Record the new reference.
+                self._volumes[declaration.name] = replace(info, in_use_by = (*info.in_use_by, backend))
+
+        # Forward the configured child output through the sink.
+        for channel, data in self.create_output:
+            # Preserve the original channel and exact bytes.
+            output.process_output(channel, data)
+
+        # Store the box and return the observation.
+        self._boxes[observation.name] = observation
