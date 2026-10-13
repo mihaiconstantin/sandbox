@@ -21,3 +21,7 @@ def validate_volume_name(value: object) -> None:
     if not isinstance(value, str) or re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_.-]+", value) is None:
         # Throw.
         raise ConfigurationError("volume.name", "Must start with a letter or digit and contain only letters, digits, periods, hyphens, or underscores.")
+
+
+# Define the public API of the shared validation rules.
+__all__: list[str] = ["validate_identifier", "validate_volume_name"]
