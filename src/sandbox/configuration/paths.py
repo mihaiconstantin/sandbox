@@ -34,3 +34,16 @@ def catalogue_path(home: Path, name: str) -> Path:
 
     # Return the catalogue path inside the resolved `sandbox` directory.
     return resolved_home(home) / CATALOGUE_ROOT / name
+
+
+# Resolve a stored registration path relative to the configuration home.
+def resolve_registered_path(home: Path, value: str) -> Path:
+    # Interpret the stored path.
+    path: Path = Path(value)
+
+    # Resolve a relative path against the resolved configuration home.
+    if not path.is_absolute():
+        path = resolved_home(home) / path
+
+    # Return the absolute normalized path.
+    return path.resolve()
