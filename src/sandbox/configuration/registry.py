@@ -92,3 +92,38 @@ def registration_value(name: str, registration: object, home: Path, registry_fil
 
     # Return the registration with its resolved path.
     return CatalogueRegistration(name, registered_type, resolved_path)
+
+
+# List every registration in name order with resolved absolute paths.
+def read_registrations(document: tomlkit.TOMLDocument, home: Path, registry_file: Path) -> tuple[CatalogueRegistration, ...]:
+    # Read the catalogue section.
+    catalogues: Mapping[str, object] | None = read_catalogue_section(document, registry_file)
+
+    # If no catalogues are registered.
+    if catalogues is None:
+        # Return no registrations.
+        return ()
+
+    # Prepare the registrations.
+    registrations: list[CatalogueRegistration] = []
+
+    # Read every catalogue registration.
+    for name, registration in catalogues.items():
+        # If the catalogue name is invalid.
+        if not isinstance(name, str):
+            # Throw.
+            raise RegistryError(f"Invalid `catalogues` section in `{registry_file}`.")
+
+        # Validate the catalogue name.
+        try:
+            validate_identifier(name, "catalogue")
+
+        # If the catalogue name is invalid.
+        except ValueError as error:
+            # Throw.
+            raise RegistryError(f"Invalid catalogue registration in `{registry_file}`: {error}") from None
+
+        # Record the validated registration.
+        registrations.append(registration_value(name, registration, home, registry_file))
+
+    # Sort the registrations by catalogue name.
