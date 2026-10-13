@@ -27,3 +27,22 @@ from sandbox.validation.identifiers import validate_identifier
 
 # Define the documented registration fields.
 REGISTRATION_FIELDS: frozenset[str] = frozenset({"type", "path"})
+
+
+# Read the catalogue section of a parsed registry.
+def read_catalogue_section(document: tomlkit.TOMLDocument, registry_file: Path) -> Mapping[str, object] | None:
+    # Get the registered catalogues.
+    catalogues: object = document.get("catalogues")
+
+    # Return no section when it is absent.
+    if catalogues is None:
+        # Return no section.
+        return None
+
+    # If the section is invalid.
+    if not isinstance(catalogues, Mapping):
+        # Throw.
+        raise RegistryError(f"Invalid `catalogues` section in `{registry_file}`.")
+
+    # Return the validated section.
+    return catalogues
