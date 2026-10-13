@@ -43,3 +43,11 @@ def validate_fields(configuration: object, required: tuple[str, ...], optional: 
 
     # Return the validated table.
     return configuration
+
+
+# Require a nonblank string without coercing or trimming the supplied value.
+def validate_string(value: object, field: str) -> None:
+    # If the value is not a nonblank string.
+    if not isinstance(value, str) or not value.strip():
+        # Throw.
+        raise ConfigurationError(field, "Must be a nonblank string.")
