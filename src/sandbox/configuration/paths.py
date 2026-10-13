@@ -25,3 +25,12 @@ def resolved_home(home: Path) -> Path:
 def registry_path(home: Path) -> Path:
     # Return the registry path inside the `sandbox` directory.
     return home / "catalogues.toml"
+
+
+# Compute the path to a `sandbox`-managed catalogue.
+def catalogue_path(home: Path, name: str) -> Path:
+    # Validate the catalogue name before using it in a path.
+    validate_identifier(name, "catalogue")
+
+    # Return the catalogue path inside the resolved `sandbox` directory.
+    return resolved_home(home) / CATALOGUE_ROOT / name
