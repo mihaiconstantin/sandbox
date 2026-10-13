@@ -19,3 +19,9 @@ GIT_CATALOGUE_TYPE: str = "git"
 def resolved_home(home: Path) -> Path:
     # Return the absolute normalized home.
     return home.expanduser().resolve()
+
+
+# Compute the path to a `sandbox` catalogue registry.
+def registry_path(home: Path) -> Path:
+    # Return the registry path inside the `sandbox` directory.
+    return home / "catalogues.toml"
