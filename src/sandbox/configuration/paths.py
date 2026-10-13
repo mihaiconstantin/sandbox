@@ -47,3 +47,16 @@ def resolve_registered_path(home: Path, value: str) -> Path:
 
     # Return the absolute normalized path.
     return path.resolve()
+
+
+# Resolve a stored secret binding path relative to the configuration home.
+def resolve_secret_path(home: Path, value: str) -> Path:
+    # Expand a user-directory binding path.
+    path: Path = Path(value).expanduser()
+
+    # Resolve a relative path against the resolved configuration home.
+    if not path.is_absolute():
+        path = resolved_home(home) / path
+
+    # Return the absolute normalized path.
+    return path.resolve()
