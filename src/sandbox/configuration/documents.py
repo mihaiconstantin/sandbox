@@ -78,3 +78,32 @@ def write_document_atomic(
     temporary_file: Path = Path(temporary_name)
 
     # Write the registry through the temporary file.
+    try:
+        # Serialize, flush, and synchronize the temporary registry.
+        with os.fdopen(descriptor, "w", encoding = "utf-8") as stream:
+            stream.write(tomlkit.dumps(document))
+            stream.flush()
+            os.fsync(stream.fileno())
+
+        # Preserve the existing or requested registry permissions.
+        if mode is not None:
+            os.chmod(temporary_file, mode)
+
+        # Resolve the replacement operation after the caller may have replaced it.
+        replacement: Any = os.replace if replace is None else replace
+
+        # Replace the registry only after the temporary file is complete.
+        replacement(temporary_file, document_file)
+
+    # If writing fails.
+    except Exception:
+        # Remove the temporary file so the original registry remains intact.
+        try:
+            temporary_file.unlink()
+
+        # If the temporary file cannot be removed.
+        except OSError:
+            pass
+
+        # Propagate the original failure.
+        raise
