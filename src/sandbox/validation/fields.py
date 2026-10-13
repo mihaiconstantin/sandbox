@@ -15,3 +15,31 @@ def require_mapping(value: object, field: str, *, message: str = "Must be a mapp
 
     # Return the validated mapping.
     return value
+
+
+# Validate a declaration's table, required fields, and allowed fields.
+def validate_fields(configuration: object, required: tuple[str, ...], optional: tuple[str, ...] = ()) -> Mapping[str, Any]:
+    # Require a mapping before reading fields.
+    configuration = require_mapping(configuration, "")
+
+    # Report unknown fields first so misspelled options are not silently ignored.
+    for name in configuration:
+        # If a field name is not a string.
+        if not isinstance(name, str):
+            # Throw.
+            raise ConfigurationError("", "Field names must be strings.")
+
+        # If the field is not allowed.
+        if name not in required and name not in optional:
+            # Throw.
+            raise ConfigurationError(name, "Unknown field.")
+
+    # Require explicit values for fields without defaults.
+    for name in required:
+        # If a required field is missing.
+        if name not in configuration:
+            # Throw.
+            raise ConfigurationError(name, "Required field is missing.")
+
+    # Return the validated table.
+    return configuration
