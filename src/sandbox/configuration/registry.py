@@ -80,3 +80,15 @@ def registration_value(name: str, registration: object, home: Path, registry_fil
         raise RegistryError(f"Catalogue `{name}` has an invalid registered path.")
 
     # Resolve the registered path relative to the configuration home.
+    resolved_path: Path = paths.resolve_registered_path(home, registered_path)
+
+    # Compute the canonical managed catalogue path.
+    canonical_path: Path = (paths.resolved_home(home) / CATALOGUE_ROOT / name).resolve()
+
+    # If the registration does not use the canonical managed path.
+    if resolved_path != canonical_path:
+        # Throw.
+        raise RegistryError(f"Catalogue `{name}` registration in `{registry_file}` uses the noncanonical path `{registered_path}`; expected `{CATALOGUE_ROOT}/{name}`.")
+
+    # Return the registration with its resolved path.
+    return CatalogueRegistration(name, registered_type, resolved_path)
