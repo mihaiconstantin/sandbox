@@ -13,3 +13,9 @@ DEFAULT_CATALOGUE_PATH: str = f"{CATALOGUE_ROOT}/{DEFAULT_CATALOGUE_NAME}"
 BUNDLED_CATALOGUE_TYPE: str = "bundled"
 LOCAL_CATALOGUE_TYPE: str = "local"
 GIT_CATALOGUE_TYPE: str = "git"
+
+
+# Expand and resolve a configuration home without requiring it to exist.
+def resolved_home(home: Path) -> Path:
+    # Return the absolute normalized home.
+    return home.expanduser().resolve()
