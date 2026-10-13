@@ -127,3 +127,7 @@ def read_registrations(document: tomlkit.TOMLDocument, home: Path, registry_file
         registrations.append(registration_value(name, registration, home, registry_file))
 
     # Sort the registrations by catalogue name.
+    registrations.sort(key = lambda item: item.name)
+
+    # Return the registrations.
+    return tuple(registrations)
