@@ -53,3 +53,28 @@ def load_document(document_file: Path) -> tomlkit.TOMLDocument:
     except TOMLKitError as error:
         # Throw.
         raise RegistryError(f"Unable to parse catalogue registry `{document_file}`: {error}") from error
+
+
+# Write a catalogue registry atomically.
+def write_document_atomic(
+    document_file: Path,
+    document: tomlkit.TOMLDocument,
+    replace: Any = None,
+    *,
+    new_mode: int | None = None,
+) -> None:
+    # Determine the existing file mode when available.
+    try:
+        mode: int | None = document_file.stat().st_mode & 0o777
+
+    # If the registry does not exist.
+    except FileNotFoundError:
+        mode = new_mode
+
+    # Create a temporary file in the registry directory.
+    descriptor: int
+    temporary_name: str
+    descriptor, temporary_name = tempfile.mkstemp(prefix = f".{document_file.name}.", suffix = ".tmp", dir = document_file.parent)
+    temporary_file: Path = Path(temporary_name)
+
+    # Write the registry through the temporary file.
