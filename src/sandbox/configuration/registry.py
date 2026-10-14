@@ -166,3 +166,23 @@ def write_registry_atomic(
 
     # Publish the registry through the shared atomic document writer.
     documents.write_document_atomic(registry_file, registry, replacement, new_mode = new_mode)
+
+
+# Read or create the catalogue section of a registration document.
+def writable_catalogues(document: tomlkit.TOMLDocument, registry_file: Path) -> Table:
+    # Get the registered catalogues.
+    catalogues: object = document.get("catalogues")
+
+    # If the `catalogues` section is missing.
+    if catalogues is None:
+        # Create it.
+        catalogues = tomlkit.table()
+        document.add("catalogues", catalogues)
+
+    # If the `catalogues` section is invalid.
+    elif not isinstance(catalogues, MutableMapping):
+        # Throw.
+        raise RegistryError(f"Invalid `catalogues` section in `{registry_file}`.")
+
+    # Return the writable section.
+    return cast(Table, catalogues)
