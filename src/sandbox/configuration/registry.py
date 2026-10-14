@@ -145,3 +145,9 @@ def read_registration(document: tomlkit.TOMLDocument, name: str, home: Path, reg
 
     # Return the validated registration.
     return registration_value(name, catalogues[name], home, registry_file)
+
+
+# Load and parse a catalogue registry.
+def load_registry(registry_file: Path) -> tomlkit.TOMLDocument:
+    # Load the typed document through the shared registry document helper.
+    return documents.load_document(registry_file)
