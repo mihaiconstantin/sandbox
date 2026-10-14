@@ -220,3 +220,54 @@ def registration_document(home: Path, registry_file: Path, name: str, origin: st
     existing = catalogues.get(name)
 
     # If the catalogue is not registered.
+    if existing is None:
+        # Create the catalogue registration.
+        registration: Table = tomlkit.table()
+
+        # Add the requested configuration.
+        registration.add("type", origin)
+        registration.add("path", normalized_path)
+
+        # Register the catalogue.
+        catalogues[name] = registration
+
+        # Separate the new registration from a following top-level table.
+        catalogues.add(tomlkit.nl())
+
+    # Otherwise.
+    else:
+        # If the existing registration does not contain exactly the supported fields.
+        if not isinstance(existing, MutableMapping) or set(existing) != REGISTRATION_FIELDS:
+            # Throw.
+            raise RegistryError(f"The existing `{name}` catalogue registration is invalid in `{registry_file}`.")
+
+        # Get the registered type and path.
+        registered_type = existing.get("type")
+        registered_path = existing.get("path")
+
+        # If the registered type or path is not a nonempty string.
+        if not isinstance(registered_type, str) or not registered_type or not isinstance(registered_path, str) or not registered_path:
+            # Throw.
+            raise RegistryError(f"The existing `{name}` catalogue registration is invalid in `{registry_file}`.")
+
+        # If the registered path does not resolve to the canonical catalogue path.
+        if paths.resolve_registered_path(home, registered_path) != canonical_path.resolve():
+            # Throw.
+            raise RegistryError(f"The existing `{name}` catalogue registration uses the noncanonical path `{registered_path}` in `{registry_file}`.")
+
+        # If the origin changes without permission.
+        if registered_type != origin and not force:
+            # Throw.
+            raise RegistryError(f"The existing `{name}` catalogue registration has the type `{registered_type}` instead of `{origin}` in `{registry_file}`.")
+
+        # Update the registered type only when it differs.
+        if registered_type != origin:
+            # Record the requested origin.
+            existing["type"] = origin
+
+        # Normalize the registered path only when it differs.
+        if registered_path != normalized_path:
+            # Record the canonical path.
+            existing["path"] = normalized_path
+
+    # Return the prepared document.
