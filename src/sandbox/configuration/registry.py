@@ -186,3 +186,37 @@ def writable_catalogues(document: tomlkit.TOMLDocument, registry_file: Path) -> 
 
     # Return the writable section.
     return cast(Table, catalogues)
+
+
+# Prepare a registry document with a catalogue registration.
+def registration_document(home: Path, registry_file: Path, name: str, origin: str, force: bool) -> tomlkit.TOMLDocument:
+    # Validate the catalogue name before using it in a registry path.
+    validate_identifier(name, "catalogue")
+
+    # Compute the canonical registered path.
+    canonical_path: Path = paths.resolved_home(home) / CATALOGUE_ROOT / name
+
+    # Compute the normalized registered path.
+    normalized_path: str = f"{CATALOGUE_ROOT}/{name}"
+
+    # If the registry file already exists.
+    if registry_file.exists():
+        # Parse the existing registry.
+        document: tomlkit.TOMLDocument = load_registry(registry_file)
+
+    # Otherwise.
+    else:
+        # Create a new registry document.
+        document = tomlkit.document()
+
+        # Add the conventional comment and separation.
+        document.add(tomlkit.comment("Registered development `sandbox` catalogues."))
+        document.add(tomlkit.nl())
+
+    # Get or create the writable catalogue section.
+    catalogues: MutableMapping[str, Any] = writable_catalogues(document, registry_file)
+
+    # Get the existing catalogue registration.
+    existing = catalogues.get(name)
+
+    # If the catalogue is not registered.
