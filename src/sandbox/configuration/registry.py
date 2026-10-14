@@ -151,3 +151,18 @@ def read_registration(document: tomlkit.TOMLDocument, name: str, home: Path, reg
 def load_registry(registry_file: Path) -> tomlkit.TOMLDocument:
     # Load the typed document through the shared registry document helper.
     return documents.load_document(registry_file)
+
+
+# Write a catalogue registry atomically.
+def write_registry_atomic(
+    registry_file: Path,
+    registry: tomlkit.TOMLDocument,
+    replace: Any = None,
+    *,
+    new_mode: int | None = None,
+) -> None:
+    # Resolve the replacement operation in this module so callers can substitute it.
+    replacement: Any = os.replace if replace is None else replace
+
+    # Publish the registry through the shared atomic document writer.
+    documents.write_document_atomic(registry_file, registry, replacement, new_mode = new_mode)
