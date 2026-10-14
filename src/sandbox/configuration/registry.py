@@ -131,3 +131,17 @@ def read_registrations(document: tomlkit.TOMLDocument, home: Path, registry_file
 
     # Return the registrations.
     return tuple(registrations)
+
+
+# Read one registration by name, or report absence.
+def read_registration(document: tomlkit.TOMLDocument, name: str, home: Path, registry_file: Path) -> CatalogueRegistration | None:
+    # Read the catalogue section.
+    catalogues: Mapping[str, object] | None = read_catalogue_section(document, registry_file)
+
+    # If no catalogues are registered or the requested catalogue is absent.
+    if catalogues is None or name not in catalogues:
+        # Return no registration.
+        return None
+
+    # Return the validated registration.
+    return registration_value(name, catalogues[name], home, registry_file)
