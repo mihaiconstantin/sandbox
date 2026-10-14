@@ -271,3 +271,4 @@ def registration_document(home: Path, registry_file: Path, name: str, origin: st
             existing["path"] = normalized_path
 
     # Return the prepared document.
+    return document
