@@ -301,3 +301,26 @@ def remove_registry_entry(registry: tomlkit.TOMLDocument, section: str, key: str
     if not entries:
         # Remove the empty section.
         del registry[section]
+
+
+# Export the registry constants and path helpers used by configuration callers.
+__all__: list[str] = [
+    "BUNDLED_CATALOGUE_TYPE",
+    "CATALOGUE_ROOT",
+    "DEFAULT_CATALOGUE_NAME",
+    "DEFAULT_CATALOGUE_PATH",
+    "GIT_CATALOGUE_TYPE",
+    "LOCAL_CATALOGUE_TYPE",
+    "REGISTRATION_FIELDS",
+    "catalogue_path",
+    "load_registry",
+    "read_catalogue_section",
+    "read_registration",
+    "read_registrations",
+    "registration_document",
+    "registration_value",
+    "registry_path",
+    "remove_registry_entry",
+    "writable_catalogues",
+    "write_registry_atomic",
+]
