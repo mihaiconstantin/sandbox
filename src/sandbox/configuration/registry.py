@@ -272,3 +272,32 @@ def registration_document(home: Path, registry_file: Path, name: str, origin: st
 
     # Return the prepared document.
     return document
+
+
+# Remove a registry entry from a parsed registry.
+def remove_registry_entry(registry: tomlkit.TOMLDocument, section: str, key: str, registry_file: Path) -> None:
+    # Get the registered entries.
+    entries = registry.get(section)
+
+    # If no entries are registered.
+    if entries is None:
+        # Return.
+        return
+
+    # If the section is invalid.
+    if not isinstance(entries, MutableMapping):
+        # Throw.
+        raise RegistryError(f"Invalid `{section}` section in `{registry_file}`.")
+
+    # If the entry is not registered.
+    if key not in entries:
+        # Return.
+        return
+
+    # Remove the entry.
+    del entries[key]
+
+    # If no entries remain.
+    if not entries:
+        # Remove the empty section.
+        del registry[section]
