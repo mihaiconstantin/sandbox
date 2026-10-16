@@ -370,3 +370,7 @@ class ConfigurationStore:
 
         # Indicate that the binding was removed.
         return True
+
+
+# Define the public API of the configuration facade.
+__all__: list[str] = ["ConfigurationStore"]
