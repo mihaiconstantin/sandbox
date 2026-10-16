@@ -76,3 +76,22 @@ def read_catalogue_bindings(secrets: MutableMapping[str, Any], catalogue: str, r
 
     # Return the validated bindings.
     return bindings
+
+
+# Read one binding alias from a catalogue binding section.
+def read_binding(bindings: MutableMapping[str, Any], catalogue: str, alias: str, registry_file: Path) -> MutableMapping[str, Any] | None:
+    # Get the requested binding.
+    binding = bindings.get(alias)
+
+    # Return no binding when the alias is absent.
+    if binding is None:
+        # Return no binding.
+        return None
+
+    # If the binding is invalid.
+    if not isinstance(binding, MutableMapping):
+        # Throw.
+        raise RegistryError(f"Invalid `secrets.{catalogue}.{alias}` section in `{registry_file}`.")
+
+    # Return the validated binding.
+    return binding
