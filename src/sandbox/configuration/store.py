@@ -26,3 +26,13 @@ class ConfigurationStore:
         # Retain the requested home and defer expansion until first use.
         self._home: Path = home
         self._resolved_home: Path | None = None
+
+    # Resolve the configuration home on first access.
+    @property
+    def home(self) -> Path:
+        # Resolve and cache the expanded configuration home.
+        if self._resolved_home is None:
+            self._resolved_home = paths.resolved_home(self._home)
+
+        # Return the resolved configuration home.
+        return self._resolved_home
