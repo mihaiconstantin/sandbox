@@ -57,3 +57,22 @@ def read_secret_section(document: tomlkit.TOMLDocument, registry_file: Path) -> 
 
     # Return the validated section.
     return secrets
+
+
+# Read the bindings of one catalogue from the secret section.
+def read_catalogue_bindings(secrets: MutableMapping[str, Any], catalogue: str, registry_file: Path) -> MutableMapping[str, Any] | None:
+    # Get the catalogue bindings.
+    bindings = secrets.get(catalogue)
+
+    # Return no bindings when the catalogue has none.
+    if bindings is None:
+        # Return no bindings.
+        return None
+
+    # If the catalogue bindings are invalid.
+    if not isinstance(bindings, MutableMapping):
+        # Throw.
+        raise RegistryError(f"Invalid `secrets.{catalogue}` section in `{registry_file}`.")
+
+    # Return the validated bindings.
+    return bindings
