@@ -125,3 +125,34 @@ def read_bindings(document: tomlkit.TOMLDocument, home: Path, registry_file: Pat
     bindings: list[SecretBinding] = []
 
     # Read every catalogue binding section.
+    for catalogue_name in secrets:
+        # Validate the catalogue bindings.
+        section: MutableMapping[str, Any] | None = read_catalogue_bindings(secrets, catalogue_name, registry_file)
+
+        # If the catalogue has no bindings.
+        if section is None:
+            # Continue with the next catalogue.
+            continue
+
+        # Read every binding in the catalogue.
+        for alias in section:
+            # Validate the binding.
+            resolved_binding: MutableMapping[str, Any] | None = read_binding(section, catalogue_name, alias, registry_file)
+
+            # If the binding is absent.
+            if resolved_binding is None:
+                # Continue with the next binding.
+                continue
+
+            # Resolve the binding path.
+            path: Path = binding_path(resolved_binding, home, catalogue_name, alias)
+
+            # Keep only the requested catalogue bindings.
+            if catalogue is not None and catalogue_name != catalogue:
+                # Continue with the next binding.
+                continue
+
+            # Record the binding.
+            bindings.append(SecretBinding(catalogue_name, alias, path))
+
+    # Sort the bindings by catalogue and secret alias.
