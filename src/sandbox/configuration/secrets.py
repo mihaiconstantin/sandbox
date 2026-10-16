@@ -156,3 +156,7 @@ def read_bindings(document: tomlkit.TOMLDocument, home: Path, registry_file: Pat
             bindings.append(SecretBinding(catalogue_name, alias, path))
 
     # Sort the bindings by catalogue and secret alias.
+    bindings.sort(key = lambda item: (item.catalogue, item.alias))
+
+    # Return the bindings.
+    return tuple(bindings)
