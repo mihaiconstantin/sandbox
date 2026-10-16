@@ -350,3 +350,23 @@ class ConfigurationStore:
             return False
 
         # If the secret is not bound.
+        if alias not in bindings:
+            # Return no removal.
+            return False
+
+        # Remove the binding.
+        del bindings[alias]
+
+        # If the catalogue has no remaining bindings.
+        if not bindings:
+            del secret_section[catalogue]
+
+        # If no secret bindings remain.
+        if not secret_section:
+            del document["secrets"]
+
+        # Write the updated configuration atomically.
+        registry.write_registry_atomic(self.registry_file, document)
+
+        # Indicate that the binding was removed.
+        return True
