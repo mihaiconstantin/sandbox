@@ -17,3 +17,12 @@ from sandbox.errors.catalogues import RegistryError
 
 # Import identifier validation.
 from sandbox.validation.identifiers import validate_identifier
+
+
+# Own the configuration home's `catalogues.toml` document and its atomic updates.
+class ConfigurationStore:
+    # Bind the store to one configuration home without resolving or reading it.
+    def __init__(self, home: Path) -> None:
+        # Retain the requested home and defer expansion until first use.
+        self._home: Path = home
+        self._resolved_home: Path | None = None
