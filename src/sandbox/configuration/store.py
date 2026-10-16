@@ -76,3 +76,16 @@ class ConfigurationStore:
 
         # Return the validated registration or its absence.
         return registry.read_registration(document, name, self.home, self.registry_file)
+
+    # Return the registered catalogue directory when the catalogue is registered.
+    def catalogue_directory(self, name: str) -> Path | None:
+        # Read the registration.
+        registration: CatalogueRegistration | None = self.registration(name)
+
+        # If the catalogue is not registered.
+        if registration is None:
+            # Return no directory.
+            return None
+
+        # Return the resolved registered directory.
+        return registration.path
