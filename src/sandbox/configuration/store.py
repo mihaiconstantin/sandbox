@@ -279,3 +279,35 @@ class ConfigurationStore:
 
         # Return the resolved host file.
         return binding.host_path
+
+    # Save a catalogue-scoped secret binding.
+    def save_secret(self, catalogue: str, alias: str, host_file: Path) -> SecretBinding:
+        # Require valid configuration keys.
+        validate_identifier(catalogue, "catalogue")
+        validate_identifier(alias, "secret")
+
+        # Require the configuration home to exist.
+        self.home.resolve(strict = True)
+
+        # If the configuration does not exist.
+        if not self.registry_file.is_file():
+            # Throw a clean configuration error rather than a raw file error.
+            raise RegistryError(f"Configuration `{self.registry_file}` does not exist.")
+
+        # Validate and resolve the secret file.
+        resolved: Path = validate_secret_file(host_file.expanduser().resolve())
+
+        # Parse the configuration.
+        document: tomlkit.TOMLDocument = registry.load_registry(self.registry_file)
+
+        # Get or create the secret section.
+        secret_section: MutableMapping[str, Any] = secrets.ensure_secret_section(document, self.registry_file)
+
+        # Get or create the catalogue section.
+        bindings: MutableMapping[str, Any] = secrets.ensure_catalogue_bindings(secret_section, catalogue, self.registry_file)
+
+        # Create the binding.
+        binding: Table = tomlkit.table()
+        binding.add("file", str(resolved))
+
+        # Store the binding.
