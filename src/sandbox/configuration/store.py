@@ -266,3 +266,16 @@ class ConfigurationStore:
 
         # Resolve and validate the binding.
         return SecretBinding(catalogue, alias, validate_secret_file(secrets.binding_path(binding, self.home, catalogue, alias)))
+
+    # Load one catalogue-scoped secret binding path.
+    def load_secret(self, catalogue: str, alias: str) -> Path | None:
+        # Read the validated binding.
+        binding: SecretBinding | None = self.secret_binding(catalogue, alias)
+
+        # Return no path when the secret is not bound.
+        if binding is None:
+            # Return no binding.
+            return None
+
+        # Return the resolved host file.
+        return binding.host_path
