@@ -168,3 +168,24 @@ class ConfigurationStore:
         catalogues: object = document.get("catalogues")
 
         # If a catalogue section exists.
+        if catalogues is not None:
+            # If the section is invalid.
+            if not isinstance(catalogues, MutableMapping):
+                # Throw.
+                raise RegistryError(f"Invalid `catalogues` section in `{self.registry_file}`.")
+
+            # If the catalogue is registered.
+            if name in catalogues:
+                # Remove the registration.
+                del catalogues[name]
+                changed = True
+
+            # If no registrations remain.
+            if not catalogues:
+                # Remove the empty section.
+                del document["catalogues"]
+
+        # Get the secret bindings.
+        secret_section = document.get("secrets")
+
+        # If a secret section exists.
