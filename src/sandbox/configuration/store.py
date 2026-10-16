@@ -189,3 +189,30 @@ class ConfigurationStore:
         secret_section = document.get("secrets")
 
         # If a secret section exists.
+        if secret_section is not None:
+            # If the section is invalid.
+            if not isinstance(secret_section, MutableMapping):
+                # Throw.
+                raise RegistryError(f"Invalid `secrets` section in `{self.registry_file}`.")
+
+            # If the catalogue has bindings.
+            if name in secret_section:
+                # Remove the catalogue bindings.
+                del secret_section[name]
+                changed = True
+
+            # If no bindings remain.
+            if not secret_section:
+                # Remove the empty section.
+                del document["secrets"]
+
+        # If nothing changed.
+        if not changed:
+            # Return no removal.
+            return False
+
+        # Publish the updated document atomically.
+        registry.write_registry_atomic(self.registry_file, document)
+
+        # Indicate that the catalogue was removed.
+        return True
