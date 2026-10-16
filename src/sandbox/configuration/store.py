@@ -126,3 +126,8 @@ class ConfigurationStore:
         except ValueError as error:
             # Throw with the catalogue discovery hint.
             raise RegistryError(f"{error}\nRun `sb list catalogues` to see registered catalogues.") from None
+
+    # Validate a registration without writing the document.
+    def check_registration(self, name: str, origin: str, force: bool) -> None:
+        # Prepare and discard the registration document.
+        registry.registration_document(self.home, self.registry_file, name, origin, force)
