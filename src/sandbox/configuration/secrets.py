@@ -195,3 +195,32 @@ def ensure_catalogue_bindings(secrets: MutableMapping[str, Any], catalogue: str,
 
     # Return the writable bindings.
     return bindings
+
+
+# Remove every secret binding for a catalogue from a parsed registry.
+def remove_catalogue_secrets(registry_document: tomlkit.TOMLDocument, catalogue: str, registry_file: Path) -> None:
+    # Get the secret bindings.
+    secrets = registry_document.get("secrets")
+
+    # If no secret bindings exist.
+    if secrets is None:
+        # Return.
+        return
+
+    # If the secret section is invalid.
+    if not isinstance(secrets, MutableMapping):
+        # Throw.
+        raise RegistryError(f"Invalid `secrets` section in `{registry_file}`.")
+
+    # If the catalogue has no bindings.
+    if catalogue not in secrets:
+        # Return.
+        return
+
+    # If the catalogue binding section is invalid.
+    if not isinstance(secrets[catalogue], MutableMapping):
+        # Throw.
+        raise RegistryError(f"Invalid `secrets.{catalogue}` section in `{registry_file}`.")
+
+    # Remove the catalogue bindings with the shared section cleanup rule.
+    registry.remove_registry_entry(registry_document, "secrets", catalogue, registry_file)
