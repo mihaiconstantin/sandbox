@@ -150,3 +150,21 @@ class ConfigurationStore:
 
         # Return the published registration.
         return CatalogueRegistration(name, origin, (self.home / paths.CATALOGUE_ROOT / name).resolve())
+
+    # Remove a registration and all its secret bindings with one atomic write.
+    def unregister(self, name: str) -> bool:
+        # If the registry does not exist.
+        if not self.registry_file.is_file():
+            # Return no removal.
+            return False
+
+        # Parse the registry.
+        document: tomlkit.TOMLDocument = registry.load_registry(self.registry_file)
+
+        # Track whether the document changed.
+        changed: bool = False
+
+        # Get the registered catalogues.
+        catalogues: object = document.get("catalogues")
+
+        # If a catalogue section exists.
