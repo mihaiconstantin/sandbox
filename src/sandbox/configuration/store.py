@@ -229,3 +229,34 @@ class ConfigurationStore:
 
         # Return the validated bindings.
         return secrets.read_bindings(document, self.home, self.registry_file, catalogue)
+
+    # Read one secret binding and validate its host file.
+    def secret_binding(self, catalogue: str, alias: str) -> SecretBinding | None:
+        # If the registry does not exist.
+        if not self.registry_file.is_file():
+            # Return no binding.
+            return None
+
+        # Parse the registry.
+        document: tomlkit.TOMLDocument = registry.load_registry(self.registry_file)
+
+        # Read the secret section.
+        secret_section: MutableMapping[str, Any] | None = secrets.read_secret_section(document, self.registry_file)
+
+        # If no bindings exist.
+        if secret_section is None:
+            # Return no binding.
+            return None
+
+        # Read the catalogue bindings.
+        bindings: MutableMapping[str, Any] | None = secrets.read_catalogue_bindings(secret_section, catalogue, self.registry_file)
+
+        # If the catalogue has no bindings.
+        if bindings is None:
+            # Return no binding.
+            return None
+
+        # Read the requested binding.
+        binding: MutableMapping[str, Any] | None = secrets.read_binding(bindings, catalogue, alias, self.registry_file)
+
+        # If the secret is not bound.
