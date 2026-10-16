@@ -216,3 +216,16 @@ class ConfigurationStore:
 
         # Indicate that the catalogue was removed.
         return True
+
+    # List secret bindings in catalogue and alias order.
+    def secret_bindings(self, catalogue: str | None = None) -> tuple[SecretBinding, ...]:
+        # If the registry does not exist.
+        if not self.registry_file.is_file():
+            # Return no bindings.
+            return ()
+
+        # Parse the registry.
+        document: tomlkit.TOMLDocument = registry.load_registry(self.registry_file)
+
+        # Return the validated bindings.
+        return secrets.read_bindings(document, self.home, self.registry_file, catalogue)
