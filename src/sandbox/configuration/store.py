@@ -63,3 +63,16 @@ class ConfigurationStore:
 
         # Return the validated registrations.
         return registry.read_registrations(document, self.home, self.registry_file)
+
+    # Read one registration by name, or report absence.
+    def registration(self, name: str) -> CatalogueRegistration | None:
+        # If the registry does not exist.
+        if not self.registry_file.is_file():
+            # Return no registration.
+            return None
+
+        # Parse the registry.
+        document: tomlkit.TOMLDocument = registry.load_registry(self.registry_file)
+
+        # Return the validated registration or its absence.
+        return registry.read_registration(document, name, self.home, self.registry_file)
