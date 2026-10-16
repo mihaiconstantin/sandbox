@@ -109,3 +109,19 @@ def binding_path(binding: Mapping[str, Any], home: Path, catalogue: str, alias: 
 
     # Return the resolved path.
     return paths.resolve_secret_path(home, file)
+
+
+# List secret bindings in catalogue and alias order.
+def read_bindings(document: tomlkit.TOMLDocument, home: Path, registry_file: Path, catalogue: str | None = None) -> tuple[SecretBinding, ...]:
+    # Read the secret section.
+    secrets: MutableMapping[str, Any] | None = read_secret_section(document, registry_file)
+
+    # If no bindings exist.
+    if secrets is None:
+        # Return no bindings.
+        return ()
+
+    # Prepare the bindings.
+    bindings: list[SecretBinding] = []
+
+    # Read every catalogue binding section.
