@@ -38,3 +38,22 @@ def validate_secret_file(path: Path) -> Path:
 
     # Return the validated path.
     return path
+
+
+# Read the secret section of a parsed registry.
+def read_secret_section(document: tomlkit.TOMLDocument, registry_file: Path) -> MutableMapping[str, Any] | None:
+    # Get the secret bindings.
+    secrets = document.get("secrets")
+
+    # Return no section when it is absent.
+    if secrets is None:
+        # Return no section.
+        return None
+
+    # If the section is invalid.
+    if not isinstance(secrets, MutableMapping):
+        # Throw.
+        raise RegistryError(f"Invalid `secrets` section in `{registry_file}`.")
+
+    # Return the validated section.
+    return secrets
