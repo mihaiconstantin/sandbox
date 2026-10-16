@@ -95,3 +95,17 @@ def read_binding(bindings: MutableMapping[str, Any], catalogue: str, alias: str,
 
     # Return the validated binding.
     return binding
+
+
+# Resolve a binding file path relative to the configuration home.
+def binding_path(binding: Mapping[str, Any], home: Path, catalogue: str, alias: str) -> Path:
+    # Get the configured file path.
+    file = binding.get("file")
+
+    # If the binding file path is invalid.
+    if not isinstance(file, str) or not file:
+        # Throw.
+        raise RegistryError(f"Secret `{catalogue}.{alias}` has an invalid `file` path.")
+
+    # Return the resolved path.
+    return paths.resolve_secret_path(home, file)
