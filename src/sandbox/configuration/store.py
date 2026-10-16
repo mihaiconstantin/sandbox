@@ -115,3 +115,14 @@ class ConfigurationStore:
 
         # Return the resolved catalogue directory.
         return registration.path
+
+    # Resolve a registered catalogue or explain how to discover catalogues.
+    def require(self, name: str) -> Path:
+        # Resolve the catalogue.
+        try:
+            return self.resolve(name)
+
+        # If the catalogue cannot be resolved.
+        except ValueError as error:
+            # Throw with the catalogue discovery hint.
+            raise RegistryError(f"{error}\nRun `sb list catalogues` to see registered catalogues.") from None
