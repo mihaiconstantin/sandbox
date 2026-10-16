@@ -311,3 +311,10 @@ class ConfigurationStore:
         binding.add("file", str(resolved))
 
         # Store the binding.
+        bindings[alias] = binding
+
+        # Write the updated configuration atomically.
+        registry.write_registry_atomic(self.registry_file, document)
+
+        # Return the saved binding.
+        return SecretBinding(catalogue, alias, resolved)
