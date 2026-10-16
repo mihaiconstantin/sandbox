@@ -36,3 +36,9 @@ class ConfigurationStore:
 
         # Return the resolved configuration home.
         return self._resolved_home
+
+    # Compute the path to the owned registry document.
+    @property
+    def registry_file(self) -> Path:
+        # Return the registry path inside the configuration home.
+        return paths.registry_path(self.home)
