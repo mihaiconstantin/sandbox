@@ -160,3 +160,23 @@ def read_bindings(document: tomlkit.TOMLDocument, home: Path, registry_file: Pat
 
     # Return the bindings.
     return tuple(bindings)
+
+
+# Get or create the secret section of a configuration document.
+def ensure_secret_section(document: tomlkit.TOMLDocument, registry_file: Path) -> MutableMapping[str, Any]:
+    # Get the secret section.
+    secrets = document.get("secrets")
+
+    # If the secret section is missing.
+    if secrets is None:
+        # Create the secret section.
+        secrets = tomlkit.table()
+        document["secrets"] = secrets
+
+    # If the secret section is invalid.
+    elif not isinstance(secrets, MutableMapping):
+        # Throw.
+        raise RegistryError(f"Invalid `secrets` section in `{registry_file}`.")
+
+    # Return the writable section.
+    return secrets
