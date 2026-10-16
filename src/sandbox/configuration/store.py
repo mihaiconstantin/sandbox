@@ -50,3 +50,16 @@ class ConfigurationStore:
 
         # Return the catalogue destination inside the managed catalogue root.
         return self.home / paths.CATALOGUE_ROOT / name
+
+    # List every registration in name order with resolved absolute paths.
+    def registrations(self) -> tuple[CatalogueRegistration, ...]:
+        # If the registry does not exist.
+        if not self.registry_file.is_file():
+            # Return no registrations.
+            return ()
+
+        # Parse the registry.
+        document: tomlkit.TOMLDocument = registry.load_registry(self.registry_file)
+
+        # Return the validated registrations.
+        return registry.read_registrations(document, self.home, self.registry_file)
