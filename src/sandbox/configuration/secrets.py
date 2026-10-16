@@ -180,3 +180,18 @@ def ensure_secret_section(document: tomlkit.TOMLDocument, registry_file: Path) -
 
     # Return the writable section.
     return secrets
+
+
+# Get or create one catalogue's binding section.
+def ensure_catalogue_bindings(secrets: MutableMapping[str, Any], catalogue: str, registry_file: Path) -> MutableMapping[str, Any]:
+    # Read the existing catalogue bindings.
+    bindings = read_catalogue_bindings(secrets, catalogue, registry_file)
+
+    # If the catalogue section is missing.
+    if bindings is None:
+        # Create the catalogue section.
+        bindings = tomlkit.table()
+        secrets[catalogue] = bindings
+
+    # Return the writable bindings.
+    return bindings
