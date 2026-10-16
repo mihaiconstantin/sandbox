@@ -318,3 +318,35 @@ class ConfigurationStore:
 
         # Return the saved binding.
         return SecretBinding(catalogue, alias, resolved)
+
+    # Remove a catalogue-scoped secret binding.
+    def remove_secret(self, catalogue: str, alias: str) -> bool:
+        # Require valid configuration keys.
+        validate_identifier(catalogue, "catalogue")
+        validate_identifier(alias, "secret")
+
+        # If the configuration does not exist.
+        if not self.registry_file.is_file():
+            # Return no removal.
+            return False
+
+        # Parse the configuration.
+        document: tomlkit.TOMLDocument = registry.load_registry(self.registry_file)
+
+        # Read the secret section.
+        secret_section: MutableMapping[str, Any] | None = secrets.read_secret_section(document, self.registry_file)
+
+        # If no secret bindings exist.
+        if secret_section is None:
+            # Return no removal.
+            return False
+
+        # Read the catalogue bindings.
+        bindings: MutableMapping[str, Any] | None = secrets.read_catalogue_bindings(secret_section, catalogue, self.registry_file)
+
+        # If the catalogue has no bindings.
+        if bindings is None:
+            # Return no removal.
+            return False
+
+        # If the secret is not bound.
