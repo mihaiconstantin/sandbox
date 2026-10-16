@@ -42,3 +42,11 @@ class ConfigurationStore:
     def registry_file(self) -> Path:
         # Return the registry path inside the configuration home.
         return paths.registry_path(self.home)
+
+    # Compute the canonical destination for a catalogue name.
+    def destination(self, name: str) -> Path:
+        # Validate the catalogue name before using it in a path.
+        validate_identifier(name, "catalogue")
+
+        # Return the catalogue destination inside the managed catalogue root.
+        return self.home / paths.CATALOGUE_ROOT / name
