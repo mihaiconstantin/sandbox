@@ -260,3 +260,9 @@ class ConfigurationStore:
         binding: MutableMapping[str, Any] | None = secrets.read_binding(bindings, catalogue, alias, self.registry_file)
 
         # If the secret is not bound.
+        if binding is None:
+            # Return no binding.
+            return None
+
+        # Resolve and validate the binding.
+        return SecretBinding(catalogue, alias, validate_secret_file(secrets.binding_path(binding, self.home, catalogue, alias)))
