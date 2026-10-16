@@ -89,3 +89,29 @@ class ConfigurationStore:
 
         # Return the resolved registered directory.
         return registration.path
+
+    # Resolve a registered catalogue to its absolute existing directory.
+    def resolve(self, name: str) -> Path:
+        # If the catalogue registry does not exist.
+        if not self.registry_file.is_file():
+            # Throw a clean configuration error rather than a raw file error.
+            raise RegistryError(f"Catalogue registry `{self.registry_file}` does not exist.")
+
+        # Parse the catalogue registry.
+        document: tomlkit.TOMLDocument = registry.load_registry(self.registry_file)
+
+        # Read the validated registration.
+        registration: CatalogueRegistration | None = registry.read_registration(document, name, self.home, self.registry_file)
+
+        # If the requested catalogue is not registered.
+        if registration is None:
+            # Throw.
+            raise RegistryError(f"Catalogue `{name}` is not registered in `{self.registry_file}`.")
+
+        # If the catalogue directory does not exist.
+        if not registration.path.is_dir():
+            # Throw.
+            raise RegistryError(f"Catalogue `{name}` does not reference a directory.")
+
+        # Return the resolved catalogue directory.
+        return registration.path
