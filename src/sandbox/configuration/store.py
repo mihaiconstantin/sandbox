@@ -136,3 +136,17 @@ class ConfigurationStore:
     def prepare_registration(self, name: str, origin: str, force: bool) -> str:
         # Serialize the prepared document.
         return tomlkit.dumps(registry.registration_document(self.home, self.registry_file, name, origin, force))
+
+    # Publish a catalogue registration with one atomic write.
+    def register(self, name: str, origin: str, force: bool, replace: Any = None) -> CatalogueRegistration:
+        # Prepare the registration document.
+        document: tomlkit.TOMLDocument = registry.registration_document(self.home, self.registry_file, name, origin, force)
+
+        # Use the umask-derived new-file mode only when the registry does not exist.
+        new_mode: int | None = None if self.registry_file.exists() else default_file_mode()
+
+        # Publish the document atomically.
+        registry.write_registry_atomic(self.registry_file, document, replace, new_mode = new_mode)
+
+        # Return the published registration.
+        return CatalogueRegistration(name, origin, (self.home / paths.CATALOGUE_ROOT / name).resolve())
