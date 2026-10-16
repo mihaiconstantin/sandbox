@@ -131,3 +131,8 @@ class ConfigurationStore:
     def check_registration(self, name: str, origin: str, force: bool) -> None:
         # Prepare and discard the registration document.
         registry.registration_document(self.home, self.registry_file, name, origin, force)
+
+    # Serialize a prepared registration document without writing it.
+    def prepare_registration(self, name: str, origin: str, force: bool) -> str:
+        # Serialize the prepared document.
+        return tomlkit.dumps(registry.registration_document(self.home, self.registry_file, name, origin, force))
