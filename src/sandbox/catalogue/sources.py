@@ -125,3 +125,33 @@ class LocalSource:
 class GitSource:
     # Record the `git` origin.
     origin: str = registry.GIT_CATALOGUE_TYPE
+
+    # Validate the source and retain the repository URL.
+    def __init__(self, value: str) -> None:
+        # If the URL uses the unsupported `git+` prefix.
+        if value.startswith("git+"):
+            # Throw.
+            raise CatalogueInstallError("The `git+` prefix is not supported. Pass the `git` URL directly.")
+
+        # If the URL declares a scheme.
+        if "://" in value:
+            # Get the declared scheme.
+            scheme: str = value.split("://", 1)[0].lower()
+
+            # If the scheme is unsupported.
+            if scheme not in GIT_URL_SCHEMES:
+                # Throw.
+                raise CatalogueInstallError(f"Unsupported `git` URL scheme `{scheme}://`. Use HTTPS, HTTP, SSH, `git`, file, or an SCP-style URL.")
+
+        # If the `git` executable is missing.
+        if shutil.which("git") is None:
+            # Throw the actionable host prerequisite.
+            raise PrerequisiteError(
+                "git",
+                PrerequisiteKind.MISSING,
+                operation = "catalogue.install",
+                hint = "Install git and ensure it is on PATH.",
+            )
+
+        # Record the requested URL.
+        self._url: str = value
