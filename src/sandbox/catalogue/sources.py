@@ -31,3 +31,17 @@ def _require_disjoint(source: Path, destination: Path) -> None:
     if resolved_source == resolved_destination or resolved_source.is_relative_to(resolved_destination) or resolved_destination.is_relative_to(resolved_source):
         # Throw.
         raise CatalogueInstallError(f"Catalogue source `{resolved_source}` overlaps the catalogue destination `{resolved_destination}`.")
+
+
+# Kill a clone process group and reap its process.
+def _terminate_clone(process: subprocess.Popen[bytes]) -> None:
+    # Kill the clone process group so child network processes stop.
+    try:
+        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+
+    # If the process group already exited.
+    except ProcessLookupError:
+        pass
+
+    # Reap the clone process.
+    process.communicate()
