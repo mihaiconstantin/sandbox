@@ -22,3 +22,30 @@ class ResolvedCatalogueRecipe:
     volumes: tuple[VolumeDeclaration, ...]
     allow_root: bool
     secrets: tuple[str, ...] = ()
+
+
+# Select the recipe to provision from an explicit request, a catalogue default, or a sole recipe.
+def select_recipe(catalogue: Catalogue, requested: str | None) -> str:
+    # An explicit recipe always wins so `--recipe` overrides the catalogue default.
+    if requested is not None:
+        # Return the requested recipe for later validation.
+        return requested
+
+    # If the catalogue declares a default recipe.
+    if catalogue.default_recipe is not None:
+        # Return the catalogue default.
+        return catalogue.default_recipe
+
+    # If the catalogue declares exactly one recipe.
+    if len(catalogue.recipes) == 1:
+        # Return the sole available recipe.
+        return next(iter(catalogue.recipes))
+
+    # List the available recipes in deterministic order.
+    available: str = ", ".join(f"`{name}`" for name in sorted(catalogue.recipes))
+
+    # Throw.
+    raise ConfigurationError(
+        "catalogue.default_recipe",
+        f"Catalogue `{catalogue.name}` does not declare a default recipe; pass `--recipe` with one of: {available}.",
+    )
