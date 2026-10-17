@@ -75,3 +75,16 @@ class Recipe:
         seen_secrets: set[str] = set()
 
         # For each secret alias.
+        for index, name in enumerate(self.secrets):
+            validate_identifier(name, f"secrets[{index}]")
+
+            # If the secret alias is duplicated.
+            if name in seen_secrets:
+                # Throw.
+                raise ConfigurationError(f"secrets[{index}]", f"Secret alias `{name}` is declared more than once in this recipe.")
+            seen_secrets.add(name)
+
+        # If the allow_root value is not a Boolean.
+        if type(self.allow_root) is not bool:
+            # Throw.
+            raise ConfigurationError("allow_root", "Must be a Boolean.")
