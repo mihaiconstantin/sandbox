@@ -167,3 +167,29 @@ class GitSource:
         environment["SSH_ASKPASS"] = "false"
 
         # Start the clone in its own session so it has no controlling terminal.
+        try:
+            # Launch the non-interactive clone.
+            process: subprocess.Popen[bytes] = subprocess.Popen(
+                ["git", "clone", "--depth", "1", "--", self._url, str(staging)],
+                stdin = subprocess.DEVNULL,
+                stdout = subprocess.DEVNULL,
+                stderr = subprocess.DEVNULL,
+                env = environment,
+                start_new_session = True,
+            )
+
+        # If the `git` executable cannot be launched.
+        except OSError as error:
+            # Classify a vanished executable separately from an unusable installation.
+            kind: PrerequisiteKind = PrerequisiteKind.MISSING if isinstance(error, FileNotFoundError) else PrerequisiteKind.UNUSABLE
+
+            # Throw the actionable host prerequisite.
+            raise PrerequisiteError(
+                "git",
+                kind,
+                operation = "catalogue.install",
+                diagnostic = str(error)[:4096],
+                hint = "Ensure the `git` executable can run and retry.",
+            ) from error
+
+        # Wait for the clone and enforce the timeout.
