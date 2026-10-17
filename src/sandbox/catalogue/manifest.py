@@ -66,6 +66,35 @@ def load_catalogue(directory: Path) -> Catalogue:
         raise ConfigurationError("", f"Manifest `{MANIFEST_FILENAME}` must resolve inside the catalogue directory `{directory}`.")
 
     # Parse the manifest as TOML without exposing parser exceptions to callers.
+    try:
+        # Open the manifest in binary mode, as required by `tomllib`.
+        with resolved_manifest.open("rb") as file:
+            # Read the native TOML tables.
+            configuration: dict[str, Any] = tomllib.load(file)
+
+    # If the manifest is not valid TOML.
+    except tomllib.TOMLDecodeError as error:
+        # Throw.
+        raise ConfigurationError("", f"Manifest `{MANIFEST_FILENAME}` at `{resolved_manifest}` is not valid TOML: {error}.") from None
+
+    # If the manifest is not UTF-8 encoded.
+    except UnicodeDecodeError:
+        # Throw.
+        raise ConfigurationError("", f"Manifest `{MANIFEST_FILENAME}` at `{resolved_manifest}` must be UTF-8 encoded.") from None
+
+    # If the manifest cannot be read.
+    except OSError as error:
+        # Throw.
+        raise ConfigurationError("", f"Manifest `{MANIFEST_FILENAME}` at `{resolved_manifest}` cannot be read: {error}.") from error
+
+    # Validate the manifest and retain its typed declarations.
+    catalogue: Catalogue = Catalogue.from_mapping(configuration)
+
+    # Prepare the recipe iteration targets.
+    name: str
+    recipe: Recipe
+
+    # Require every declared `docker` compose file to resolve inside this catalogue.
 
 
 # Resolve a recipe's declared `docker` compose file inside a catalogue directory.
