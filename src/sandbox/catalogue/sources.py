@@ -60,3 +60,20 @@ class CatalogueSource(Protocol):
 class BundledSource:
     # Record the bundled origin.
     origin: str = registry.BUNDLED_CATALOGUE_TYPE
+
+    # Locate the bundled catalogue.
+    def __init__(self) -> None:
+        # Locate the bundled catalogue inside the installed package.
+        source: Traversable = resources.files("sandbox").joinpath(*registry.DEFAULT_CATALOGUE_PATH.split("/"))
+
+        # If the package catalogue is missing, use the repository layout.
+        if not source.is_dir():
+            source = Path(__file__).resolve().parents[3] / registry.DEFAULT_CATALOGUE_PATH
+
+        # If the bundled catalogue does not exist.
+        if not source.is_dir():
+            # Throw.
+            raise CatalogueInstallError(f"Bundled catalogue `{registry.DEFAULT_CATALOGUE_NAME}` was not found.")
+
+        # Retain the located catalogue.
+        self._source: Traversable = source
