@@ -57,3 +57,31 @@ class Catalogue:
     recipes: Mapping[str, Recipe]
     volumes: Mapping[str, VolumeDeclaration] = field(default_factory = dict)
     default_recipe: str | None = None
+
+    def __post_init__(self) -> None:
+        # Catalogue versions describe definitions, not dependency constraints.
+        validate_identifier(self.name, "catalogue.name")
+        validate_string(self.version, "catalogue.version")
+
+        # If the schema version is not an integer.
+        if type(self.schema_version) is not int:
+            # Throw.
+            raise ConfigurationError("catalogue.schema_version", "Must be an integer.")
+
+        # If the schema version is unsupported.
+        if self.schema_version != 1:
+            # Throw.
+            raise ConfigurationError("catalogue.schema_version", f"Unsupported schema version `{self.schema_version}`; expected `1`.")
+
+        # Require a table of recipe declarations.
+        require_mapping(self.recipes, "recipes", message="Must be a table of recipe declarations.")
+
+        # Copy the table before validating its declarations.
+        recipes: dict[str, Recipe] = dict(self.recipes)
+
+        # If no recipes are declared.
+        if not recipes:
+            # Throw.
+            raise ConfigurationError("recipes", "Must declare at least one recipe.")
+
+        # Validate each recipe identifier and declaration.
