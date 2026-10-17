@@ -33,6 +33,41 @@ def _resolve_catalogue_directory(directory: Path) -> Path:
     return resolved
 
 
+# Load and validate the manifest of a catalogue directory.
+def load_catalogue(directory: Path) -> Catalogue:
+    # Resolve the catalogue directory to an absolute path.
+    directory = _resolve_catalogue_directory(directory)
+
+    # Compute the manifest path.
+    manifest: Path = directory / MANIFEST_FILENAME
+
+    # If the manifest does not exist.
+    if not manifest.exists() and not manifest.is_symlink():
+        # Throw.
+        raise ConfigurationError("", f"Catalogue manifest `{manifest}` does not exist.")
+
+    # Resolve the manifest path.
+    try:
+        resolved_manifest: Path = manifest.resolve(strict = True)
+
+    # If the manifest path cannot be resolved.
+    except OSError as error:
+        # Throw.
+        raise ConfigurationError("", f"Catalogue manifest `{manifest}` cannot be resolved: {error}.") from error
+
+    # If the resolved manifest is not a regular file.
+    if not resolved_manifest.is_file():
+        # Throw.
+        raise ConfigurationError("", f"Manifest `{MANIFEST_FILENAME}` must be a regular file.")
+
+    # If the manifest resolves outside the catalogue.
+    if not resolved_manifest.is_relative_to(directory):
+        # Throw.
+        raise ConfigurationError("", f"Manifest `{MANIFEST_FILENAME}` must resolve inside the catalogue directory `{directory}`.")
+
+    # Parse the manifest as TOML without exposing parser exceptions to callers.
+
+
 # Resolve a recipe's declared `docker` compose file inside a catalogue directory.
 def resolve_compose_file(directory: Path, name: str, recipe: Recipe) -> Path:
     # Resolve the catalogue directory to an absolute path.
