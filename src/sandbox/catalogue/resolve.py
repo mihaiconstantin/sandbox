@@ -100,3 +100,44 @@ def resolve_recipe(catalogue: Catalogue, directory: Path, name: str) -> Resolved
     recipe_name: str
 
     # For each recipe in the parent-first chain.
+    for recipe_name in chain:
+        # Get the recipe declaration.
+        recipe = catalogue.recipes[recipe_name]
+
+        # Prepare the volume iteration targets.
+        index: int
+        alias: str
+
+        # Resolve each catalogue-local alias to its physical `docker` volume.
+        for index, alias in enumerate(recipe.volumes):
+            # If the volume alias is not declared in the catalogue.
+            if alias not in catalogue.volumes:
+                # Throw.
+                raise ConfigurationError(f"recipes.{recipe_name}.volumes[{index}]", f"Volume `{alias}` is not declared in the catalogue.")
+
+            # Get the physical volume declaration.
+            declaration: VolumeDeclaration = catalogue.volumes[alias]
+
+            # If the physical volume is already required.
+            if declaration.name in volumes:
+                # If aliases for the same physical volume conflict.
+                if volumes[declaration.name] != declaration:
+                    # Throw.
+                    raise ConfigurationError(f"volumes.{alias}", f"Volume `{alias}` conflicts with an existing declaration for `{declaration.name}`.")
+
+            # Otherwise, retain the physical volume.
+            else:
+                # Retain the physical volume in first-appearance order.
+                volumes[declaration.name] = declaration
+
+        # Prepare the secret iteration target.
+        secret: str
+
+        # Retain each secret requirement in first-appearance order.
+        for secret in recipe.secrets:
+            # If the secret has not been seen.
+            if secret not in seen_secrets:
+                secrets.append(secret)
+                seen_secrets.add(secret)
+
+    # Resolve every `docker` compose file in parent-first order.
