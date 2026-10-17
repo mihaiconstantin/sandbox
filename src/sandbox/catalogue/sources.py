@@ -87,3 +87,9 @@ class BundledSource:
 
             # Copy the bundled catalogue.
             shutil.copytree(source_dir, staging)
+
+
+# Represent a catalogue copied from a local directory.
+class LocalSource:
+    # Record the local origin.
+    origin: str = registry.LOCAL_CATALOGUE_TYPE
