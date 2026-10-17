@@ -52,3 +52,26 @@ class Recipe:
 
         # Store requirements immutably and reject duplicates within this recipe.
         # If the volumes value is not a tuple.
+        if not isinstance(self.volumes, tuple):
+            # Throw.
+            raise ConfigurationError("volumes", "Must be a tuple of volume aliases. Parsed arrays must use `from_mapping()`.")
+        seen: set[str] = set()
+
+        # For each volume alias.
+        for index, name in enumerate(self.volumes):
+            validate_identifier(name, f"volumes[{index}]")
+
+            # If the volume alias is duplicated.
+            if name in seen:
+                # Throw.
+                raise ConfigurationError(f"volumes[{index}]", f"Volume alias `{name}` is declared more than once in this recipe.")
+            seen.add(name)
+
+        # Store secret requirements immutably and reject duplicates within this recipe.
+        # If the secrets value is not a tuple.
+        if not isinstance(self.secrets, tuple):
+            # Throw.
+            raise ConfigurationError("secrets", "Must be a tuple of secret aliases. Parsed arrays must use `from_mapping()`.")
+        seen_secrets: set[str] = set()
+
+        # For each secret alias.
