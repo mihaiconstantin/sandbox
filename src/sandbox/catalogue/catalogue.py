@@ -85,3 +85,33 @@ class Catalogue:
             raise ConfigurationError("recipes", "Must declare at least one recipe.")
 
         # Validate each recipe identifier and declaration.
+        for name, recipe in recipes.items():
+            field_name: str = f"recipes.{name}" if isinstance(name, str) else "recipes"
+            validate_identifier(name, field_name)
+
+            # If the recipe declaration is invalid.
+            if not isinstance(recipe, Recipe):
+                # Throw.
+                raise ConfigurationError(field_name, "Must be a Recipe declaration.")
+
+        # Publish the validated recipe table as an immutable snapshot.
+        object.__setattr__(self, "recipes", MappingProxyType(recipes))
+
+        # If a default recipe is declared.
+        if self.default_recipe is not None:
+            # Require a nonblank recipe name.
+            validate_string(self.default_recipe, "catalogue.default_recipe")
+
+            # Require the default recipe to be declared in this catalogue.
+            if self.default_recipe not in recipes:
+                # Throw.
+                raise ConfigurationError("catalogue.default_recipe", f"Recipe `{self.default_recipe}` is not declared in the catalogue.")
+
+        # Require a table of volume declarations.
+        require_mapping(self.volumes, "volumes", message="Must be a table of volume declarations.")
+
+        # Copy the table before validating its declarations.
+        volumes: dict[str, VolumeDeclaration] = dict(self.volumes)
+
+        # Volume aliases are local to this catalogue, even when physical names coincide.
+        # For each volume identifier and declaration.
