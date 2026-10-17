@@ -152,3 +152,23 @@ class Catalogue:
         recipes: dict[str, Recipe] = {}
 
         # Validate each recipe configuration.
+        for name, recipe_configuration in recipe_configurations.items():
+            field_name: str = f"recipes.{name}" if isinstance(name, str) else "recipes"
+            validate_identifier(name, field_name)
+
+            # Attempt to parse the recipe declaration.
+            try:
+                recipes[name] = Recipe.from_mapping(recipe_configuration)
+
+            # If the recipe declaration is invalid.
+            except ConfigurationError as error:
+                # Prefix the recipe field with its catalogue-local identifier.
+                raise error.with_prefix(field_name) from None
+
+        # Omitted volume declarations mean no shared-volume requirements are defined.
+        volume_configurations: Mapping[str, Any] = require_mapping(configuration.get("volumes", {}), "volumes", message="Must be a table of volume declarations.")
+
+        # Prepare the volume table.
+        volumes: dict[str, VolumeDeclaration] = {}
+
+        # For each volume identifier and configuration.
