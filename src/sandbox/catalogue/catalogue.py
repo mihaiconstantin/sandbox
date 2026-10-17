@@ -172,3 +172,29 @@ class Catalogue:
         volumes: dict[str, VolumeDeclaration] = {}
 
         # For each volume identifier and configuration.
+        for name, volume_configuration in volume_configurations.items():
+            # Prepare the volume field name.
+            volume_field_name: str = f"volumes.{name}" if isinstance(name, str) else "volumes"
+
+            # Validate the volume identifier.
+            validate_identifier(name, volume_field_name)
+
+            # Attempt to parse the volume declaration.
+            try:
+                # Parse and store the volume declaration.
+                volumes[name] = _parse_volume_declaration(volume_configuration)
+
+            # If the volume declaration is invalid.
+            except ConfigurationError as error:
+                # Prefix the volume field with its catalogue-local alias.
+                raise error.with_prefix(volume_field_name) from None
+
+        # Return the validated catalogue from its metadata and declarations.
+        return cls(
+            name = metadata["name"],
+            version = metadata["version"],
+            schema_version = metadata["schema_version"],
+            recipes = recipes,
+            volumes = volumes,
+            default_recipe = metadata.get("default_recipe"),
+        )
