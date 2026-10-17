@@ -129,3 +129,26 @@ class Catalogue:
 
         # Publish the validated volume table as an immutable snapshot.
         object.__setattr__(self, "volumes", MappingProxyType(volumes))
+
+    # Create a catalogue from native parsed data without reading TOML or `docker` compose files.
+    @classmethod
+    def from_mapping(cls: type[Catalogue], configuration: object) -> Catalogue:
+        # Validate the catalogue fields.
+        configuration = validate_fields(configuration, ("catalogue", "recipes"), ("volumes",))
+
+        # Catalogue metadata has its own strict field set.
+        try:
+            metadata: Mapping[str, Any] = validate_fields(configuration["catalogue"], ("name", "version", "schema_version"), ("default_recipe",))
+
+        # If the metadata field is invalid.
+        except ConfigurationError as error:
+            # Prefix the metadata field with its table.
+            raise error.with_prefix("catalogue") from None
+
+        # Parse each recipe and retain its catalogue-local error location.
+        recipe_configurations: Mapping[str, Any] = require_mapping(configuration["recipes"], "recipes", message="Must be a table of recipe declarations.")
+
+        # Prepare the recipe table.
+        recipes: dict[str, Recipe] = {}
+
+        # Validate each recipe configuration.
