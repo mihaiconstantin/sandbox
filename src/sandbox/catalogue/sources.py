@@ -119,3 +119,9 @@ class LocalSource:
 
         # Copy the local catalogue while preserving symlinks.
         shutil.copytree(self._source, staging, symlinks = True)
+
+
+# Represent a catalogue cloned from a `git` repository.
+class GitSource:
+    # Record the `git` origin.
+    origin: str = registry.GIT_CATALOGUE_TYPE
