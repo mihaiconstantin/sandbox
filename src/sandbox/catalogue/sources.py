@@ -155,3 +155,15 @@ class GitSource:
 
         # Record the requested URL.
         self._url: str = value
+
+    # Clone the repository into the staging directory.
+    def materialize(self, staging: Path, destination: Path) -> None:
+        # Prepare a non-interactive `git` environment.
+        environment: dict[str, str] = dict(os.environ)
+        environment["GIT_TERMINAL_PROMPT"] = "0"
+        environment["GCM_INTERACTIVE"] = "never"
+        environment["GIT_SSH_COMMAND"] = "ssh -o BatchMode=yes"
+        environment["GIT_ASKPASS"] = "false"
+        environment["SSH_ASKPASS"] = "false"
+
+        # Start the clone in its own session so it has no controlling terminal.
