@@ -135,3 +135,4 @@ def resolve_compose_file(directory: Path, name: str, recipe: Recipe) -> Path:
         raise ConfigurationError(f"recipes.{name}.compose", f"Compose file `{recipe.compose}` must be a regular file.")
 
     # Return the resolved path used by later `docker` compose operations.
+    return resolved
