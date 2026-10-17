@@ -46,3 +46,14 @@ def _parse_volume_declaration(configuration: object) -> VolumeDeclaration:
 
     # Build the validated neutral declaration.
     return VolumeDeclaration(name = configuration["name"], scope = configuration["scope"], target = configuration["target"])
+
+
+# Represent a validated manifest's declarations, independently of its filesystem.
+@dataclass(frozen = True)
+class Catalogue:
+    name: str
+    version: str
+    schema_version: int
+    recipes: Mapping[str, Recipe]
+    volumes: Mapping[str, VolumeDeclaration] = field(default_factory = dict)
+    default_recipe: str | None = None
