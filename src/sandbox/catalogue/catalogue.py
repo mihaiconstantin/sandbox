@@ -115,3 +115,17 @@ class Catalogue:
 
         # Volume aliases are local to this catalogue, even when physical names coincide.
         # For each volume identifier and declaration.
+        for name, volume in volumes.items():
+            # Prepare the volume field name.
+            volume_field_name: str = f"volumes.{name}" if isinstance(name, str) else "volumes"
+
+            # Validate the volume identifier.
+            validate_identifier(name, volume_field_name)
+
+            # If the volume declaration is invalid.
+            if not isinstance(volume, VolumeDeclaration):
+                # Throw.
+                raise ConfigurationError(volume_field_name, "Must be a Volume declaration.")
+
+        # Publish the validated volume table as an immutable snapshot.
+        object.__setattr__(self, "volumes", MappingProxyType(volumes))
