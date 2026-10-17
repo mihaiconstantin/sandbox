@@ -77,3 +77,13 @@ class BundledSource:
 
         # Retain the located catalogue.
         self._source: Traversable = source
+
+    # Copy the bundled catalogue into the staging directory.
+    def materialize(self, staging: Path, destination: Path) -> None:
+        # Copy the bundled catalogue from its package or repository location.
+        with resources.as_file(self._source) as source_dir:
+            # Reject a source that overlaps the final catalogue destination.
+            _require_disjoint(source_dir, destination)
+
+            # Copy the bundled catalogue.
+            shutil.copytree(source_dir, staging)
