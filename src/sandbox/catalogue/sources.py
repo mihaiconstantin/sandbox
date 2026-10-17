@@ -111,3 +111,11 @@ class LocalSource:
 
         # Retain the resolved source.
         self._source: Path = source
+
+    # Copy the local catalogue into the staging directory.
+    def materialize(self, staging: Path, destination: Path) -> None:
+        # Reject a source that overlaps the final catalogue destination.
+        _require_disjoint(self._source, destination)
+
+        # Copy the local catalogue while preserving symlinks.
+        shutil.copytree(self._source, staging, symlinks = True)
