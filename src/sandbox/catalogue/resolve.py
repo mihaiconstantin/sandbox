@@ -141,3 +141,18 @@ def resolve_recipe(catalogue: Catalogue, directory: Path, name: str) -> Resolved
                 seen_secrets.add(secret)
 
     # Resolve every `docker` compose file in parent-first order.
+    compose: tuple[Path, ...] = tuple(resolve_compose_file(directory, recipe_name, catalogue.recipes[recipe_name]) for recipe_name in chain)
+
+    # Get the selected recipe declaration.
+    selected: Recipe = catalogue.recipes[name]
+
+    # Build the resolved execution plan.
+    return ResolvedCatalogueRecipe(
+        name = name,
+        service = selected.service,
+        recipes = tuple(chain),
+        compose = compose,
+        volumes = tuple(volumes.values()),
+        allow_root = selected.allow_root,
+        secrets = tuple(secrets),
+    )
