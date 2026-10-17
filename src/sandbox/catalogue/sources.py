@@ -193,3 +193,26 @@ class GitSource:
             ) from error
 
         # Wait for the clone and enforce the timeout.
+        try:
+            process.communicate(timeout = GIT_CLONE_TIMEOUT)
+
+        # If the clone exceeds the timeout.
+        except subprocess.TimeoutExpired:
+            # Stop the clone process tree before reporting the timeout.
+            _terminate_clone(process)
+
+            # Throw.
+            raise CatalogueInstallError(f"`git` clone timed out after {GIT_CLONE_TIMEOUT} seconds.") from None
+
+        # If the user interrupts the clone.
+        except KeyboardInterrupt:
+            # Stop the clone process tree before propagating the interruption.
+            _terminate_clone(process)
+
+            # Propagate the interruption.
+            raise
+
+        # If the clone fails.
+        if process.returncode != 0:
+            # Throw without exposing the URL or the `git` output.
+            raise CatalogueInstallError(f"`git` clone failed with exit code {process.returncode}.")
