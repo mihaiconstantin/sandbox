@@ -94,3 +94,9 @@ def resolve_recipe(catalogue: Catalogue, directory: Path, name: str) -> Resolved
     # Collect volume and secret requirements across the complete recipe chain.
     volumes: dict[str, VolumeDeclaration] = {}
     secrets: list[str] = []
+    seen_secrets: set[str] = set()
+
+    # Prepare the recipe iteration target.
+    recipe_name: str
+
+    # For each recipe in the parent-first chain.
