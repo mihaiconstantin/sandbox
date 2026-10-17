@@ -88,3 +88,31 @@ class Recipe:
         if type(self.allow_root) is not bool:
             # Throw.
             raise ConfigurationError("allow_root", "Must be a Boolean.")
+
+    # Create a recipe from a native parsed manifest table.
+    @classmethod
+    def from_mapping(cls: type[Recipe], configuration: object) -> Recipe:
+        # Validate the recipe fields.
+        configuration = validate_fields(configuration, ("compose", "service"), ("extends", "volumes", "secrets", "allow_root"))
+
+        # An absent parent is allowed, but an explicitly invalid value is not a default.
+        # If the parent is explicitly null.
+        if "extends" in configuration and configuration["extends"] is None:
+            # Throw.
+            raise ConfigurationError("extends", "Must be a single parent recipe identifier when present.")
+
+        # TOML arrays become tuples without retaining the caller's mutable list.
+        volumes: tuple[str, ...] = ()
+
+        # If volume aliases are declared.
+        if "volumes" in configuration:
+            # If the volume aliases are not an array.
+            if not isinstance(configuration["volumes"], list):
+                # Throw.
+                raise ConfigurationError("volumes", "Must be an array of volume aliases.")
+            volumes = tuple(configuration["volumes"])
+
+        # Parse secret aliases into an immutable tuple.
+        secrets: tuple[str, ...] = ()
+
+        # If secret aliases are declared.
