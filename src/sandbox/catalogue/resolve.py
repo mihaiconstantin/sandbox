@@ -66,3 +66,31 @@ def resolve_recipe(catalogue: Catalogue, directory: Path, name: str) -> Resolved
     current: str | None = name
 
     # While a recipe remains in the chain.
+    while current is not None:
+        # If the recipe chain contains a cycle.
+        if current in chain:
+            # Throw.
+            raise ConfigurationError(f"recipes.{current}.extends", f"Recipe dependency cycle: {' -> '.join((*chain, current))}.")
+
+        # Add the recipe to the selected-first chain.
+        chain.append(current)
+
+        # Get the recipe declaration.
+        recipe: Recipe = catalogue.recipes[current]
+
+        # If the recipe declares a parent.
+        if recipe.extends is not None:
+            # If the parent is not declared in the catalogue.
+            if recipe.extends not in catalogue.recipes:
+                # Throw.
+                raise ConfigurationError(f"recipes.{current}.extends", f"Recipe `{recipe.extends}` is not declared in the catalogue.")
+
+        # Continue with the parent, if any.
+        current = recipe.extends
+
+    # Reverse the chain into parent-first order.
+    chain.reverse()
+
+    # Collect volume and secret requirements across the complete recipe chain.
+    volumes: dict[str, VolumeDeclaration] = {}
+    secrets: list[str] = []
