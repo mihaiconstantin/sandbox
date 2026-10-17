@@ -95,6 +95,11 @@ def load_catalogue(directory: Path) -> Catalogue:
     recipe: Recipe
 
     # Require every declared `docker` compose file to resolve inside this catalogue.
+    for name, recipe in catalogue.recipes.items():
+        resolve_compose_file(directory, name, recipe)
+
+    # Return the validated catalogue.
+    return catalogue
 
 
 # Resolve a recipe's declared `docker` compose file inside a catalogue directory.
