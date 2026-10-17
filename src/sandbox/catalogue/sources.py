@@ -19,3 +19,15 @@ GIT_CLONE_TIMEOUT: int = 120
 
 # Define the supported `git` URL schemes.
 GIT_URL_SCHEMES: frozenset[str] = frozenset({"https", "http", "ssh", "git", "file"})
+
+
+# Reject a source that overlaps the final catalogue destination.
+def _require_disjoint(source: Path, destination: Path) -> None:
+    # Resolve both paths without requiring either to exist.
+    resolved_source: Path = source.expanduser().resolve()
+    resolved_destination: Path = destination.expanduser().resolve()
+
+    # If either path contains the other.
+    if resolved_source == resolved_destination or resolved_source.is_relative_to(resolved_destination) or resolved_destination.is_relative_to(resolved_source):
+        # Throw.
+        raise CatalogueInstallError(f"Catalogue source `{resolved_source}` overlaps the catalogue destination `{resolved_destination}`.")
