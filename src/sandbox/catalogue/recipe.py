@@ -116,3 +116,19 @@ class Recipe:
         secrets: tuple[str, ...] = ()
 
         # If secret aliases are declared.
+        if "secrets" in configuration:
+            # If the secret aliases are not an array.
+            if not isinstance(configuration["secrets"], list):
+                # Throw.
+                raise ConfigurationError("secrets", "Must be an array of secret aliases.")
+            secrets = tuple(configuration["secrets"])
+
+        # Build the validated recipe from its required and optional fields.
+        return cls(
+            compose = configuration["compose"],
+            service = configuration["service"],
+            extends = configuration.get("extends"),
+            volumes = volumes,
+            secrets = secrets,
+            allow_root = configuration.get("allow_root", False),
+        )
