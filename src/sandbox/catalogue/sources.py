@@ -54,3 +54,9 @@ class CatalogueSource(Protocol):
 
     # Copy the source, staging it before the final catalogue destination.
     def materialize(self, staging: Path, destination: Path) -> None: ...
+
+
+# Represent the catalogue bundled with `sandbox`.
+class BundledSource:
+    # Record the bundled origin.
+    origin: str = registry.BUNDLED_CATALOGUE_TYPE
