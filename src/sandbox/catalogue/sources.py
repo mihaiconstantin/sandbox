@@ -93,3 +93,21 @@ class BundledSource:
 class LocalSource:
     # Record the local origin.
     origin: str = registry.LOCAL_CATALOGUE_TYPE
+
+    # Resolve and validate the local catalogue directory.
+    def __init__(self, value: str) -> None:
+        # If no source path was provided.
+        if not value:
+            # Throw.
+            raise CatalogueInstallError("A local catalogue source path is required.")
+
+        # Expand and resolve the source path relative to the current directory.
+        source: Path = Path(value).expanduser().resolve()
+
+        # If the source is missing or not a directory.
+        if not source.is_dir():
+            # Throw.
+            raise CatalogueInstallError(f"Local catalogue source `{value}` is not a directory.")
+
+        # Retain the resolved source.
+        self._source: Path = source
