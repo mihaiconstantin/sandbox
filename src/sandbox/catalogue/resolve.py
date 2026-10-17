@@ -49,3 +49,20 @@ def select_recipe(catalogue: Catalogue, requested: str | None) -> str:
         "catalogue.default_recipe",
         f"Catalogue `{catalogue.name}` does not declare a default recipe; pass `--recipe` with one of: {available}.",
     )
+
+
+# Resolve a selected recipe into ordered `docker` compose files and volume requirements.
+def resolve_recipe(catalogue: Catalogue, directory: Path, name: str) -> ResolvedCatalogueRecipe:
+    # If the selected recipe is not declared in the catalogue.
+    if name not in catalogue.recipes:
+        # List the available recipes in deterministic order.
+        available: str = ", ".join(f"`{recipe_name}`" for recipe_name in sorted(catalogue.recipes))
+
+        # Throw.
+        raise ConfigurationError("recipes", f"Recipe `{name}` is not declared in the catalogue; available recipes: {available}.")
+
+    # Follow the optional single-parent chain from the selected recipe.
+    chain: list[str] = []
+    current: str | None = name
+
+    # While a recipe remains in the chain.
