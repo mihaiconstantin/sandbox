@@ -45,3 +45,12 @@ def _terminate_clone(process: subprocess.Popen[bytes]) -> None:
 
     # Reap the clone process.
     process.communicate()
+
+
+# Describe a catalogue source that can be materialized into a destination.
+class CatalogueSource(Protocol):
+    # The origin recorded in the catalogue registry.
+    origin: str
+
+    # Copy the source, staging it before the final catalogue destination.
+    def materialize(self, staging: Path, destination: Path) -> None: ...
