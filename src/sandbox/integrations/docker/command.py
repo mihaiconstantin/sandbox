@@ -45,3 +45,21 @@ class CommandResult:
         if not isinstance(self.stdout, bytes) or not isinstance(self.stderr, bytes):
             # Throw.
             raise ValueError("CommandResult.stdout and CommandResult.stderr must be bytes.")
+
+    @property
+    def diagnostic(self) -> str:
+        # Prefer the last non-empty standard-error line and fall back to standard output.
+        for stream in (self.stderr, self.stdout):
+            # Decode invalid partial UTF-8 without raising across the boundary.
+            text: str = stream.decode("utf-8", errors = "replace")
+
+            # Select the last non-empty line.
+            lines: list[str] = [line.strip() for line in text.splitlines() if line.strip()]
+
+            # Return the bounded diagnostic when this stream carried one.
+            if lines:
+                # Bound the diagnostic to a single stable line.
+                return lines[-1][:DIAGNOSTIC_LIMIT]
+
+        # Report an empty diagnostic when both streams were empty.
+        return ""
