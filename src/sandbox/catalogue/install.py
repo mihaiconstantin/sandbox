@@ -142,6 +142,7 @@ class CatalogueInstaller:
                 shutil.rmtree(staging_dir)
 
         # Return the installed catalogue directory.
+        return catalogue_dir
 
 
 # Install a catalogue from a source value.
