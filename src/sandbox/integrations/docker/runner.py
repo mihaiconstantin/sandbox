@@ -65,3 +65,8 @@ class SubprocessRunner:
 
         # Return the raw child status without interpreting it.
         return CommandResult(arguments = command, returncode = completed.returncode)
+
+    # Put one queue item into the bounded queue.
+    def _put(self, queue: Queue[tuple[OutputChannel, bytes | None]], item: tuple[OutputChannel, bytes | None]) -> None:
+        # Block until the caller thread makes room, preserving the end-of-stream marker.
+        queue.put(item)
