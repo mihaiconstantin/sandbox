@@ -84,6 +84,64 @@ class CatalogueInstaller:
         completed: bool = False
 
         # Prepare and publish the catalogue.
+        try:
+            # Materialize the catalogue into the staging directory.
+            source.materialize(staged_catalogue, catalogue_dir)
+
+            # Rewrite the manifest name when it differs from the requested name.
+            _rewrite_manifest_name(staged_catalogue / manifest.MANIFEST_FILENAME, name)
+
+            # Validate the staged catalogue before publishing it.
+            staged: Catalogue = manifest.load_catalogue(staged_catalogue)
+
+            # If the validated name differs from the requested name.
+            if staged.name != name:
+                # Throw.
+                raise CatalogueInstallError(f"Catalogue manifest `{staged_catalogue / manifest.MANIFEST_FILENAME}` declares the name `{staged.name}` instead of `{name}`.")
+
+            # If an existing catalogue must be preserved.
+            if catalogue_dir.exists():
+                # Move the previous catalogue into the backup directory.
+                os.replace(catalogue_dir, backup_catalogue)
+
+                # Mark that a backup was created.
+                backed_up = True
+
+            # Install the staged catalogue.
+            os.replace(staged_catalogue, catalogue_dir)
+
+            # Mark the new catalogue as installed.
+            installed = True
+
+            # Publish the registration after installing the catalogue.
+            self.store.register(name, source.origin, force, replace = os.replace)
+
+            # Mark the installation as successfully completed.
+            completed = True
+
+        # If installation fails.
+        except Exception:
+            # Remove the newly installed catalogue if necessary.
+            # If the new catalogue was installed before the failure.
+            if installed:
+                shutil.rmtree(catalogue_dir)
+
+            # If a backup was created.
+            if backed_up:
+                # Restore the previous catalogue.
+                os.replace(backup_catalogue, catalogue_dir)
+
+            # Propagate the original failure.
+            raise
+
+        # Remove the staging directory after success or successful rollback.
+        finally:
+            # If installation completed or no backup remains.
+            if completed or not backup_catalogue.exists():
+                # Remove the staging directory.
+                shutil.rmtree(staging_dir)
+
+        # Return the installed catalogue directory.
 
 
 # Install a catalogue from a source value.
