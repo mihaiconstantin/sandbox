@@ -37,3 +37,31 @@ class SubprocessRunner:
 
         # Record the bounded diagnostic retention.
         self._tail_limit: int = tail_limit
+
+    # Run one command with inherited standard streams and preserve its status.
+    def run_interactive(
+        self,
+        arguments: Sequence[str],
+        *,
+        environment: Mapping[str, str] | None = None,
+    ) -> CommandResult:
+        # Normalize the argument vector.
+        command: tuple[str, ...] = tuple(arguments)
+
+        # Require an actual command.
+        if not command:
+            # Throw.
+            raise ValueError("arguments must contain at least one command argument.")
+
+        # Inherit the caller's terminal so interactive shells keep their semantics.
+        completed: subprocess.CompletedProcess[bytes] = subprocess.run(
+            list(command),
+            stdin = None,
+            stdout = None,
+            stderr = None,
+            env = None if environment is None else dict(environment),
+            check = False,
+        )
+
+        # Return the raw child status without interpreting it.
+        return CommandResult(arguments = command, returncode = completed.returncode)
