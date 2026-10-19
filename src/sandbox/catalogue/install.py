@@ -28,6 +28,39 @@ class CatalogueInstaller:
         # Bind the installer to the configuration store.
         self.store: ConfigurationStore = store if store is not None else ConfigurationStore(self.home)
 
+    # Install and publish a catalogue under the requested name.
+    def _install(self, name: str, source: sources.CatalogueSource, force: bool = False) -> Path:
+        # Compute the catalogue destination, validating the name.
+        catalogue_dir: Path = self.store.destination(name)
+
+        # Determine whether the catalogue directory already exists.
+        directory_exists: bool = catalogue_dir.exists() or catalogue_dir.is_symlink()
+
+        # Determine whether the catalogue is already registered.
+        registered: bool = any(item.name == name for item in self.store.registrations())
+
+        # If an existing catalogue would be replaced without permission.
+        if (directory_exists or registered) and not force:
+            # Throw.
+            raise CatalogueInstallError(f"Catalogue `{name}` is already installed. Use `--force` to replace it.")
+
+        # If the destination is a symbolic link or not a directory.
+        if catalogue_dir.is_symlink() or (catalogue_dir.exists() and not catalogue_dir.is_dir()):
+            # Throw.
+            raise CatalogueInstallError(f"Catalogue destination `{catalogue_dir}` is not a regular directory.")
+
+        # Validate the registration before changing the filesystem.
+        self.store.check_registration(name, source.origin, force)
+
+        # Create the catalogue root before staging.
+        catalogue_dir.parent.mkdir(parents = True, exist_ok = True)
+
+        # Create a temporary directory for staging and backup.
+        staging_dir: Path = Path(tempfile.mkdtemp(prefix = f".{name}-", dir = catalogue_dir.parent))
+
+        # Prepare paths for the staged catalogue and the previous installation.
+        staged_catalogue: Path = staging_dir / "catalogue"
+
 
 # Install a catalogue from a source value.
 def install_catalogue(home: Path, name: str, source: str, force: bool = False) -> Path:
