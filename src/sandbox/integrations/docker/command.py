@@ -85,3 +85,7 @@ class CommandRunner(Protocol):
         *,
         environment: Mapping[str, str] | None = None,
     ) -> CommandResult: ...
+
+
+# Define the public API of the integration command module.
+__all__: list[str] = ["CommandResult", "CommandRunner", "DIAGNOSTIC_LIMIT"]
