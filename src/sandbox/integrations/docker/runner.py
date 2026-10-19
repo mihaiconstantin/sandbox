@@ -92,3 +92,13 @@ class SubprocessRunner:
     def _put(self, queue: Queue[tuple[OutputChannel, bytes | None]], item: tuple[OutputChannel, bytes | None]) -> None:
         # Block until the caller thread makes room, preserving the end-of-stream marker.
         queue.put(item)
+
+    # Retain the final bytes of one stream up to the configured bound.
+    def _append_tail(self, tail: bytearray, chunk: bytes) -> None:
+        # Append the new chunk.
+        tail.extend(chunk)
+
+        # Drop the oldest bytes beyond the bound.
+        if len(tail) > self._tail_limit:
+            # Keep only the newest bounded suffix.
+            del tail[: len(tail) - self._tail_limit]
