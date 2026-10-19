@@ -28,6 +28,18 @@ class CatalogueInstaller:
         # Bind the installer to the configuration store.
         self.store: ConfigurationStore = store if store is not None else ConfigurationStore(self.home)
 
+    # Install a catalogue under the requested name.
+    def install(self, name: str, source: sources.CatalogueSource, force: bool = False) -> Path:
+        # Wrap expected filesystem failures in a domain error.
+        try:
+            # Install the catalogue and publish its files and registration.
+            return self._install(name, source, force)
+
+        # If the filesystem cannot complete the installation.
+        except (OSError, shutil.Error) as error:
+            # Throw.
+            raise CatalogueInstallError(f"Unable to install catalogue `{name}`: {error}") from error
+
     # Install and publish a catalogue under the requested name.
     def _install(self, name: str, source: sources.CatalogueSource, force: bool = False) -> Path:
         # Compute the catalogue destination, validating the name.
