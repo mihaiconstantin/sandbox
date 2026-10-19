@@ -66,6 +66,28 @@ class SubprocessRunner:
         # Return the raw child status without interpreting it.
         return CommandResult(arguments = command, returncode = completed.returncode)
 
+    # Read one binary pipe until end of stream.
+    def _pump(self, stream: BinaryIO, channel: OutputChannel, queue: Queue[tuple[OutputChannel, bytes | None]]) -> None:
+        # Read chunks until the child closes this pipe.
+        try:
+            # Loop over the page-sized reads.
+            while True:
+                # Read the next chunk from the binary stream.
+                chunk: bytes = stream.read(READ_SIZE)
+
+                # Stop at end of stream.
+                if not chunk:
+                    # Leave the loop.
+                    break
+
+                # Apply back-pressure through the bounded queue.
+                self._put(queue, (channel, chunk))
+
+        # Always signal end of stream to the caller thread.
+        finally:
+            # Report this pipe as finished.
+            self._put(queue, (channel, None))
+
     # Put one queue item into the bounded queue.
     def _put(self, queue: Queue[tuple[OutputChannel, bytes | None]], item: tuple[OutputChannel, bytes | None]) -> None:
         # Block until the caller thread makes room, preserving the end-of-stream marker.
