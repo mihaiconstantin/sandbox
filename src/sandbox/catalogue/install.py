@@ -27,3 +27,13 @@ class CatalogueInstaller:
 
         # Bind the installer to the configuration store.
         self.store: ConfigurationStore = store if store is not None else ConfigurationStore(self.home)
+
+
+# Install a catalogue from a source value.
+def install_catalogue(home: Path, name: str, source: str, force: bool = False) -> Path:
+    # Build the catalogue installer and source.
+    installer: CatalogueInstaller = CatalogueInstaller(home)
+    catalogue_source: sources.CatalogueSource = sources.source_for(source)
+
+    # Install the catalogue.
+    return installer.install(name, catalogue_source, force)
