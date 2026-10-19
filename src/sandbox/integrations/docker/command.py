@@ -77,3 +77,11 @@ class CommandRunner(Protocol):
         capture: bool = True,
         output: OutputSink = SILENT,
     ) -> CommandResult: ...
+
+    # Run one command with inherited standard streams and preserve its status.
+    def run_interactive(
+        self,
+        arguments: Sequence[str],
+        *,
+        environment: Mapping[str, str] | None = None,
+    ) -> CommandResult: ...
