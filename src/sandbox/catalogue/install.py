@@ -72,6 +72,18 @@ class CatalogueInstaller:
 
         # Prepare paths for the staged catalogue and the previous installation.
         staged_catalogue: Path = staging_dir / "catalogue"
+        backup_catalogue: Path = staging_dir / "backup"
+
+        # Track whether the previous installation was moved to backup.
+        backed_up: bool = False
+
+        # Track whether the new catalogue was installed.
+        installed: bool = False
+
+        # Track whether the installation completed successfully.
+        completed: bool = False
+
+        # Prepare and publish the catalogue.
 
 
 # Install a catalogue from a source value.
