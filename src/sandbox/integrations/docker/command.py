@@ -26,3 +26,22 @@ class CommandResult:
 
     # Record the captured or tailed standard error as raw bytes.
     stderr: bytes = b""
+
+    def __post_init__(self) -> None:
+        # Require an immutable argument vector.
+        if (
+            not isinstance(self.arguments, tuple)
+            or any(not isinstance(argument, str) for argument in self.arguments)
+        ):
+            # Throw.
+            raise ValueError("CommandResult.arguments must be a tuple of strings.")
+
+        # Require an exact integer status.
+        if type(self.returncode) is not int:
+            # Throw.
+            raise ValueError("CommandResult.returncode must be an integer.")
+
+        # Require raw byte streams.
+        if not isinstance(self.stdout, bytes) or not isinstance(self.stderr, bytes):
+            # Throw.
+            raise ValueError("CommandResult.stdout and CommandResult.stderr must be bytes.")
