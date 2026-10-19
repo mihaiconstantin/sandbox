@@ -63,3 +63,17 @@ class CommandResult:
 
         # Report an empty diagnostic when both streams were empty.
         return ""
+
+
+# Define the process-execution seam shared by the Docker integration.
+@runtime_checkable
+class CommandRunner(Protocol):
+    # Run one non-interactive command with captured or streamed binary pipes.
+    def run(
+        self,
+        arguments: Sequence[str],
+        *,
+        environment: Mapping[str, str] | None = None,
+        capture: bool = True,
+        output: OutputSink = SILENT,
+    ) -> CommandResult: ...
