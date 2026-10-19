@@ -216,3 +216,19 @@ class GitSource:
         if process.returncode != 0:
             # Throw without exposing the URL or the `git` output.
             raise CatalogueInstallError(f"`git` clone failed with exit code {process.returncode}.")
+
+
+# Build the catalogue source for a CLI value.
+def source_for(value: str) -> CatalogueSource:
+    # If the value selects the bundled catalogue.
+    if value == registry.BUNDLED_CATALOGUE_TYPE:
+        # Return the bundled source.
+        return BundledSource()
+
+    # If the value looks like a `git` repository.
+    if "://" in value or value.startswith("git@"):
+        # Return the `git` source.
+        return GitSource(value)
+
+    # Otherwise, treat the value as a local directory.
+    return LocalSource(value)
