@@ -91,3 +91,29 @@ class DockerCli:
             exit_code = exit_code,
             diagnostic = result.diagnostic,
         )
+
+    # Report whether one image is available locally for the selected platform.
+    def image_exists(self, reference: str, *, platform: str | None, operation: str) -> bool:
+        # Start the local image inspection.
+        arguments: list[str] = ["docker", "image", "inspect"]
+
+        # Select the same image platform that the build uses.
+        if platform:
+            # Retain Docker's own multi-platform selection.
+            arguments.extend(["--platform", platform])
+
+        # Request only the image identifier to keep the result small.
+        arguments.extend(["--format", "{{.Id}}", reference])
+
+        # Inspect the image without treating a missing image as a command failure.
+        result: CommandResult = self.run(arguments, operation = operation)
+
+        # If the image is available locally, the inspection succeeds.
+        if result.returncode == 0:
+            # Report the image presence.
+            return True
+
+        # Read the diagnostic from both streams because Docker versions differ.
+        detail: str = f"{result.stdout.decode('utf-8', errors = 'replace')}\n{result.stderr.decode('utf-8', errors = 'replace')}".lower()
+
+        # If the image is missing or unavailable for the selected platform, report absence.
