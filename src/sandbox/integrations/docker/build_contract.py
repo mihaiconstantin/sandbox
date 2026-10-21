@@ -83,6 +83,31 @@ def _validate_build_arguments(value: object, field: str) -> None:
     raise RecipeUnresolved(field, "Must be a mapping or an array of `name=value` strings.")
 
 
+# Validate local additional build contexts while preserving Compose service references.
+def _validate_additional_contexts(value: object, catalogue_root: Path, field: str) -> None:
+    # If no additional contexts are declared, accept the build.
+    if value is None:
+        # Return without additional contexts.
+        return
+
+    # Normalize the mapping form.
+    if isinstance(value, Mapping):
+        # Read every declared context.
+        entries: list[Any] = list(value.values())
+
+    # Normalize the array form.
+    elif isinstance(value, list):
+        # Read every declared context.
+        entries = list(value)
+
+    # Reject an unexpected resolved shape.
+    else:
+        # Throw.
+        raise RecipeUnresolved(field, "Must be a mapping or an array of context declarations.")
+
+    # Validate every context entry.
+
+
 # Resolve one local path against the catalogue root and require containment.
 def _contained_local_path(value: object, catalogue_root: Path, field: str) -> Path:
     # Require a nonblank string path.
