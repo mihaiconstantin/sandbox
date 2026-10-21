@@ -171,3 +171,22 @@ class DockerCli:
 
         # Stream the pull progress with a bounded diagnostic tail.
         return self.run(arguments, operation = operation, environment = environment, capture = False, output = output)
+
+    # Save exactly one target image into an uncompressed Docker archive.
+    def save_image(self, reference: str, *, platform: str | None, destination: Path, operation: str) -> CommandResult:
+        # Start the image save command.
+        arguments: list[str] = ["docker", "image", "save"]
+
+        # Select the target platform before writing the archive.
+        if platform:
+            # Add the platform selector.
+            arguments.extend(["--platform", platform])
+
+        # Write the archive directly to the operation-scoped destination.
+        arguments.extend(["--output", str(destination)])
+
+        # Name the single target image last and never add build dependencies.
+        arguments.append(reference)
+
+        # Run the export with captured output.
+        return self.run(arguments, operation = operation)
