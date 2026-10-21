@@ -128,6 +128,30 @@ class DockerCli:
         # Otherwise, preserve the inspection failure for the caller.
         raise EngineFailure(self.failure(operation, arguments, result))
 
+    # Inspect one image and return its first structured payload.
+    def inspect_image(self, reference: str, *, platform: str | None, operation: str) -> Mapping[str, Any]:
+        # Start the image inspection.
+        arguments: list[str] = ["docker", "image", "inspect"]
+
+        # Select the effective platform when one is known.
+        if platform:
+            # Add the platform selector.
+            arguments.extend(["--platform", platform])
+
+        # Inspect the exact reference.
+        arguments.append(reference)
+
+        # Run the inspection and require success.
+        result: CommandResult = self.run(arguments, operation = operation)
+
+        # Translate an inspection failure.
+        if result.returncode != 0:
+            # Throw the neutral engine failure.
+            raise EngineFailure(self.failure(operation, arguments, result))
+
+        # Parse the complete inspection payload.
+        return self._inspection(operation, result)
+
     # Read the effective image platform as `os/arch[/variant]`.
     def image_platform(self, inspection: Mapping[str, Any]) -> str | None:
         # Read the operating system and architecture fields.
