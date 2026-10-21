@@ -94,6 +94,63 @@ class SubprocessRunner:
         # Report whether the child was reaped by the normal path.
 
         # Drain both pipes on the calling thread so the sink never races the readers.
+        try:
+            # Count the two end-of-stream markers.
+            remaining: int = len(readers)
+
+            # Forward every chunk until both readers finish.
+            while remaining > 0:
+                # Receive the next chunk without spinning the caller thread.
+                channel, chunk = queue.get()
+
+                # If this reader reached end of stream.
+                if chunk is None:
+                    # Record the completed pipe.
+                    remaining -= 1
+                    continue
+
+                # Preserve complete output for captured commands.
+                if capture:
+                    # Append the complete chunk.
+                    captured[channel].extend(chunk)
+
+                # Retain only the bounded diagnostic tail for every command.
+                self._append_tail(tails[channel], chunk)
+
+                # Forward the raw chunk on its original channel.
+                output.process_output(channel, chunk)
+
+            # Reap the child and preserve its raw status.
+            returncode: int = process.wait()
+
+        # On interruption or a sink failure, terminate the whole process group before leaving.
+        except BaseException:
+            # Terminate, reap, and release both pipes.
+            self._stop(process)
+
+            # Drain any chunks that were already queued so readers can exit.
+            self._drain(queue, len(readers))
+
+            # Join both readers after the pipes are closed.
+            for reader in readers:
+                # Allow a briefly blocked reader to observe EOF.
+                reader.join(timeout = 1.0)
+
+            # Re-raise the original failure unchanged.
+            raise
+
+        # The normal path reaps the child; release the pipe handles.
+        finally:
+            # Close both binary pipes.
+            process.stdout.close()
+            process.stderr.close()
+
+            # Join the readers only after the child is gone.
+            for reader in readers:
+                # Wait briefly for the final chunk.
+                reader.join(timeout = 1.0)
+
+        # Return the captured output or its bounded tail.
 
     # Run one command with inherited standard streams and preserve its status.
     def run_interactive(
