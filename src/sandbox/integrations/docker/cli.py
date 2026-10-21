@@ -228,6 +228,14 @@ class DockerCli:
         # Return the successful result.
         return result
 
+    # Inspect one resource and parse its first payload.
+    def _inspect_payload(self, operation: str, arguments: Sequence[str]) -> Mapping[str, Any]:
+        # Require the inspection to succeed.
+        result: CommandResult = self._run(operation, arguments)
+
+        # Parse the inspection payload.
+        return self._inspection(operation, result)
+
     # Split one identifier listing.
     def _lines(self, stdout: bytes) -> tuple[str, ...]:
         # Decode invalid partial UTF-8 without raising across the boundary.
