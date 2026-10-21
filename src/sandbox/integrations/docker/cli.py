@@ -127,3 +127,23 @@ class DockerCli:
 
         # Otherwise, preserve the inspection failure for the caller.
         raise EngineFailure(self.failure(operation, arguments, result))
+
+    # Read the effective image platform as `os/arch[/variant]`.
+    def image_platform(self, inspection: Mapping[str, Any]) -> str | None:
+        # Read the operating system and architecture fields.
+        os_name: Any = inspection.get("Os")
+        architecture: Any = inspection.get("Architecture")
+        variant: Any = inspection.get("Variant")
+
+        # Require two usable components.
+        if not isinstance(os_name, str) or not os_name or not isinstance(architecture, str) or not architecture:
+            # Report an unknown platform.
+            return None
+
+        # Include the variant only when Docker reports one.
+        if isinstance(variant, str) and variant:
+            # Return the complete platform.
+            return f"{os_name}/{architecture}/{variant}"
+
+        # Return the base platform.
+        return f"{os_name}/{architecture}"
