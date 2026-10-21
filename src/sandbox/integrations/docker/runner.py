@@ -129,3 +129,23 @@ class SubprocessRunner:
             if chunk is None:
                 # Record the marker.
                 remaining -= 1
+
+    # Terminate the complete process group and reap the direct child.
+    def _stop(self, process: subprocess.Popen[bytes]) -> None:
+        # If the child already exited, only reap it.
+        if process.poll() is not None:
+            # Reap the direct child without another signal.
+            process.wait()
+            return
+
+        # Ask the whole process group to terminate.
+        try:
+            # Signal every process in the child's group.
+            os.killpg(process.pid, signal.SIGTERM)
+
+        # Ignore a group that exited between the poll and the signal.
+        except ProcessLookupError:
+            # Continue to the status wait.
+            pass
+
+        # Wait for the group to exit.
