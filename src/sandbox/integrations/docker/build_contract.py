@@ -292,3 +292,7 @@ def _mapping(value: object, field: str) -> Mapping[str, Any]:
 
     # Return the mapping.
     return value
+
+
+# Define the public API of the builder build-contract projection.
+__all__: list[str] = ["BuildDeclaration", "ServiceBuild", "project_service"]
