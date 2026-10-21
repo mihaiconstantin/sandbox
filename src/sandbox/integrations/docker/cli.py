@@ -203,3 +203,11 @@ class DockerCli:
 
         # Return the successful result.
         return result
+
+    # Split one identifier listing.
+    def _lines(self, stdout: bytes) -> tuple[str, ...]:
+        # Decode invalid partial UTF-8 without raising across the boundary.
+        text: str = stdout.decode("utf-8", errors = "replace")
+
+        # Return the nonempty lines in engine order.
+        return tuple(line for line in text.splitlines() if line)
