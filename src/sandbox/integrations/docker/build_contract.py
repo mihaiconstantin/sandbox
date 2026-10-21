@@ -12,3 +12,13 @@ from sandbox.errors.recipes import RecipeUnresolved
 
 # Import the neutral plan and recipe values.
 from sandbox.domain import RecipeDefinition, SandboxPlan
+
+
+# Record the local build descriptor read from one resolved Compose service.
+@dataclass(frozen = True, slots = True)
+class BuildDeclaration:
+    # Record the contained absolute build context.
+    context: Path
+
+    # Record the contained absolute Dockerfile when one was declared.
+    dockerfile: Path | None
