@@ -16,3 +16,11 @@ from sandbox.integrations.docker.command import CommandResult, CommandRunner
 
 # Import the neutral output contract.
 from sandbox.ports.output import SILENT, OutputSink
+
+
+# Run Docker CLI commands and translate their failures once.
+class DockerCli:
+    # Construct the gateway around one process runner.
+    def __init__(self, runner: CommandRunner) -> None:
+        # Record the injected runner.
+        self._runner: CommandRunner = runner
