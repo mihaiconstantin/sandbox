@@ -37,6 +37,41 @@ class ServiceBuild:
     build: BuildDeclaration | None
 
 
+# Project one contained local build declaration.
+def _build(value: object, catalogue_root: Path, field: str) -> BuildDeclaration | None:
+    # If no build is declared, return no descriptor.
+    if value is None:
+        # Return no build.
+        return None
+
+    # Read the short string form.
+    if isinstance(value, str):
+        # Require the short context form to be nonblank.
+        if not value.strip():
+            # Throw.
+            raise RecipeUnresolved(field, "Must be a nonblank local build context.")
+
+        # Build the short descriptor.
+        build: Mapping[str, Any] = {"context": value}
+
+    # Otherwise require a build mapping.
+    else:
+        # Normalize the mapping form.
+        build = _mapping(value, field)
+
+    # Resolve the local build context against the catalogue root.
+    context: Path = _contained_local_path(build.get("context", "."), catalogue_root, f"{field}.context")
+
+    # Require the build context to exist as a directory.
+    if not context.is_dir():
+        # Throw.
+        raise ConfigurationError(f"{field}.context", "Must reference an existing local directory.")
+
+    # Resolve an optional Dockerfile against the build context.
+    dockerfile_value: Any = build.get("dockerfile")
+    dockerfile: Path | None = None
+
+
 # Reject a build argument that has no explicit value.
 def _validate_build_arguments(value: object, field: str) -> None:
     # If no arguments are declared, accept the build.
