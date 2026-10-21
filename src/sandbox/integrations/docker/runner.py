@@ -151,6 +151,12 @@ class SubprocessRunner:
                 reader.join(timeout = 1.0)
 
         # Return the captured output or its bounded tail.
+        return CommandResult(
+            arguments = command,
+            returncode = returncode,
+            stdout = bytes(captured[OutputChannel.STDOUT] if capture else tails[OutputChannel.STDOUT]),
+            stderr = bytes(captured[OutputChannel.STDERR] if capture else tails[OutputChannel.STDERR]),
+        )
 
     # Run one command with inherited standard streams and preserve its status.
     def run_interactive(
