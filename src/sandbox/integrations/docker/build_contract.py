@@ -62,3 +62,22 @@ def _validate_build_arguments(value: object, field: str) -> None:
         return
 
     # Normalize the resolved array form.
+    if isinstance(value, list):
+        # Validate every array entry.
+        for index, item in enumerate(value):
+            # Require the `name=value` form.
+            if not isinstance(item, str) or "=" not in item:
+                # Throw.
+                raise ConfigurationError(f"{field}[{index}]", "Must declare an explicit `name=value` build argument.")
+
+            # Require a nonblank argument name.
+            name: str = item.split("=", 1)[0]
+            if not name.strip():
+                # Throw.
+                raise ConfigurationError(f"{field}[{index}]", "Must declare a nonblank build-argument name.")
+
+        # Return after validating the array.
+        return
+
+    # Reject an unexpected resolved shape.
+    raise RecipeUnresolved(field, "Must be a mapping or an array of `name=value` strings.")
