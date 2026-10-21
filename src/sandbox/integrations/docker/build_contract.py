@@ -119,6 +119,34 @@ def _build(value: object, catalogue_root: Path, field: str) -> BuildDeclaration 
     # Resolve an optional Dockerfile against the build context.
     dockerfile_value: Any = build.get("dockerfile")
     dockerfile: Path | None = None
+    if dockerfile_value is not None:
+        # Require a nonblank Dockerfile path.
+        if not isinstance(dockerfile_value, str) or not dockerfile_value.strip():
+            # Throw.
+            raise RecipeUnresolved(f"{field}.dockerfile", "Must be a nonblank local path.")
+
+        # Resolve the path against the context before containment checks.
+        dockerfile_path: Path = Path(dockerfile_value).expanduser()
+        if not dockerfile_path.is_absolute():
+            # Anchor the Dockerfile at the build context.
+            dockerfile_path = context / dockerfile_path
+
+        # Require the Dockerfile to remain inside the catalogue.
+        dockerfile = _contained_path(dockerfile_path, catalogue_root, f"{field}.dockerfile")
+
+        # Require the Dockerfile to exist as a regular file.
+        if not dockerfile.is_file():
+            # Throw.
+            raise ConfigurationError(f"{field}.dockerfile", "Must reference an existing file.")
+
+    # Reject build arguments that cannot be resolved to one explicit value.
+    _validate_build_arguments(build.get("args"), f"{field}.args")
+
+    # Validate every additional context and reject remote sources.
+    _validate_additional_contexts(build.get("additional_contexts"), catalogue_root, f"{field}.additional_contexts")
+
+    # Return the contained build descriptor.
+    return BuildDeclaration(context = context, dockerfile = dockerfile)
 
 
 # Reject a build argument that has no explicit value.
