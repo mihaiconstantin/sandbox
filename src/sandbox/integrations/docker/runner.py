@@ -75,6 +75,25 @@ class SubprocessRunner:
             threading.Thread(target = self._pump, args = (process.stdout, OutputChannel.STDOUT, queue), daemon = True),
             threading.Thread(target = self._pump, args = (process.stderr, OutputChannel.STDERR, queue), daemon = True),
         )
+        for reader in readers:
+            # Start delivering chunks.
+            reader.start()
+
+        # Keep the complete capture only when the caller requires machine-readable output.
+        captured: dict[OutputChannel, bytearray] = {
+            OutputChannel.STDOUT: bytearray(),
+            OutputChannel.STDERR: bytearray(),
+        }
+
+        # Always retain a bounded tail for diagnostics, even while streaming.
+        tails: dict[OutputChannel, bytearray] = {
+            OutputChannel.STDOUT: bytearray(),
+            OutputChannel.STDERR: bytearray(),
+        }
+
+        # Report whether the child was reaped by the normal path.
+
+        # Drain both pipes on the calling thread so the sink never races the readers.
 
     # Run one command with inherited standard streams and preserve its status.
     def run_interactive(
