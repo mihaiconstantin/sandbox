@@ -81,3 +81,18 @@ def _validate_build_arguments(value: object, field: str) -> None:
 
     # Reject an unexpected resolved shape.
     raise RecipeUnresolved(field, "Must be a mapping or an array of `name=value` strings.")
+
+
+# Require a path to resolve inside one directory.
+def _contained_path(path: Path, directory: Path, field: str) -> Path:
+    # Resolve candidate and root without requiring either to exist.
+    resolved: Path = path.expanduser().resolve(strict = False)
+    root: Path = directory.expanduser().resolve(strict = False)
+
+    # If the path escapes the catalogue.
+    if not resolved.is_relative_to(root):
+        # Throw.
+        raise ConfigurationError(field, "Must resolve inside the catalogue directory.")
+
+    # Return the contained path.
+    return resolved
