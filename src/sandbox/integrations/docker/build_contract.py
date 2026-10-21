@@ -106,6 +106,32 @@ def _validate_additional_contexts(value: object, catalogue_root: Path, field: st
         raise RecipeUnresolved(field, "Must be a mapping or an array of context declarations.")
 
     # Validate every context entry.
+    for index, entry in enumerate(entries):
+        # Require a string entry.
+        if not isinstance(entry, str) or not entry.strip():
+            # Throw.
+            raise RecipeUnresolved(f"{field}[{index}]", "Must be a nonblank context declaration.")
+
+        # Preserve Compose service references without interpreting their build graph.
+        if entry.startswith("service:"):
+            # Accept the service reference.
+            continue
+
+        # Strip an optional `name=` prefix from the array form.
+        context_value: str = entry.split("=", 1)[1] if "=" in entry else entry
+
+        # Preserve a Compose service reference after the optional name prefix.
+        if context_value.startswith("service:"):
+            # Accept the service reference.
+            continue
+
+        # Reject remote, image, and git build contexts.
+        if "://" in context_value or context_value.startswith("git@"):
+            # Throw.
+            raise ConfigurationError(f"{field}[{index}]", "Must use a local build context inside the catalogue directory.")
+
+        # Require containment without requiring existence.
+        _contained_local_path(context_value, catalogue_root, f"{field}[{index}]")
 
 
 # Resolve one local path against the catalogue root and require containment.
