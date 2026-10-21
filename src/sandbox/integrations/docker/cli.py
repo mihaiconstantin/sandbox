@@ -190,3 +190,16 @@ class DockerCli:
 
         # Run the export with captured output.
         return self.run(arguments, operation = operation)
+
+    # Run one command that must succeed.
+    def _run(self, operation: str, arguments: Sequence[str]) -> CommandResult:
+        # Execute the command through the injected runner.
+        result: CommandResult = self.run(arguments, operation = operation)
+
+        # If the command failed.
+        if result.returncode != 0:
+            # Translate the engine failure once.
+            raise EngineFailure(self.failure(operation, arguments, result))
+
+        # Return the successful result.
+        return result
