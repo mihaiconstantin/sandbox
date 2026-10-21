@@ -56,3 +56,24 @@ class DockerCli:
                 diagnostic = str(error)[:4096],
                 hint = "Install Docker and ensure the `docker` executable is available on PATH.",
             ) from error
+
+    # Run one interactive command with inherited standard streams.
+    def run_interactive(
+        self,
+        arguments: Sequence[str],
+        *,
+        operation: str,
+        environment: Mapping[str, str] | None = None,
+    ) -> CommandResult:
+        # Execute through the injected runner with inherited streams.
+        try:
+            # Preserve the terminal and the child status unchanged.
+            return self._runner.run_interactive(tuple(arguments), environment = environment)
+
+        # Translate a missing executable once.
+        except (FileNotFoundError, PermissionError, OSError) as error:
+            # Choose the prerequisite kind from the OS failure.
+            kind: PrerequisiteKind = PrerequisiteKind.MISSING if isinstance(error, FileNotFoundError) else PrerequisiteKind.UNUSABLE
+
+            # Translate the host failure without leaking the raw exception.
+            raise PrerequisiteError("docker", kind, operation = operation, diagnostic = str(error)[:4096]) from error
