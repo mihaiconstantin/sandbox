@@ -77,3 +77,17 @@ class DockerCli:
 
             # Translate the host failure without leaking the raw exception.
             raise PrerequisiteError("docker", kind, operation = operation, diagnostic = str(error)[:4096]) from error
+
+    # Build the structured command failure for one completed command.
+    def failure(self, operation: str, arguments: Sequence[str], result: CommandResult) -> CommandFailure:
+        # Preserve a positive engine status and normalize signal termination.
+        exit_code: int = result.returncode if result.returncode > 0 else 1
+
+        # Return the bounded neutral failure facts.
+        return CommandFailure(
+            backend = "docker",
+            operation = operation,
+            command = tuple(arguments),
+            exit_code = exit_code,
+            diagnostic = result.diagnostic,
+        )
