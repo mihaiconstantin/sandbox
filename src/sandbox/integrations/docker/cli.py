@@ -211,3 +211,23 @@ class DockerCli:
 
         # Return the nonempty lines in engine order.
         return tuple(line for line in text.splitlines() if line)
+
+    # Parse one nonempty image inspection array.
+    def _inspection(self, operation: str, result: CommandResult) -> Mapping[str, Any]:
+        # Parse the JSON array.
+        try:
+            # Parse the complete output.
+            payload: Any = json.loads(result.stdout)
+
+        # If the output is not JSON.
+        except (json.JSONDecodeError, UnicodeDecodeError) as error:
+            # Translate the malformed response without leaking the parser error.
+            raise EngineOutputInvalid("docker", operation, result.stdout[:200].decode("utf-8", errors = "replace")) from error
+
+        # Require a nonempty array of objects.
+        if not isinstance(payload, list) or not payload or not isinstance(payload[0], Mapping):
+            # Throw.
+            raise EngineOutputInvalid("docker", operation, result.stdout[:200].decode("utf-8", errors = "replace"))
+
+        # Return the first inspected image.
+        return payload[0]
