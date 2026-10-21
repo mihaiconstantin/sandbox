@@ -22,3 +22,16 @@ class BuildDeclaration:
 
     # Record the contained absolute Dockerfile when one was declared.
     dockerfile: Path | None
+
+
+# Record the effective image and optional build declaration for one service.
+@dataclass(frozen = True, slots = True)
+class ServiceBuild:
+    # Record the effective Compose image reference.
+    image: str
+
+    # Record the effective service platform when one is resolved.
+    platform: str | None
+
+    # Record the build declaration when the service declares a build.
+    build: BuildDeclaration | None
