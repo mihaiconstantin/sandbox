@@ -269,3 +269,21 @@ class SubprocessRunner:
             pass
 
         # Wait for the group to exit.
+        try:
+            # Reap within the termination deadline.
+            process.wait(timeout = TERMINATION_TIMEOUT)
+
+        # Escalate when a process ignores the graceful signal.
+        except subprocess.TimeoutExpired:
+            # Ask the group to stop immediately.
+            try:
+                # Signal every descendant without further grace.
+                os.killpg(process.pid, signal.SIGKILL)
+
+            # Ignore a group that exited late.
+            except ProcessLookupError:
+                # Continue to the final wait.
+                pass
+
+            # Reap the direct child after the forced signal.
+            process.wait()
