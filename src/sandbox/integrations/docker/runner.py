@@ -102,3 +102,30 @@ class SubprocessRunner:
         if len(tail) > self._tail_limit:
             # Keep only the newest bounded suffix.
             del tail[: len(tail) - self._tail_limit]
+
+    # Drain queued chunks after an interrupted command.
+    def _drain(self, queue: Queue[tuple[OutputChannel, bytes | None]], streams: int) -> None:
+        # Count the end-of-stream markers still expected.
+        remaining: int = streams
+
+        # Drain until every reader reports completion or the shutdown deadline expires.
+        for _ in range(READ_SIZE):
+            # Stop as soon as both readers are gone.
+            if remaining <= 0:
+                # Leave the drain loop.
+                break
+
+            # Check for one queued item without blocking forever.
+            try:
+                # Receive the next item.
+                _, chunk = queue.get(timeout = 0.05)
+
+            # Tolerate a reader that is still being stopped.
+            except Empty:
+                # Continue until the fixed attempt budget is exhausted.
+                continue
+
+            # Count a completed stream.
+            if chunk is None:
+                # Record the marker.
+                remaining -= 1
