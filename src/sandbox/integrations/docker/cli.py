@@ -147,3 +147,27 @@ class DockerCli:
 
         # Return the base platform.
         return f"{os_name}/{architecture}"
+
+    # Pull one image for the effective platform and stream its progress.
+    def pull_image(
+        self,
+        reference: str,
+        *,
+        platform: str | None,
+        operation: str,
+        environment: Mapping[str, str],
+        output: OutputSink,
+    ) -> CommandResult:
+        # Start the pull command.
+        arguments: list[str] = ["docker", "pull"]
+
+        # Select the effective platform when one is known.
+        if platform:
+            # Add the platform selector.
+            arguments.extend(["--platform", platform])
+
+        # Name the image last.
+        arguments.append(reference)
+
+        # Stream the pull progress with a bounded diagnostic tail.
+        return self.run(arguments, operation = operation, environment = environment, capture = False, output = output)
