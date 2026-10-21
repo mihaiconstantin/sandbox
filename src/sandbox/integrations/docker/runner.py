@@ -287,3 +287,7 @@ class SubprocessRunner:
 
             # Reap the direct child after the forced signal.
             process.wait()
+
+
+# Define the public API of the subprocess runner.
+__all__: list[str] = ["DIAGNOSTIC_TAIL_LIMIT", "SubprocessRunner"]
