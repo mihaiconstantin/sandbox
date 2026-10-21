@@ -117,3 +117,13 @@ class DockerCli:
         detail: str = f"{result.stdout.decode('utf-8', errors = 'replace')}\n{result.stderr.decode('utf-8', errors = 'replace')}".lower()
 
         # If the image is missing or unavailable for the selected platform, report absence.
+        if (
+            "no such image" in detail
+            or "no such object" in detail
+            or "does not match the specified platform" in detail
+        ):
+            # Request the caller to prepare the image.
+            return False
+
+        # Otherwise, preserve the inspection failure for the caller.
+        raise EngineFailure(self.failure(operation, arguments, result))
