@@ -38,6 +38,44 @@ class SubprocessRunner:
         # Record the bounded diagnostic retention.
         self._tail_limit: int = tail_limit
 
+    # Run one non-interactive command with captured or streamed binary pipes.
+    def run(
+        self,
+        arguments: Sequence[str],
+        *,
+        environment: Mapping[str, str] | None = None,
+        capture: bool = True,
+        output: OutputSink = SILENT,
+    ) -> CommandResult:
+        # Normalize the argument vector before the child sees it.
+        command: tuple[str, ...] = tuple(arguments)
+
+        # Require an actual command.
+        if not command:
+            # Throw.
+            raise ValueError("arguments must contain at least one command argument.")
+
+        # Start the child in its own process group with no inherited input.
+        process: subprocess.Popen[bytes] = subprocess.Popen(
+            list(command),
+            stdin = subprocess.DEVNULL,
+            stdout = subprocess.PIPE,
+            stderr = subprocess.PIPE,
+            env = None if environment is None else dict(environment),
+            bufsize = 0,
+            start_new_session = True,
+        )
+
+        # The readers deliver chunks through one bounded caller-thread queue.
+        queue: Queue[tuple[OutputChannel, bytes | None]] = Queue(maxsize = QUEUE_LIMIT)
+
+        # Start one reader per binary pipe.
+        assert process.stdout is not None and process.stderr is not None
+        readers: tuple[threading.Thread, ...] = (
+            threading.Thread(target = self._pump, args = (process.stdout, OutputChannel.STDOUT, queue), daemon = True),
+            threading.Thread(target = self._pump, args = (process.stderr, OutputChannel.STDERR, queue), daemon = True),
+        )
+
     # Run one command with inherited standard streams and preserve its status.
     def run_interactive(
         self,
