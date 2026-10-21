@@ -37,6 +37,43 @@ class ServiceBuild:
     build: BuildDeclaration | None
 
 
+# Project the effective image, platform, and build declaration for one recipe service.
+def project_service(
+    configuration: Mapping[str, Any],
+    plan: SandboxPlan,
+    definition: RecipeDefinition,
+    *,
+    default_platform: str | None = None,
+) -> ServiceBuild:
+    # Require a top-level mapping and a services table.
+    configuration = _mapping(configuration, "configuration")
+    services: Mapping[str, Any] = _mapping(configuration.get("services"), "services")
+
+    # Require the selected primary service.
+    if definition.service not in services:
+        # Throw.
+        raise RecipeUnresolved("services", f"Primary service `{definition.service}` is not declared in the resolved recipe configuration.")
+
+    # Require a mapping for the selected service.
+    field: str = f"services.{definition.service}"
+    service: Mapping[str, Any] = _mapping(services[definition.service], field)
+
+    # Read the effective image or reproduce Compose's default image name.
+    image: Any = service.get("image")
+    if image is None:
+        # Use the Compose default for the selected project and service.
+        image_name: str = f"{plan.project.name}-{definition.service}"
+    elif isinstance(image, str) and image.strip():
+        # Retain the declared image reference exactly as Compose resolved it.
+        image_name = image
+    else:
+        # Throw.
+        raise RecipeUnresolved(f"{field}.image", "Must be a nonblank image reference.")
+
+    # Read the effective service platform without inventing one.
+    platform_value: Any = service.get("platform")
+
+
 # Project one contained local build declaration.
 def _build(value: object, catalogue_root: Path, field: str) -> BuildDeclaration | None:
     # If no build is declared, return no descriptor.
