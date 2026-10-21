@@ -83,6 +83,28 @@ def _validate_build_arguments(value: object, field: str) -> None:
     raise RecipeUnresolved(field, "Must be a mapping or an array of `name=value` strings.")
 
 
+# Resolve one local path against the catalogue root and require containment.
+def _contained_local_path(value: object, catalogue_root: Path, field: str) -> Path:
+    # Require a nonblank string path.
+    if not isinstance(value, str) or not value.strip():
+        # Throw.
+        raise RecipeUnresolved(field, "Must be a nonblank local path.")
+
+    # Reject remote and image build sources.
+    if "://" in value or value.startswith("git@") or value.startswith("service:"):
+        # Throw.
+        raise ConfigurationError(field, "Must use a local build context inside the catalogue directory.")
+
+    # Expand the user and anchor relative paths at the catalogue root.
+    path: Path = Path(value).expanduser()
+    if not path.is_absolute():
+        # Resolve against the catalogue root.
+        path = catalogue_root / path
+
+    # Require the resolved path to stay inside the catalogue.
+    return _contained_path(path, catalogue_root, field)
+
+
 # Require a path to resolve inside one directory.
 def _contained_path(path: Path, directory: Path, field: str) -> Path:
     # Resolve candidate and root without requiring either to exist.
