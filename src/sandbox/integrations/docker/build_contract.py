@@ -72,6 +72,18 @@ def project_service(
 
     # Read the effective service platform without inventing one.
     platform_value: Any = service.get("platform")
+    if platform_value is not None and (not isinstance(platform_value, str) or not platform_value.strip()):
+        # Throw.
+        raise RecipeUnresolved(f"{field}.platform", "Must be a nonblank platform string.")
+
+    # Read the effective build declaration.
+    build: BuildDeclaration | None = _build(service.get("build"), definition.catalogue_root, f"{field}.build")
+
+    # Apply the Docker default platform only to a locally built service, matching the current projection.
+    effective_platform: str | None = platform_value if platform_value is not None else (default_platform if build is not None else None)
+
+    # Return the effective service facts.
+    return ServiceBuild(image = image_name, platform = effective_platform, build = build)
 
 
 # Project one contained local build declaration.
