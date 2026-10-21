@@ -263,3 +263,7 @@ class DockerCli:
 
         # Return the first inspected image.
         return payload[0]
+
+
+# Define the public API of the Docker CLI gateway.
+__all__: list[str] = ["DockerCli"]
