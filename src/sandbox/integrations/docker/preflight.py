@@ -125,6 +125,29 @@ def require_buildx(docker: DockerCli, *, operation: str = "build") -> None:
     found: tuple[int, int, int] | None = parse_version(_tool_output(result))
 
     # If the version is absent, treat the plugin as unusable.
+    if found is None:
+        # Throw.
+        raise PrerequisiteError(
+            "buildx",
+            PrerequisiteKind.UNUSABLE,
+            requirement = f">={BUILDX_MINIMUM}",
+            operation = operation,
+            diagnostic = result.diagnostic,
+            hint = "Install the Docker Buildx plugin v0.17.0 or newer.",
+        )
+
+    # If the installed version is below the supported floor.
+    if not meets_minimum(found, BUILDX_MINIMUM):
+        # Throw the unsupported-version failure.
+        raise PrerequisiteError(
+            "buildx",
+            PrerequisiteKind.VERSION,
+            requirement = f">={BUILDX_MINIMUM}",
+            found = _version_text(found),
+            operation = operation,
+            diagnostic = result.diagnostic,
+            hint = "Upgrade the Docker Buildx plugin to v0.17.0 or newer.",
+        )
 
 
 # Report whether a failed plugin probe means the plugin is absent.
