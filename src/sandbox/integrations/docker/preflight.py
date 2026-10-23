@@ -18,3 +18,20 @@ BUILDX_MINIMUM: str = "0.17.0"
 
 # Match the first semantic version in a tool banner.
 _VERSION_PATTERN = re.compile(r"v?(\d+)\.(\d+)(?:\.(\d+))?")
+
+
+# Return the numeric semantic version tuple found in one tool banner.
+def parse_version(output: str) -> tuple[int, int, int] | None:
+    # Find the first version anywhere in the banner.
+    match: re.Match[str] | None = _VERSION_PATTERN.search(output)
+
+    # Report an unparseable version as absent.
+    if match is None:
+        # Return no version.
+        return None
+
+    # Read the captured numeric components.
+    major, minor, patch = match.groups()
+
+    # Normalize a missing patch component.
+    return (int(major), int(minor), int(patch or 0))
