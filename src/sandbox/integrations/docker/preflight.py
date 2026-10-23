@@ -49,3 +49,22 @@ def meets_minimum(found: tuple[int, int, int], minimum: str) -> bool:
 
     # Compare the normalized numeric components.
     return found >= required
+
+
+# Report whether a failed plugin probe means the plugin is absent.
+def _mentions_missing_plugin(result: CommandResult) -> bool:
+    # Inspect both streams because Docker prints plugin discovery errors to either.
+    detail: str = f"{result.stdout.decode('utf-8', errors = 'replace')}\n{result.stderr.decode('utf-8', errors = 'replace')}".lower()
+
+    # Recognize Docker's plugin discovery messages.
+    return any(
+        marker in detail
+        for marker in (
+            "is not a docker command",
+            "unknown command",
+            "not a docker command",
+            "no such plugin",
+            "plugin not found",
+            "not found",
+        )
+    )
