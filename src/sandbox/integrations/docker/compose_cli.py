@@ -36,3 +36,40 @@ class ComposeCli:
     def version_result(self) -> CommandResult:
         # Execute the short version probe.
         return self._docker.run(compose_version_arguments(), operation = "preflight")
+
+    # Resolve the complete project configuration as structured JSON.
+    def configuration(
+        self,
+        definition: RecipeDefinition,
+        compose_files: Sequence[Path],
+        environment: Mapping[str, str],
+    ) -> Mapping[str, Any]:
+        # Build the configuration command.
+        arguments: list[str] = compose_config_arguments(definition, compose_files)
+
+        # Run the read-only resolution with captured output.
+        result: CommandResult = self._docker.run(arguments, operation = "resolve", environment = environment)
+
+        # If the resolution command failed.
+        if result.returncode != 0:
+            # Translate the engine failure once.
+            raise EngineFailure(self._docker.failure("resolve", arguments, result))
+
+        # Parse the resolved model as strict UTF-8 JSON.
+        try:
+            # Parse the complete output.
+            payload: Any = json.loads(result.stdout)
+
+        # If the output is not JSON.
+        except (json.JSONDecodeError, UnicodeDecodeError) as error:
+            # Translate the malformed response without leaking the parser error.
+            sample: str = result.stdout[:200].decode("utf-8", errors = "replace")
+            raise EngineOutputInvalid("docker", "resolve", sample) from error
+
+        # Require a top-level configuration mapping.
+        if not isinstance(payload, Mapping):
+            # Throw.
+            raise EngineOutputInvalid("docker", "resolve", result.stdout[:200].decode("utf-8", errors = "replace"))
+
+        # Return the resolved configuration.
+        return payload
