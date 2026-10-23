@@ -69,3 +69,9 @@ def compose_build_arguments(definition: RecipeDefinition, compose_files: Sequenc
 
     # Return the complete command.
     return arguments
+
+
+# Build the version command used by the Compose prerequisite preflight.
+def compose_version_arguments() -> list[str]:
+    # Return the short version probe without a project.
+    return ["docker", "compose", "version", "--short"]
