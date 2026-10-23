@@ -73,3 +73,24 @@ class ComposeCli:
 
         # Return the resolved configuration.
         return payload
+
+    # Build the selected service and every dependency with visible child output.
+    def build(
+        self,
+        definition: RecipeDefinition,
+        compose_files: Sequence[Path],
+        service: str,
+        environment: Mapping[str, str],
+        output: OutputSink = SILENT,
+    ) -> CommandResult:
+        # Build the selected service and its dependency graph.
+        arguments: list[str] = compose_build_arguments(definition, compose_files, service)
+
+        # Run the build with streamed output and a bounded diagnostic tail.
+        return self._docker.run(
+            arguments,
+            operation = "build",
+            environment = environment,
+            capture = False,
+            output = output,
+        )
