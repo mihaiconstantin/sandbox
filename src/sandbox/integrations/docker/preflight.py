@@ -179,3 +179,14 @@ def _tool_output(result: CommandResult) -> str:
 def _version_text(version: tuple[int, int, int]) -> str:
     # Join the numeric components.
     return ".".join(str(component) for component in version)
+
+
+# Define the public API of the host prerequisite preflight.
+__all__: list[str] = [
+    "BUILDX_MINIMUM",
+    "COMPOSE_MINIMUM",
+    "meets_minimum",
+    "parse_version",
+    "require_buildx",
+    "require_compose",
+]
