@@ -31,3 +31,8 @@ class ComposeCli:
     def __init__(self, docker: DockerCli) -> None:
         # Record the shared Docker gateway.
         self._docker: DockerCli = docker
+
+    # Read the installed Compose version without translating its status.
+    def version_result(self) -> CommandResult:
+        # Execute the short version probe.
+        return self._docker.run(compose_version_arguments(), operation = "preflight")
