@@ -51,6 +51,32 @@ def meets_minimum(found: tuple[int, int, int], minimum: str) -> bool:
     return found >= required
 
 
+# Require a usable Compose version at or above the supported floor.
+def require_compose(compose: ComposeCli, *, operation: str = "preflight") -> None:
+    # Read the installed Compose version without treating a failed probe as an engine failure.
+    result: CommandResult = compose.version_result()
+
+    # If the version command failed.
+    if result.returncode != 0:
+        # Classify a missing plugin separately from an unusable installation.
+        kind: PrerequisiteKind = PrerequisiteKind.MISSING if _mentions_missing_plugin(result) else PrerequisiteKind.UNUSABLE
+
+        # Throw the actionable prerequisite failure.
+        raise PrerequisiteError(
+            "docker compose",
+            kind,
+            requirement = f">={COMPOSE_MINIMUM}",
+            operation = operation,
+            diagnostic = result.diagnostic,
+            hint = "Install Docker Compose v5.6.0 or newer.",
+        )
+
+    # Parse the short version banner.
+    found: tuple[int, int, int] | None = parse_version(_tool_output(result))
+
+    # If the version is absent, treat the tool as unusable.
+
+
 # Report whether a failed plugin probe means the plugin is absent.
 def _mentions_missing_plugin(result: CommandResult) -> bool:
     # Inspect both streams because Docker prints plugin discovery errors to either.
