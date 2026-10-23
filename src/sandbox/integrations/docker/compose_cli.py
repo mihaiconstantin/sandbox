@@ -23,3 +23,11 @@ from sandbox.ports.output import SILENT, OutputSink
 
 # Import the opaque recipe source.
 from sandbox.domain import RecipeDefinition
+
+
+# Run shared read-only and streaming Compose commands.
+class ComposeCli:
+    # Construct the Compose gateway around the Docker gateway.
+    def __init__(self, docker: DockerCli) -> None:
+        # Record the shared Docker gateway.
+        self._docker: DockerCli = docker
