@@ -75,6 +75,29 @@ def require_compose(compose: ComposeCli, *, operation: str = "preflight") -> Non
     found: tuple[int, int, int] | None = parse_version(_tool_output(result))
 
     # If the version is absent, treat the tool as unusable.
+    if found is None:
+        # Throw.
+        raise PrerequisiteError(
+            "docker compose",
+            PrerequisiteKind.UNUSABLE,
+            requirement = f">={COMPOSE_MINIMUM}",
+            operation = operation,
+            diagnostic = result.diagnostic,
+            hint = "Install Docker Compose v5.6.0 or newer.",
+        )
+
+    # If the installed version is below the supported floor.
+    if not meets_minimum(found, COMPOSE_MINIMUM):
+        # Throw the unsupported-version failure.
+        raise PrerequisiteError(
+            "docker compose",
+            PrerequisiteKind.VERSION,
+            requirement = f">={COMPOSE_MINIMUM}",
+            found = _version_text(found),
+            operation = operation,
+            diagnostic = result.diagnostic,
+            hint = "Upgrade Docker Compose to v5.6.0 or newer.",
+        )
 
 
 # Report whether a failed plugin probe means the plugin is absent.
