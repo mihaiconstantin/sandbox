@@ -68,3 +68,9 @@ def _mentions_missing_plugin(result: CommandResult) -> bool:
             "not found",
         )
     )
+
+
+# Read the combined output of one version probe.
+def _tool_output(result: CommandResult) -> str:
+    # Join both streams so a warning on stderr cannot hide the version banner.
+    return f"{result.stdout.decode('utf-8', errors = 'replace')}\n{result.stderr.decode('utf-8', errors = 'replace')}"
