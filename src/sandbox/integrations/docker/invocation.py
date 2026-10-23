@@ -75,3 +75,9 @@ def compose_build_arguments(definition: RecipeDefinition, compose_files: Sequenc
 def compose_version_arguments() -> list[str]:
     # Return the short version probe without a project.
     return ["docker", "compose", "version", "--short"]
+
+
+# Build the version command used by the Buildx prerequisite preflight.
+def buildx_version_arguments() -> list[str]:
+    # Return the Buildx plugin version probe.
+    return ["docker", "buildx", "version"]
