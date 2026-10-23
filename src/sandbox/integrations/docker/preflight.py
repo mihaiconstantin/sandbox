@@ -35,3 +35,17 @@ def parse_version(output: str) -> tuple[int, int, int] | None:
 
     # Normalize a missing patch component.
     return (int(major), int(minor), int(patch or 0))
+
+
+# Compare two numeric version tuples without padding surprises.
+def meets_minimum(found: tuple[int, int, int], minimum: str) -> bool:
+    # Parse the required floor.
+    required: tuple[int, int, int] | None = parse_version(minimum)
+
+    # A malformed internal floor is a programming error.
+    if required is None:
+        # Throw.
+        raise ValueError(f"Invalid minimum version `{minimum}`.")
+
+    # Compare the normalized numeric components.
+    return found >= required
