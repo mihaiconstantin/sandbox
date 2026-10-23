@@ -100,6 +100,33 @@ def require_compose(compose: ComposeCli, *, operation: str = "preflight") -> Non
         )
 
 
+# Require a usable Buildx version at or above the supported floor when a build runs.
+def require_buildx(docker: DockerCli, *, operation: str = "build") -> None:
+    # Probe the Buildx plugin version.
+    arguments: list[str] = buildx_version_arguments()
+    result: CommandResult = docker.run(arguments, operation = operation)
+
+    # If the version command failed.
+    if result.returncode != 0:
+        # Classify a missing plugin separately from an unusable installation.
+        kind: PrerequisiteKind = PrerequisiteKind.MISSING if _mentions_missing_plugin(result) else PrerequisiteKind.UNUSABLE
+
+        # Throw the actionable prerequisite failure.
+        raise PrerequisiteError(
+            "buildx",
+            kind,
+            requirement = f">={BUILDX_MINIMUM}",
+            operation = operation,
+            diagnostic = result.diagnostic,
+            hint = "Install the Docker Buildx plugin v0.17.0 or newer.",
+        )
+
+    # Parse the version from the plugin banner.
+    found: tuple[int, int, int] | None = parse_version(_tool_output(result))
+
+    # If the version is absent, treat the plugin as unusable.
+
+
 # Report whether a failed plugin probe means the plugin is absent.
 def _mentions_missing_plugin(result: CommandResult) -> bool:
     # Inspect both streams because Docker prints plugin discovery errors to either.
