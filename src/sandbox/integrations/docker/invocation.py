@@ -57,3 +57,15 @@ def compose_config_arguments(definition: RecipeDefinition, compose_files: Sequen
 
     # Return the complete command.
     return arguments
+
+
+# Build the `docker` compose build command for one selected service.
+def compose_build_arguments(definition: RecipeDefinition, compose_files: Sequence[Path], service: str) -> list[str]:
+    # Start with the shared compose invocation prefix.
+    arguments: list[str] = compose_arguments(definition, compose_files)
+
+    # Build the selected service and every dependency without changing image tags or cache policy.
+    arguments.extend(["build", "--with-dependencies", service])
+
+    # Return the complete command.
+    return arguments
