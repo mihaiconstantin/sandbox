@@ -35,3 +35,9 @@ from sandbox.integrations.docker.command import CommandResult
 from sandbox.integrations.docker.compose_cli import ComposeCli
 from sandbox.integrations.docker.invocation import compose_environment
 from sandbox.integrations.docker.preflight import require_buildx, require_compose
+
+# Name the single archive produced for one operation.
+ARCHIVE_NAME: str = "artifact.tar"
+
+# Name the single image manifest inside a Docker archive.
+ARCHIVE_MANIFEST: str = "manifest.json"
