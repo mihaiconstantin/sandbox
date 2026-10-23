@@ -81,3 +81,14 @@ def compose_version_arguments() -> list[str]:
 def buildx_version_arguments() -> list[str]:
     # Return the Buildx plugin version probe.
     return ["docker", "buildx", "version"]
+
+
+# Define the public API of the Compose invocation helpers.
+__all__: list[str] = [
+    "buildx_version_arguments",
+    "compose_arguments",
+    "compose_build_arguments",
+    "compose_config_arguments",
+    "compose_environment",
+    "compose_version_arguments",
+]
