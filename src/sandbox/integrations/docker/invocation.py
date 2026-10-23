@@ -31,3 +31,17 @@ def compose_environment(
 
     # Return the prepared environment.
     return environment
+
+
+# Build the `docker` compose argument prefix pinned to the catalogue root and ordered files.
+def compose_arguments(definition: RecipeDefinition, compose_files: Sequence[Path]) -> list[str]:
+    # Start with the Compose command and a plain, non-interactive progress mode.
+    arguments: list[str] = ["docker", "compose", "--progress", "plain", "--project-directory", str(definition.catalogue_root)]
+
+    # Append every `docker` compose file in parent-first order.
+    for path in compose_files:
+        # Add the ordered file.
+        arguments.extend(["-f", str(path)])
+
+    # Return the complete argument prefix.
+    return arguments
