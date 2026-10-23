@@ -94,3 +94,6 @@ class ComposeCli:
             capture = False,
             output = output,
         )
+
+# Define the public API of the Compose CLI gateway.
+__all__: list[str] = ["ComposeCli"]
