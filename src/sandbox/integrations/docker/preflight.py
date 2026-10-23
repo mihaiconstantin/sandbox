@@ -74,3 +74,9 @@ def _mentions_missing_plugin(result: CommandResult) -> bool:
 def _tool_output(result: CommandResult) -> str:
     # Join both streams so a warning on stderr cannot hide the version banner.
     return f"{result.stdout.decode('utf-8', errors = 'replace')}\n{result.stderr.decode('utf-8', errors = 'replace')}"
+
+
+# Format one numeric version tuple for structured facts.
+def _version_text(version: tuple[int, int, int]) -> str:
+    # Join the numeric components.
+    return ".".join(str(component) for component in version)
