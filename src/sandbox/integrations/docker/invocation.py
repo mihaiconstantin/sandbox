@@ -45,3 +45,15 @@ def compose_arguments(definition: RecipeDefinition, compose_files: Sequence[Path
 
     # Return the complete argument prefix.
     return arguments
+
+
+# Build the `docker` compose configuration command.
+def compose_config_arguments(definition: RecipeDefinition, compose_files: Sequence[Path]) -> list[str]:
+    # Start with the shared compose invocation prefix.
+    arguments: list[str] = compose_arguments(definition, compose_files)
+
+    # Request the fully resolved configuration as JSON.
+    arguments.extend(["config", "--format", "json"])
+
+    # Return the complete command.
+    return arguments
