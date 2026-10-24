@@ -276,6 +276,19 @@ def _platforms_match(expected: str, actual: str) -> bool:
     return True
 
 
+# Report whether two references denote the same Docker image.
+def _same_reference(left: str, right: str) -> bool:
+    # Compare canonicalized references without inventing a new artifact string.
+    try:
+        # Normalize both sides for comparison.
+        return _reference_key(left) == _reference_key(right)
+
+    # Treat an invalid reference as a non-match.
+    except ValueError:
+        # Report a mismatch.
+        return False
+
+
 # Normalize the registry, repository, tag, and digest for comparison only.
 def _reference_key(reference: str) -> str:
     # Strip surrounding whitespace.
