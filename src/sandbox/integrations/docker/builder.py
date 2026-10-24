@@ -212,3 +212,28 @@ def _normalized_platform(value: str | None, requirement: ArtifactRequirement) ->
 
     # Return the normalized platform.
     return "/".join(parts)
+
+
+# Report whether two normalized platforms describe the same OS and architecture.
+def _platforms_match(expected: str, actual: str) -> bool:
+    # Split both platform strings.
+    expected_parts: list[str] = expected.split("/")
+    actual_parts: list[str] = actual.split("/")
+
+    # Require the operating system and architecture to agree.
+    if len(expected_parts) < 2 or len(actual_parts) < 2:
+        # Treat an incomplete platform as a mismatch.
+        return False
+
+    # Compare the operating system and architecture.
+    if expected_parts[0] != actual_parts[0] or expected_parts[1] != actual_parts[1]:
+        # Report a mismatch.
+        return False
+
+    # When both sides name a variant, require it to agree.
+    if len(expected_parts) >= 3 and len(actual_parts) >= 3 and expected_parts[2] != actual_parts[2]:
+        # Report a variant mismatch.
+        return False
+
+    # Report a matching platform.
+    return True
