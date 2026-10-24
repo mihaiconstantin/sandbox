@@ -74,6 +74,43 @@ class DockerBuilder(Builder):
             # Throw.
             raise ValueError("staging_dir must reference an existing directory.")
 
+    # Select the normalized platform the prepared image must satisfy.
+    def _target_platform(
+        self,
+        requirement: ArtifactRequirement,
+        service: ServiceBuild,
+        environment: dict[str, str],
+    ) -> str | None:
+        # Normalize the required platform when the runtime constrains it.
+        required: str | None = _normalized_platform(requirement.platform, requirement)
+
+        # Normalize the service platform when Compose resolves one.
+        resolved: str | None = _normalized_platform(service.platform, requirement)
+
+        # Reject a requirement that disagrees with an explicit service platform.
+        if required is not None and resolved is not None and not _platforms_match(required, resolved):
+            # Throw before preparation.
+            raise ArtifactRejected(
+                transport = requirement.transport.value,
+                reference = requirement.reference,
+                expected_platform = required,
+                actual_platform = resolved,
+                detail = "The required platform does not match the resolved service platform.",
+            )
+
+        # Prefer the requirement when it is stated.
+        if required is not None:
+            # Select the requirement and make Compose honor it when the service is silent.
+            if resolved is None:
+                # Apply the platform to the Compose build and pull environment.
+                environment["DOCKER_DEFAULT_PLATFORM"] = required
+
+            # Return the required platform.
+            return required
+
+        # Otherwise use the service platform.
+        return resolved
+
     # Ensure the image exists through reuse, a build, or a pull.
     def _ensure_image(
         self,
