@@ -73,3 +73,20 @@ class DockerBuilder(Builder):
         if not staging_dir.is_dir():
             # Throw.
             raise ValueError("staging_dir must reference an existing directory.")
+
+    # Ensure the image exists through reuse, a build, or a pull.
+    def _ensure_image(
+        self,
+        *,
+        requirement: ArtifactRequirement,
+        service: ServiceBuild,
+        definition: RecipeDefinition,
+        environment: Mapping[str, str],
+        platform: str | None,
+        rebuild: bool,
+        output: OutputSink,
+    ) -> bool:
+        # Check the local image for the effective platform.
+        present: bool = self._docker.image_exists(service.image, platform = platform, operation = "prepare")
+
+        # A service that declares a build uses the selected build policy.
