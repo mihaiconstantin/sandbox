@@ -90,3 +90,46 @@ class DockerBuilder(Builder):
         present: bool = self._docker.image_exists(service.image, platform = platform, operation = "prepare")
 
         # A service that declares a build uses the selected build policy.
+        if service.build is not None:
+            # Reuse a present image unless an explicit rebuild was requested.
+            if present and not rebuild:
+                # Report reuse rather than creation.
+                return False
+
+            # Require Buildx only when a build will actually run.
+            require_buildx(self._docker, operation = "build")
+
+            # Announce only the actual build, never a pull or reuse.
+            output.progress(ProgressPhase.BUILD_IMAGE, subject = definition.service)
+
+            # Run the build graph for the selected service and its dependencies.
+            result: CommandResult = self._compose.build(
+                definition,
+                definition.files,
+                definition.service,
+                environment,
+                output,
+            )
+
+            # Translate a failed build with its command facts.
+            if result.returncode != 0:
+                # Throw the typed build failure.
+                raise BuildFailed(self._docker.failure("build", result.arguments, result))
+
+            # Require the build to leave the required image available.
+            if not self._docker.image_exists(service.image, platform = platform, operation = "prepare"):
+                # Throw a typed post-build failure.
+                raise BuildFailed(
+                    CommandFailure(
+                        backend = "docker",
+                        operation = "build",
+                        command = result.arguments,
+                        exit_code = 1,
+                        diagnostic = f"The build completed without producing image `{service.image}`.",
+                    )
+                )
+
+            # Report the build as this call's creation.
+            return True
+
+        # An image-only service reuses a present image even when a rebuild was requested.
