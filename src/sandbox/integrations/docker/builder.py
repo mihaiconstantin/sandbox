@@ -183,3 +183,32 @@ def _export_staging(root: Path) -> Generator[Path, None, None]:
     finally:
         # Remove the transient directory and every partial file.
         shutil.rmtree(temporary, ignore_errors = True)
+
+
+# Normalize a platform into `os/arch[/variant]` and reject malformed values.
+def _normalized_platform(value: str | None, requirement: ArtifactRequirement) -> str | None:
+    # Preserve an unspecified platform.
+    if value is None:
+        # Return no platform.
+        return None
+
+    # Split the platform components.
+    parts: list[str] = [part.strip().lower() for part in value.split("/")]
+
+    # Default a single component to Linux.
+    if len(parts) == 1:
+        # Prepend the standard operating system.
+        parts = ["linux", parts[0]]
+
+    # Require the normalized `os/arch[/variant]` form.
+    if len(parts) > 3 or any(not part or any(character.isspace() for character in part) for part in parts):
+        # Throw a typed artifact rejection for a malformed requirement.
+        raise ArtifactRejected(
+            transport = requirement.transport.value,
+            reference = requirement.reference,
+            expected_platform = requirement.platform,
+            detail = f"Invalid platform `{value}`.",
+        )
+
+    # Return the normalized platform.
+    return "/".join(parts)
