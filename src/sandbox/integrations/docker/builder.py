@@ -350,3 +350,20 @@ def _repository_key(repository: str) -> str:
 
     # Return the comparison key.
     return value
+
+
+# Read a manifest digest from Docker's repository digests, never its config ID.
+def _manifest_digest(inspection: Mapping[str, Any], reference: str) -> str | None:
+    # Read the repository digests reported by Docker.
+    digests: Any = inspection.get("RepoDigests")
+
+    # Report no digest when Docker has no repository digest.
+    if not isinstance(digests, list):
+        # Return no digest.
+        return None
+
+    # Read the reference repository without a tag or digest for comparison.
+    repository_value: str = reference.split("@", 1)[0]
+    repository: str = _repository_key(_split_tag(repository_value)[0])
+
+    # Find the first repository digest for this image.
