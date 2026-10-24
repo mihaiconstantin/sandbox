@@ -398,6 +398,14 @@ class DockerBuilder(Builder):
             ) from error
 
         # Return the archive artifact; created reflects build/pull, not export.
+        return BuildArtifact(
+            reference = requirement.reference,
+            platform = requirement.platform,
+            digest = None,
+            transport = ArtifactTransport.DOCKER_ARCHIVE,
+            archive_path = destination,
+            created = created,
+        )
 
 
 # Create a transient export directory under the operation-owned staging root.
