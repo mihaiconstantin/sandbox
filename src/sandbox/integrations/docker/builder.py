@@ -621,3 +621,31 @@ def _validate_archive(path: Path, reference: str, service_image: str) -> None:
         ) from error
 
     # Require exactly one image entry in the archive.
+    if not isinstance(payload, list) or len(payload) != 1 or not isinstance(payload[0], Mapping):
+        # Throw.
+        raise ArtifactRejected(
+            transport = ArtifactTransport.DOCKER_ARCHIVE.value,
+            reference = reference,
+            detail = "The Docker archive must contain exactly one target image.",
+        )
+
+    # Read the manifest tags.
+    tags: Any = payload[0].get("RepoTags")
+
+    # Require a canonical tag for the target image.
+    if not isinstance(tags, list) or not tags or any(not isinstance(tag, str) for tag in tags):
+        # Throw.
+        raise ArtifactRejected(
+            transport = ArtifactTransport.DOCKER_ARCHIVE.value,
+            reference = reference,
+            detail = "The Docker archive must carry exactly one tagged target image.",
+        )
+
+    # Require the manifest to name the target image.
+    if not any(_same_reference(tag, reference) or _same_reference(tag, service_image) for tag in tags):
+        # Throw.
+        raise ArtifactRejected(
+            transport = ArtifactTransport.DOCKER_ARCHIVE.value,
+            reference = reference,
+            detail = "The Docker archive does not contain the required target image.",
+        )
