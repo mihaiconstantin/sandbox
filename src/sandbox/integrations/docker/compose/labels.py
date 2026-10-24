@@ -31,3 +31,15 @@ COMPOSE_ONEOFF_LABEL: str = "com.docker.compose.oneoff"
 
 # Record the Compose lifecycle hook label.
 COMPOSE_HOOK_LABEL: str = "com.docker.compose.hook"
+
+
+# Return the exact managed-box discovery filters for one project.
+def box_filters(name: str) -> dict[str, str]:
+    # Return the five server-side filters in their current order.
+    return {
+        MANAGED_LABEL: "true",
+        PROJECT_LABEL: name,
+        COMPOSE_PROJECT_LABEL: name,
+        ROLE_LABEL: "box",
+        COMPOSE_ONEOFF_LABEL: "False",
+    }
