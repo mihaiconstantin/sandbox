@@ -276,6 +276,31 @@ def _platforms_match(expected: str, actual: str) -> bool:
     return True
 
 
+# Normalize the registry, repository, tag, and digest for comparison only.
+def _reference_key(reference: str) -> str:
+    # Strip surrounding whitespace.
+    value: str = reference.strip()
+
+    # Reject references that cannot be Docker image references.
+    if not value or any(character.isspace() for character in value) or "://" in value:
+        # Throw.
+        raise ValueError(f"Invalid image reference `{reference}`.")
+
+    # Split a digest when present.
+    if "@" in value:
+        # Split the repository and digest.
+        repository, digest = value.rsplit("@", 1)
+
+        # Return the normalized repository and digest.
+        return f"{_repository_key(repository)}@{digest}"
+
+    # Split a tag from the repository.
+    repository, tag = _split_tag(value)
+
+    # Return the normalized repository and effective tag.
+    return f"{_repository_key(repository)}:{tag or 'latest'}"
+
+
 # Read a repository and tag from one image reference.
 def _split_tag(value: str) -> tuple[str, str | None]:
     # Find the last path separator so a registry port is not mistaken for a tag.
