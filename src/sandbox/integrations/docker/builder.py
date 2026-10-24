@@ -388,3 +388,33 @@ def _manifest_digest(inspection: Mapping[str, Any], reference: str) -> str | Non
 
     # Never fall back to Docker's config `Id`.
     return None
+
+
+# Validate one uncompressed Docker archive with exactly one target image.
+def _validate_archive(path: Path, reference: str, service_image: str) -> None:
+    # Parse the archive with the uncompressed reader.
+    try:
+        # Open the uncompressed outer tar.
+        with tarfile.open(path, mode = "r:") as archive:
+            # Read the Docker archive manifest.
+            member: tarfile.TarInfo = archive.getmember(ARCHIVE_MANIFEST)
+            extracted: Any = archive.extractfile(member)
+
+            # Require a readable manifest member.
+            if extracted is None:
+                # Throw into the shared translation.
+                raise ValueError("The Docker archive has no readable manifest.")
+
+            # Parse the manifest JSON.
+            payload: Any = json.loads(extracted.read())
+
+    # Translate every malformed-archive failure into one typed rejection.
+    except (tarfile.TarError, KeyError, ValueError, OSError) as error:
+        # Throw the typed artifact rejection.
+        raise ArtifactRejected(
+            transport = ArtifactTransport.DOCKER_ARCHIVE.value,
+            reference = reference,
+            detail = "The exported image archive is not an uncompressed Docker image archive.",
+        ) from error
+
+    # Require exactly one image entry in the archive.
