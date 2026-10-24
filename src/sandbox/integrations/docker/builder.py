@@ -204,6 +204,23 @@ class DockerBuilder(Builder):
         # Report the pull as this call's creation.
         return True
 
+    # Export exactly one target image into an uncompressed Docker archive.
+    def _export_archive(
+        self,
+        requirement: ArtifactRequirement,
+        service: ServiceBuild,
+        platform: str | None,
+        staging_dir: Path | None,
+        created: bool,
+    ) -> BuildArtifact:
+        # Rerequire the caller-owned staging directory for the type checker.
+        assert staging_dir is not None
+
+        # Prepare the operation-scoped archive path.
+        destination: Path = staging_dir / ARCHIVE_NAME
+
+        # Translate any operation-scoped filesystem failure without leaking an OS exception.
+
 
 # Create a transient export directory under the operation-owned staging root.
 @contextmanager
