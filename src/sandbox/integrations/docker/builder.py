@@ -166,3 +166,20 @@ class DockerBuilder(Builder):
 
         # Report the pull as this call's creation.
         return True
+
+
+# Create a transient export directory under the operation-owned staging root.
+@contextmanager
+def _export_staging(root: Path) -> Generator[Path, None, None]:
+    # Allocate a unique working directory inside the operation scope.
+    temporary: Path = Path(tempfile.mkdtemp(prefix = ".sb-export-", dir = root))
+
+    # Always remove the transient export directory.
+    try:
+        # Yield the operation-scoped working directory.
+        yield temporary
+
+    # Clean up even when the export or validation fails.
+    finally:
+        # Remove the transient directory and every partial file.
+        shutil.rmtree(temporary, ignore_errors = True)
