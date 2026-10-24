@@ -274,3 +274,18 @@ def _platforms_match(expected: str, actual: str) -> bool:
 
     # Report a matching platform.
     return True
+
+
+# Read a repository and tag from one image reference.
+def _split_tag(value: str) -> tuple[str, str | None]:
+    # Find the last path separator so a registry port is not mistaken for a tag.
+    slash: int = value.rfind("/")
+    colon: int = value.rfind(":")
+
+    # Only a colon after the final slash names a tag.
+    if colon > slash:
+        # Return the repository and tag.
+        return value[:colon], value[colon + 1:]
+
+    # Return the repository without a tag.
+    return value, None
