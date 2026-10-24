@@ -166,6 +166,33 @@ class DockerBuilder(Builder):
         actual_platform: str | None = self._docker.image_platform(inspection)
 
         # Require an inspectable architecture before writing an archive.
+        if actual_platform is None:
+            # Throw.
+            raise ArtifactRejected(
+                transport = requirement.transport.value,
+                reference = requirement.reference,
+                expected_platform = requirement.platform,
+                detail = "Cannot determine the image platform before archive export.",
+            )
+
+        # Validate the target architecture before export.
+        if target_platform is not None:
+            # Compare the requested platform with the image's own platform.
+            if not _platforms_match(target_platform, actual_platform):
+                # Throw before any export mutation.
+                raise ArtifactRejected(
+                    transport = requirement.transport.value,
+                    reference = requirement.reference,
+                    expected_platform = target_platform,
+                    actual_platform = actual_platform,
+                    detail = "The prepared image does not match the required platform.",
+                )
+
+        # Export through the platform selected by the requirement or the image itself.
+        export_platform: str = target_platform or actual_platform
+
+        # Return the single-image archive.
+        return self._export_archive(requirement, service, export_platform, staging_dir, created)
 
     # Reject transports the Docker builder does not implement before any work.
     def _require_supported_transport(self, requirement: ArtifactRequirement) -> None:
