@@ -363,6 +363,41 @@ class DockerBuilder(Builder):
         destination: Path = staging_dir / ARCHIVE_NAME
 
         # Translate any operation-scoped filesystem failure without leaking an OS exception.
+        try:
+            # Write into a temporary directory so a failed export leaves no partial artifact.
+            with _export_staging(staging_dir) as temporary:
+                # Write the transient archive.
+                candidate: Path = temporary / ARCHIVE_NAME
+
+                # Export exactly one image for the effective platform.
+                result: CommandResult = self._docker.save_image(
+                    service.image,
+                    platform = platform,
+                    destination = candidate,
+                    operation = "export",
+                )
+
+                # Translate a failed export with its command facts.
+                if result.returncode != 0:
+                    # Throw the typed build failure.
+                    raise BuildFailed(self._docker.failure("export", result.arguments, result))
+
+                # Prove the archive is an uncompressed, single-image Docker archive.
+                _validate_archive(candidate, requirement.reference, service.image)
+
+                # Publish the validated archive into the operation-scoped staging directory.
+                os.replace(candidate, destination)
+
+        # Translate a staging filesystem failure once.
+        except OSError as error:
+            # Throw the typed artifact rejection.
+            raise ArtifactRejected(
+                transport = requirement.transport.value,
+                reference = requirement.reference,
+                detail = f"The image archive could not be written: {error}",
+            ) from error
+
+        # Return the archive artifact; created reflects build/pull, not export.
 
 
 # Create a transient export directory under the operation-owned staging root.
