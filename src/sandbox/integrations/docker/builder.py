@@ -649,3 +649,7 @@ def _validate_archive(path: Path, reference: str, service_image: str) -> None:
             reference = reference,
             detail = "The Docker archive does not contain the required target image.",
         )
+
+
+# Define the public API of the Docker builder integration.
+__all__: list[str] = ["ARCHIVE_MANIFEST", "ARCHIVE_NAME", "DockerBuilder"]
