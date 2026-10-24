@@ -61,3 +61,15 @@ class DockerBuilder(Builder):
                 reference = requirement.reference,
                 detail = "OCI archives are not implemented by the Docker builder.",
             )
+
+    # Require an existing caller-owned staging directory for an archive.
+    def _require_staging(self, staging_dir: Path | None) -> None:
+        # Require the operation-scoped staging directory.
+        if staging_dir is None:
+            # Throw before any image preparation.
+            raise ValueError("Archive transports require a staging directory.")
+
+        # Require an existing directory rather than creating caller-owned state.
+        if not staging_dir.is_dir():
+            # Throw.
+            raise ValueError("staging_dir must reference an existing directory.")
