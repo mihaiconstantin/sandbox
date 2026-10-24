@@ -92,6 +92,32 @@ class DockerBuilder(Builder):
 
         # Require operation-scoped staging before any image preparation for an archive.
         archive: bool = requirement.transport is ArtifactTransport.DOCKER_ARCHIVE
+        if archive:
+            # Reject a missing or unusable staging directory before the engine runs.
+            self._require_staging(staging_dir)
+
+        # Prepare the Compose interpolation environment without mutating process state.
+        project_directory: Path = plan.project.directory.expanduser().resolve(strict = False)
+        environment: dict[str, str] = compose_environment(plan.project.name, project_directory)
+
+        # Make Compose honor an explicitly required platform even when the service omits one.
+        if requirement.platform is not None:
+            # Apply the platform to every build and pull in this preparation.
+            environment["DOCKER_DEFAULT_PLATFORM"] = requirement.platform
+
+        # Require the supported Compose floor before resolving the recipe.
+        require_compose(self._compose, operation = "prepare")
+
+        # Resolve the effective service read-only.
+        configuration: Mapping[str, Any] = self._compose.configuration(definition, definition.files, environment)
+        service: ServiceBuild = project_service(
+            configuration,
+            plan,
+            definition,
+            default_platform = environment.get("DOCKER_DEFAULT_PLATFORM") or None,
+        )
+
+        # Require the resolved service image to satisfy the requested reference.
 
     # Reject transports the Docker builder does not implement before any work.
     def _require_supported_transport(self, requirement: ArtifactRequirement) -> None:
