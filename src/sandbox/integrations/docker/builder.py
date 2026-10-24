@@ -50,3 +50,14 @@ class DockerBuilder(Builder):
         # Record the shared gateway and its Compose facade.
         self._docker: DockerCli = docker
         self._compose: ComposeCli = ComposeCli(docker)
+
+    # Reject transports the Docker builder does not implement before any work.
+    def _require_supported_transport(self, requirement: ArtifactRequirement) -> None:
+        # OCI archives remain a future transport.
+        if requirement.transport is ArtifactTransport.OCI_ARCHIVE:
+            # Throw before building.
+            raise ArtifactRejected(
+                transport = requirement.transport.value,
+                reference = requirement.reference,
+                detail = "OCI archives are not implemented by the Docker builder.",
+            )
