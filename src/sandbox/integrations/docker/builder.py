@@ -289,3 +289,26 @@ def _split_tag(value: str) -> tuple[str, str | None]:
 
     # Return the repository without a tag.
     return value, None
+
+
+# Normalize a repository alias for comparison only.
+def _repository_key(repository: str) -> str:
+    # Normalize the registry aliases Docker accepts.
+    value: str = repository.strip().lower()
+    for prefix in ("index.docker.io/", "registry-1.docker.io/"):
+        # Replace the alias with the canonical registry name.
+        if value.startswith(prefix):
+            # Normalize the prefix.
+            value = "docker.io/" + value[len(prefix):]
+            break
+
+    # Drop the implicit Docker Hub library namespace.
+    for prefix in ("docker.io/library/", "docker.io/", "library/"):
+        # Remove the implicit prefix.
+        if value.startswith(prefix):
+            # Strip the prefix.
+            value = value[len(prefix):]
+            break
+
+    # Return the comparison key.
+    return value
