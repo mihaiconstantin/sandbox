@@ -51,6 +51,48 @@ class DockerBuilder(Builder):
         self._docker: DockerCli = docker
         self._compose: ComposeCli = ComposeCli(docker)
 
+    # Ensure the required image exists and return the typed artifact.
+    def prepare(
+        self,
+        plan: SandboxPlan,
+        definition: RecipeDefinition,
+        requirement: ArtifactRequirement,
+        *,
+        rebuild: bool = False,
+        staging_dir: Path | None = None,
+        output: OutputSink = SILENT,
+    ) -> BuildArtifact:
+        # Require the neutral request values.
+        if not isinstance(requirement, ArtifactRequirement):
+            # Throw.
+            raise ValueError("requirement must be an ArtifactRequirement.")
+        if type(rebuild) is not bool:
+            # Throw.
+            raise ValueError("rebuild must be a Boolean.")
+        if staging_dir is not None and not isinstance(staging_dir, Path):
+            # Throw.
+            raise ValueError("staging_dir must be a path or `None`.")
+
+        # Reject an unimplemented transport before probing or preparing any image.
+        self._require_supported_transport(requirement)
+
+        # Require a canonical runtime-facing reference before any engine call.
+        try:
+            # Validate the reference syntax without rewriting the requested value.
+            _reference_key(requirement.reference)
+
+        # Translate an invalid reference into the typed artifact rejection.
+        except ValueError as error:
+            # Throw.
+            raise ArtifactRejected(
+                transport = requirement.transport.value,
+                reference = requirement.reference,
+                detail = "The image reference is not canonical.",
+            ) from error
+
+        # Require operation-scoped staging before any image preparation for an archive.
+        archive: bool = requirement.transport is ArtifactTransport.DOCKER_ARCHIVE
+
     # Reject transports the Docker builder does not implement before any work.
     def _require_supported_transport(self, requirement: ArtifactRequirement) -> None:
         # OCI archives remain a future transport.
