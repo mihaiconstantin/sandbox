@@ -152,3 +152,17 @@ class DockerBuilder(Builder):
             raise EngineFailure(self._docker.failure("pull", result.arguments, result))
 
         # Require the pull to leave the required image available.
+        if not self._docker.image_exists(service.image, platform = platform, operation = "prepare"):
+            # Throw a typed post-pull failure.
+            raise EngineFailure(
+                CommandFailure(
+                    backend = "docker",
+                    operation = "pull",
+                    command = result.arguments,
+                    exit_code = 1,
+                    diagnostic = f"The pull completed without producing image `{service.image}`.",
+                )
+            )
+
+        # Report the pull as this call's creation.
+        return True
