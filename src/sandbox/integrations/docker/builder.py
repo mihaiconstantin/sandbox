@@ -141,6 +141,31 @@ class DockerBuilder(Builder):
         )
 
         # Return the local image artifact with an optional manifest digest.
+        if not archive:
+            # Inspect the prepared image for a portable manifest digest.
+            inspection: Mapping[str, Any] = self._docker.inspect_image(
+                service.image,
+                platform = target_platform,
+                operation = "inspect",
+            )
+
+            # Return the local-image artifact.
+            return BuildArtifact(
+                reference = requirement.reference,
+                platform = requirement.platform,
+                digest = _manifest_digest(inspection, service.image),
+                transport = ArtifactTransport.LOCAL_IMAGE,
+                archive_path = None,
+                created = created,
+            )
+
+        # Inspect the image before export to prove its architecture.
+        inspection = self._docker.inspect_image(service.image, platform = target_platform, operation = "inspect")
+
+        # Read the actual image platform from Docker's own facts.
+        actual_platform: str | None = self._docker.image_platform(inspection)
+
+        # Require an inspectable architecture before writing an archive.
 
     # Reject transports the Docker builder does not implement before any work.
     def _require_supported_transport(self, requirement: ArtifactRequirement) -> None:
