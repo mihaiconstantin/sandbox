@@ -118,6 +118,29 @@ class DockerBuilder(Builder):
         )
 
         # Require the resolved service image to satisfy the requested reference.
+        if not _same_reference(service.image, requirement.reference):
+            # Throw the artifact rejection before touching the image store.
+            raise ArtifactRejected(
+                transport = requirement.transport.value,
+                reference = requirement.reference,
+                detail = f"The resolved service image `{service.image}` does not match the required reference.",
+            )
+
+        # Resolve the target platform from the requirement, the service, and the environment.
+        target_platform: str | None = self._target_platform(requirement, service, environment)
+
+        # Ensure the image exists with the intended build, pull, or reuse semantics.
+        created: bool = self._ensure_image(
+            requirement = requirement,
+            service = service,
+            definition = definition,
+            environment = environment,
+            platform = target_platform,
+            rebuild = rebuild,
+            output = output,
+        )
+
+        # Return the local image artifact with an optional manifest digest.
 
     # Reject transports the Docker builder does not implement before any work.
     def _require_supported_transport(self, requirement: ArtifactRequirement) -> None:
