@@ -41,3 +41,12 @@ ARCHIVE_NAME: str = "artifact.tar"
 
 # Name the single image manifest inside a Docker archive.
 ARCHIVE_MANIFEST: str = "manifest.json"
+
+
+# Prepare Docker images and typed artifacts for a runtime requirement.
+class DockerBuilder(Builder):
+    # Construct the builder around one Docker gateway.
+    def __init__(self, docker: DockerCli) -> None:
+        # Record the shared gateway and its Compose facade.
+        self._docker: DockerCli = docker
+        self._compose: ComposeCli = ComposeCli(docker)
