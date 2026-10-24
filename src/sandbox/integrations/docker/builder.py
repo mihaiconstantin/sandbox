@@ -367,3 +367,24 @@ def _manifest_digest(inspection: Mapping[str, Any], reference: str) -> str | Non
     repository: str = _repository_key(_split_tag(repository_value)[0])
 
     # Find the first repository digest for this image.
+    for entry in digests:
+        # Require a string `repo@digest` entry.
+        if not isinstance(entry, str) or "@" not in entry:
+            # Skip malformed entries.
+            continue
+
+        # Split the repository and digest.
+        entry_repository, digest = entry.rsplit("@", 1)
+
+        # Compare the repository without tags.
+        if _repository_key(_split_tag(entry_repository)[0]) != repository:
+            # Skip a digest for another repository.
+            continue
+
+        # Require a nonblank digest value.
+        if digest.strip():
+            # Return the manifest or index digest.
+            return digest.strip()
+
+    # Never fall back to Docker's config `Id`.
+    return None
