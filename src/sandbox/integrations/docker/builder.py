@@ -133,3 +133,22 @@ class DockerBuilder(Builder):
             return True
 
         # An image-only service reuses a present image even when a rebuild was requested.
+        if present:
+            # Report reuse rather than creation.
+            return False
+
+        # Pull the missing image with streamed progress.
+        result = self._docker.pull_image(
+            service.image,
+            platform = platform,
+            operation = "pull",
+            environment = environment,
+            output = output,
+        )
+
+        # Translate a failed pull with its command facts.
+        if result.returncode != 0:
+            # Throw the neutral engine failure.
+            raise EngineFailure(self._docker.failure("pull", result.arguments, result))
+
+        # Require the pull to leave the required image available.
