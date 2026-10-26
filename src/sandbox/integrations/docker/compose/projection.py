@@ -343,3 +343,36 @@ def _mounts(value: object, definitions: object, catalogue_root: Path, field: str
 
     # Return the projected mounts.
     return tuple(mounts)
+
+
+# Project the effective service networks.
+def _networks(definitions: object, service_networks: object, field: str, *, skip: bool) -> tuple[NetworkFacts, ...]:
+    # If the service selects a network mode, Compose does not use named networks.
+    if skip:
+        # Return no network attachments.
+        return ()
+
+    # Use the default network when the service names none.
+    if service_networks is None:
+        # Select the default network.
+        used: tuple[object, ...] = ("default",)
+
+    # Read names from the mapping or array form.
+    elif isinstance(service_networks, (Mapping, list)):
+        # Select the declared names.
+        used = tuple(service_networks)
+
+    # Otherwise, throw.
+    else:
+        # Throw.
+        raise RecipeUnresolved(field, "Must be an array or mapping of network names.")
+
+    # Use the default network when the service names an empty set.
+    if not used:
+        # Select the default network.
+        used = ("default",)
+
+    # Require the top-level network table.
+    networks: Mapping[str, Any] = _mapping(definitions, "networks")
+
+    # Prepare the projected networks.
