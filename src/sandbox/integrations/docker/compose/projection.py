@@ -178,6 +178,17 @@ def _mapping(value: object, field: str) -> Mapping[str, Any]:
     return value
 
 
+# Normalize labels from the resolved mapping or array form.
+def _labels(value: object, field: str) -> dict[str, str]:
+    # If labels are absent, return an empty mapping.
+    if value is None:
+        # Return no labels.
+        return {}
+
+    # Delegate the shared mapping and array rules.
+    return _pairs(value, field)
+
+
 # Normalize a name-to-value mapping or array.
 def _pairs(value: object, field: str) -> dict[str, str]:
     # Normalize the mapping form.
