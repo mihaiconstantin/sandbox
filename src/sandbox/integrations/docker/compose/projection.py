@@ -60,3 +60,13 @@ class HooksFacts:
 
     # Record the pre-stop hooks.
     pre_stop: tuple[HookFacts, ...]
+
+
+# Record one effective network attachment and its labels.
+@dataclass(frozen = True, slots = True)
+class NetworkFacts:
+    # Record the network name.
+    name: str
+
+    # Record the network labels.
+    labels: Mapping[str, str]
