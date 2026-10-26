@@ -70,3 +70,52 @@ class NetworkFacts:
 
     # Record the network labels.
     labels: Mapping[str, str]
+
+
+# Record every effective fact used to verify the realized override.
+@dataclass(frozen = True, slots = True)
+class ServiceFacts:
+    # Record the selected service name.
+    service: str
+
+    # Record the effective image reference.
+    image: str
+
+    # Record the effective platform.
+    platform: str | None
+
+    # Record the effective service user.
+    user: str | int | None
+
+    # Record the effective working directory.
+    working_directory: str | None
+
+    # Record whether privileged mode is effective.
+    privileged: bool
+
+    # Record whether host networking is effective.
+    host_network: bool
+
+    # Record the effective service labels.
+    labels: Mapping[str, str]
+
+    # Record the effective mounts.
+    mounts: tuple[MountSpec, ...]
+
+    # Record the effective network attachments.
+    networks: tuple[NetworkFacts, ...]
+
+    # Record the effective environment files.
+    environment_files: tuple[Path, ...]
+
+    # Record every declared top-level secret name.
+    declared_secrets: tuple[str, ...]
+
+    # Record the service secret references.
+    secrets: tuple[str, ...]
+
+    # Record the resolved build mapping when the service declares one.
+    build: Mapping[str, Any] | None
+
+    # Record the effective lifecycle hook sequences.
+    hooks: HooksFacts
