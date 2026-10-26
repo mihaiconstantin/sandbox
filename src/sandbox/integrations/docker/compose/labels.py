@@ -153,3 +153,30 @@ def is_managed_volume(labels: Mapping[str, str]) -> bool:
         and labels.get(RESOURCE_LABEL) == "volume"
         and labels.get(SCOPE_LABEL) == "shared"
     )
+
+
+# Define the public API of the Compose label rules.
+__all__: list[str] = [
+    "CATALOGUE_LABEL",
+    "COMPOSE_HOOK_LABEL",
+    "COMPOSE_ONEOFF_LABEL",
+    "COMPOSE_PROJECT_LABEL",
+    "MANAGED_LABEL",
+    "PROJECT_LABEL",
+    "RECIPE_LABEL",
+    "RESOURCE_LABEL",
+    "ROLE_LABEL",
+    "SCOPE_LABEL",
+    "box_filters",
+    "container_labels",
+    "is_box_role",
+    "is_managed_volume",
+    "is_owned_by",
+    "is_retained_container",
+    "managed_container_filters",
+    "managed_volume_filters",
+    "network_labels",
+    "project_filters",
+    "volume_create_labels",
+    "volume_labels",
+]
