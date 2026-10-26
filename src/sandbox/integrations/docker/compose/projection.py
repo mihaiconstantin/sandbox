@@ -288,3 +288,21 @@ def _physical_volume_name(source: object, definitions: object, field: str) -> st
 
     # Return the physical name.
     return name
+
+
+# Project the effective service mounts.
+def _mounts(value: object, definitions: object, catalogue_root: Path, field: str) -> tuple[MountSpec, ...]:
+    # If mounts are absent, use an empty sequence.
+    if value is None:
+        # Return no mounts.
+        return ()
+
+    # Require an array of mounts.
+    if not isinstance(value, list):
+        # Throw.
+        raise RecipeUnresolved(field, "Must be an array of mounts.")
+
+    # Prepare the projected mounts.
+    mounts: list[MountSpec] = []
+
+    # For each resolved mount.
