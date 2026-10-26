@@ -376,3 +376,25 @@ def _networks(definitions: object, service_networks: object, field: str, *, skip
     networks: Mapping[str, Any] = _mapping(definitions, "networks")
 
     # Prepare the projected networks.
+    resolved: list[NetworkFacts] = []
+
+    # For each used network.
+    for name in used:
+        # Require a nonblank name.
+        if not isinstance(name, str) or not name:
+            # Throw.
+            raise RecipeUnresolved(field, "Must contain nonblank network names.")
+
+        # If the network is not defined.
+        if name not in networks:
+            # Throw.
+            raise RecipeUnresolved(field, f"Network `{name}` is not defined in the resolved configuration.")
+
+        # Require the network definition.
+        network: Mapping[str, Any] = _mapping(networks[name], f"networks.{name}")
+
+        # Project the effective name and labels.
+        resolved.append(NetworkFacts(name = name, labels = _labels(network.get("labels"), f"networks.{name}.labels")))
+
+    # Return the projected networks.
+    return tuple(resolved)
