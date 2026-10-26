@@ -119,3 +119,13 @@ class ServiceFacts:
 
     # Record the effective lifecycle hook sequences.
     hooks: HooksFacts
+
+
+# Record the neutral requirements and private verification facts for one service.
+@dataclass(frozen = True, slots = True)
+class Projection:
+    # Record the neutral sandbox spec.
+    spec: SandboxSpec
+
+    # Record the private effective facts.
+    facts: ServiceFacts
