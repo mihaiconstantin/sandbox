@@ -49,3 +49,9 @@ def box_filters(name: str) -> dict[str, str]:
 def managed_container_filters() -> dict[str, str]:
     # Return the ownership filter used by `list`.
     return {MANAGED_LABEL: "true"}
+
+
+# Return the project-scoped removal filters.
+def project_filters(name: str) -> dict[str, str]:
+    # Return the Compose project label shared by removal resources.
+    return {COMPOSE_PROJECT_LABEL: name}
