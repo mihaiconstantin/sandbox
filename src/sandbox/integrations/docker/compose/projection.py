@@ -176,3 +176,26 @@ def _mapping(value: object, field: str) -> Mapping[str, Any]:
 
     # Return the mapping.
     return value
+
+
+# Normalize a name-to-value mapping or array.
+def _pairs(value: object, field: str) -> dict[str, str]:
+    # Normalize the mapping form.
+    if isinstance(value, Mapping):
+        # Prepare the normalized pairs.
+        pairs: dict[str, str] = {}
+
+        # For each pair.
+        for name, item in value.items():
+            # If the name or value is invalid.
+            if not isinstance(name, str) or not name or not isinstance(item, str):
+                # Throw.
+                raise RecipeUnresolved(field, "Must contain string names and values.")
+
+            # Record the pair.
+            pairs[name] = item
+
+        # Return the pairs.
+        return pairs
+
+    # Normalize the array form.
