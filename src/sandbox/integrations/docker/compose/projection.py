@@ -398,3 +398,19 @@ def _networks(definitions: object, service_networks: object, field: str, *, skip
 
     # Return the projected networks.
     return tuple(resolved)
+
+
+# Project environment files as absolute local paths.
+def _environment_files(value: object, catalogue_root: Path, field: str) -> tuple[Path, ...]:
+    # If no environment files are declared, return an empty sequence.
+    if value is None:
+        # Return no files.
+        return ()
+
+    # Accept a single entry or an array of entries.
+    entries: list[object] = value if isinstance(value, list) else [value]
+
+    # Prepare the resolved files.
+    files: list[Path] = []
+
+    # For each declared entry.
