@@ -131,6 +131,41 @@ class Projection:
     facts: ServiceFacts
 
 
+# Read the raw recipe pre-start hooks from one resolved configuration.
+def recipe_pre_start(configuration: Mapping[str, Any], service: str) -> list[dict[str, Any]]:
+    # Require the services table.
+    services: Mapping[str, Any] = _mapping(configuration.get("services"), "services")
+
+    # Require the selected service mapping.
+    selected: Mapping[str, Any] = _mapping(services.get(service), f"services.{service}")
+
+    # Read the recipe startup hooks.
+    value: Any = selected.get("pre_start")
+
+    # If the recipe does not declare startup hooks, retain an empty sequence.
+    if value is None:
+        # Return no hooks.
+        return []
+
+    # If the hook sequence is invalid, report its configuration location.
+    if not isinstance(value, list):
+        # Throw.
+        raise RecipeUnresolved(f"services.{service}.pre_start", "Must be an array of startup hooks.")
+
+    # Preserve every recipe hook field without normalizing or dropping its settings.
+    hooks: list[dict[str, Any]] = []
+    for index, entry in enumerate(value):
+        # Require a hook mapping.
+        if not isinstance(entry, Mapping):
+            # Throw.
+            raise RecipeUnresolved(f"services.{service}.pre_start[{index}]", "Must be a mapping.")
+
+        # Record the hook unchanged.
+        hooks.append(dict(entry))
+
+    # Return the ordered recipe hooks.
+
+
 # Require a mapping value at one resolved-configuration field.
 def _mapping(value: object, field: str) -> Mapping[str, Any]:
     # If the value is not a mapping.
