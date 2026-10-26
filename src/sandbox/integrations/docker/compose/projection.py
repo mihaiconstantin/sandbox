@@ -342,3 +342,4 @@ def _mounts(value: object, definitions: object, catalogue_root: Path, field: str
         raise RecipeUnresolved(f"{field}[{index}].type", "Only bind and named volume mounts are supported.")
 
     # Return the projected mounts.
+    return tuple(mounts)
