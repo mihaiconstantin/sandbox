@@ -210,3 +210,30 @@ def _pairs(value: object, field: str) -> dict[str, str]:
         return pairs
 
     # Normalize the array form.
+    if isinstance(value, list):
+        # Prepare the normalized pairs.
+        pairs = {}
+
+        # For each name=value entry.
+        for index, item in enumerate(value):
+            # If the entry is not a string pair.
+            if not isinstance(item, str) or "=" not in item:
+                # Throw.
+                raise RecipeUnresolved(f"{field}[{index}]", "Must use the `name=value` form.")
+
+            # Split the name and value.
+            name, item_value = item.split("=", 1)
+
+            # If the name is blank.
+            if not name:
+                # Throw.
+                raise RecipeUnresolved(f"{field}[{index}]", "Must use a nonblank name.")
+
+            # Record the pair.
+            pairs[name] = item_value
+
+        # Return the pairs.
+        return pairs
+
+    # Throw.
+    raise RecipeUnresolved(field, "Must be a mapping or an array of `name=value` strings.")
