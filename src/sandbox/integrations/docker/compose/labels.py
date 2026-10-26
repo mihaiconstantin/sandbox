@@ -127,3 +127,9 @@ def volume_labels(payload: Mapping[str, Any]) -> Mapping[str, str]:
 def is_retained_container(labels: Mapping[str, str]) -> bool:
     # Treat any hook label or one-off probe as a retained lifecycle resource.
     return bool(labels.get(COMPOSE_HOOK_LABEL)) or labels.get(COMPOSE_ONEOFF_LABEL) == "True"
+
+
+# Report whether one container is a box-role candidate.
+def is_box_role(labels: Mapping[str, str]) -> bool:
+    # Require the current box role label.
+    return labels.get(ROLE_LABEL) == "box"
