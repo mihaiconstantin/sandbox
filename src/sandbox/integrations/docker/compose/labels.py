@@ -133,3 +133,13 @@ def is_retained_container(labels: Mapping[str, str]) -> bool:
 def is_box_role(labels: Mapping[str, str]) -> bool:
     # Require the current box role label.
     return labels.get(ROLE_LABEL) == "box"
+
+
+# Report whether one container or network belongs to the project.
+def is_owned_by(labels: Mapping[str, str], project: str) -> bool:
+    # Require the three ownership labels used by removal.
+    return (
+        labels.get(MANAGED_LABEL) == "true"
+        and labels.get(PROJECT_LABEL) == project
+        and labels.get(COMPOSE_PROJECT_LABEL) == project
+    )
