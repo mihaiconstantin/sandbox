@@ -164,6 +164,7 @@ def recipe_pre_start(configuration: Mapping[str, Any], service: str) -> list[dic
         hooks.append(dict(entry))
 
     # Return the ordered recipe hooks.
+    return hooks
 
 
 # Require a mapping value at one resolved-configuration field.
