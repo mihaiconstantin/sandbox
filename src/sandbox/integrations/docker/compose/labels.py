@@ -55,3 +55,9 @@ def managed_container_filters() -> dict[str, str]:
 def project_filters(name: str) -> dict[str, str]:
     # Return the Compose project label shared by removal resources.
     return {COMPOSE_PROJECT_LABEL: name}
+
+
+# Return the managed-volume listing filters.
+def managed_volume_filters() -> dict[str, str]:
+    # Return the ownership filter used by volume listing.
+    return {MANAGED_LABEL: "true"}
