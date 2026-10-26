@@ -259,3 +259,32 @@ def _local_path(value: object, catalogue_root: Path, field: str) -> Path:
 
     # Return the absolute path without requiring it to exist.
     return path.resolve(strict = False)
+
+
+# Resolve a Compose volume key to its physical volume name.
+def _physical_volume_name(source: object, definitions: object, field: str) -> str:
+    # Require a named volume key.
+    if not isinstance(source, str) or not source:
+        # Throw.
+        raise RecipeUnresolved(field, "Must be a nonblank string.")
+
+    # Normalize the top-level volume definitions.
+    volume_definitions: Mapping[str, Any] = {} if definitions is None else _mapping(definitions, "volumes")
+
+    # Read the definition when the key is declared.
+    definition: Any = volume_definitions.get(source)
+    if definition is None:
+        # Use the Compose key as the physical name.
+        return source
+
+    # Require the definition mapping.
+    definition = _mapping(definition, f"volumes.{source}")
+
+    # Read the physical name or fall back to the key.
+    name: Any = definition.get("name", source)
+    if not isinstance(name, str) or not name:
+        # Throw.
+        raise RecipeUnresolved(field, "Must resolve to a nonblank physical volume name.")
+
+    # Return the physical name.
+    return name
