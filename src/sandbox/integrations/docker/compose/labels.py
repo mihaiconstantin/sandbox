@@ -107,3 +107,17 @@ def network_labels(payload: Mapping[str, Any]) -> Mapping[str, str]:
 
     # Return the reported labels.
     return cast(Mapping[str, str], labels)
+
+
+# Read the labels from one inspected volume.
+def volume_labels(payload: Mapping[str, Any]) -> Mapping[str, str]:
+    # Read the labels with an empty fallback.
+    labels: Any = payload.get("Labels") or {}
+
+    # If the labels are not a mapping, report no labels.
+    if not isinstance(labels, Mapping):
+        # Return an empty mapping.
+        return {}
+
+    # Return the reported labels.
+    return cast(Mapping[str, str], labels)
