@@ -306,3 +306,39 @@ def _mounts(value: object, definitions: object, catalogue_root: Path, field: str
     mounts: list[MountSpec] = []
 
     # For each resolved mount.
+    for index, entry in enumerate(value):
+        # Require a mapping mount.
+        mount: Mapping[str, Any] = _mapping(entry, f"{field}[{index}]")
+
+        # Require the mount type and target.
+        mount_type: Any = mount.get("type")
+        target: Any = mount.get("target")
+        if not isinstance(target, str) or not target:
+            # Throw.
+            raise RecipeUnresolved(f"{field}[{index}].target", "Must be a nonblank string.")
+
+        # Require a Boolean read-only flag.
+        read_only: bool = mount.get("read_only") is True
+
+        # Project a bind mount as an absolute host path.
+        if mount_type == "bind":
+            # Resolve the local bind source.
+            source: Path = _local_path(mount.get("source"), catalogue_root, f"{field}[{index}].source")
+
+            # Record the bind mount.
+            mounts.append(MountSpec(kind = "bind", source = source, target = target, read_only = read_only))
+            continue
+
+        # Project a named volume as its physical name.
+        if mount_type == "volume":
+            # Resolve the physical volume name.
+            name: str = _physical_volume_name(mount.get("source"), definitions, f"{field}[{index}].source")
+
+            # Record the volume mount.
+            mounts.append(MountSpec(kind = "volume", source = name, target = target, read_only = read_only))
+            continue
+
+        # Reject every unsupported mount form.
+        raise RecipeUnresolved(f"{field}[{index}].type", "Only bind and named volume mounts are supported.")
+
+    # Return the projected mounts.
