@@ -143,3 +143,13 @@ def is_owned_by(labels: Mapping[str, str], project: str) -> bool:
         and labels.get(PROJECT_LABEL) == project
         and labels.get(COMPOSE_PROJECT_LABEL) == project
     )
+
+
+# Report whether one volume is fully managed by sandbox.
+def is_managed_volume(labels: Mapping[str, str]) -> bool:
+    # Require the ownership, resource, and scope labels that identify a shared volume.
+    return (
+        labels.get(MANAGED_LABEL) == "true"
+        and labels.get(RESOURCE_LABEL) == "volume"
+        and labels.get(SCOPE_LABEL) == "shared"
+    )
