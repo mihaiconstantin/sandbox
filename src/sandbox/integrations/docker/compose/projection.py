@@ -237,3 +237,25 @@ def _pairs(value: object, field: str) -> dict[str, str]:
 
     # Throw.
     raise RecipeUnresolved(field, "Must be a mapping or an array of `name=value` strings.")
+
+
+# Resolve one local path against the catalogue root without requiring it to exist.
+def _local_path(value: object, catalogue_root: Path, field: str) -> Path:
+    # Require a nonblank string path.
+    if not isinstance(value, str) or not value:
+        # Throw.
+        raise RecipeUnresolved(field, "Must be a nonblank local path.")
+
+    # Reject remote build and bind sources.
+    if "://" in value or value.startswith("git@"):
+        # Throw.
+        raise RecipeUnresolved(field, "Must be a local path inside the catalogue directory.")
+
+    # Expand the user and resolve relative paths against the catalogue root.
+    path: Path = Path(value).expanduser()
+    if not path.is_absolute():
+        # Anchor the path at the catalogue root.
+        path = catalogue_root / path
+
+    # Return the absolute path without requiring it to exist.
+    return path.resolve(strict = False)
