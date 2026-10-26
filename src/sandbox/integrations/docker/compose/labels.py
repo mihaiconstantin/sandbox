@@ -43,3 +43,9 @@ def box_filters(name: str) -> dict[str, str]:
         ROLE_LABEL: "box",
         COMPOSE_ONEOFF_LABEL: "False",
     }
+
+
+# Return the broad managed-container listing filters.
+def managed_container_filters() -> dict[str, str]:
+    # Return the ownership filter used by `list`.
+    return {MANAGED_LABEL: "true"}
