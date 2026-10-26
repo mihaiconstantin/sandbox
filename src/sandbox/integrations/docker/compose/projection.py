@@ -129,3 +129,14 @@ class Projection:
 
     # Record the private effective facts.
     facts: ServiceFacts
+
+
+# Require a mapping value at one resolved-configuration field.
+def _mapping(value: object, field: str) -> Mapping[str, Any]:
+    # If the value is not a mapping.
+    if not isinstance(value, Mapping):
+        # Throw.
+        raise RecipeUnresolved(field, "Must be a mapping.")
+
+    # Return the mapping.
+    return value
