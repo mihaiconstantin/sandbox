@@ -61,3 +61,13 @@ def project_filters(name: str) -> dict[str, str]:
 def managed_volume_filters() -> dict[str, str]:
     # Return the ownership filter used by volume listing.
     return {MANAGED_LABEL: "true"}
+
+
+# Return the exact labels written when a shared volume is created.
+def volume_create_labels() -> dict[str, str]:
+    # Return the ownership, resource, and scope labels in creation order.
+    return {
+        MANAGED_LABEL: "true",
+        RESOURCE_LABEL: "volume",
+        SCOPE_LABEL: "shared",
+    }
