@@ -117,3 +117,11 @@ def _networks(payload: Mapping[str, Any]) -> tuple[Network, ...] | None:
 
     # Return the reported networks, including an observed empty tuple.
     return tuple(networks)
+
+
+# Report whether one inspected resource has both nonblank reference parts.
+def _has_reference(payload: Mapping[str, Any]) -> bool:
+    # Require both nonblank reference parts.
+    identifier: Any = payload.get("Id")
+    name: Any = payload.get("Name")
+    return isinstance(identifier, str) and bool(identifier) and isinstance(name, str) and bool(name)
