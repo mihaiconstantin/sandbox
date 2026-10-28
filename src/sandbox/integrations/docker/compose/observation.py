@@ -78,3 +78,28 @@ def _workspace(name: str, mounts: tuple[Mount, ...] | None) -> Workspace | None:
 
     # Report that no project bind was observed.
     return None
+
+
+# Map the reported networks onto neutral values.
+def _networks(payload: Mapping[str, Any]) -> tuple[Network, ...] | None:
+    # If the payload does not report network settings.
+    if "NetworkSettings" not in payload or payload.get("NetworkSettings") is None:
+        # Report networks as unavailable.
+        return None
+
+    # Require the network settings mapping.
+    settings: Any = payload.get("NetworkSettings")
+    if not isinstance(settings, Mapping):
+        # Throw for malformed engine data.
+        raise EngineOutputInvalid("docker", "inspect", "")
+
+    # Read the attached network mapping.
+    reported: Any = settings.get("Networks") or {}
+    if not isinstance(reported, Mapping):
+        # Throw for malformed engine data.
+        raise EngineOutputInvalid("docker", "inspect", "")
+
+    # Prepare the mapped networks.
+    networks: list[Network] = []
+
+    # For each attached network.
