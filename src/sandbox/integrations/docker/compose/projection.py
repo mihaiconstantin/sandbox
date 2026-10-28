@@ -739,6 +739,7 @@ def _hook_sequence(value: object, definitions: object, catalogue_root: Path, fie
         ))
 
     # Return the projected hooks.
+    return tuple(hooks)
 
 
 # Project an optional command or entrypoint into an immutable argument tuple.
