@@ -66,6 +66,29 @@ def render_override(plan: SandboxPlan, definition: RecipeDefinition, *, pre_star
             lines.append(f"            - {secret.alias}")
 
     # Add the default network and its ownership labels.
+    lines.extend([
+        "networks:",
+        "    default:",
+        "        labels:",
+        f"            sb.managed: {quote_yaml('true')}",
+        f"            sb.project: {quote_yaml(plan.project.name)}",
+        f"            sb.resource: {quote_yaml('network')}",
+    ])
+
+    # If the service requires shared volumes, define them at the top level.
+    if plan.volumes:
+        # Sandbox provisions these resources separately from Compose.
+        lines.append("volumes:")
+
+        # Retain the physical names without project prefixes.
+        for volume in plan.volumes:
+            lines.extend([
+                f"    {quote_yaml(volume.name)}:",
+                "        external: true",
+                f"        name: {quote_yaml(volume.name)}",
+            ])
+
+    # If the service requires secrets, define them at the top level.
 
 
 # Build the fixed ownership initializer used for validated volume targets.
