@@ -48,3 +48,9 @@ def initialization_hooks(plan: SandboxPlan, recipe_hooks: list[dict[str, Any]], 
 
     # Return the complete ordered sequence.
     return hooks
+
+
+# Quote a string as a YAML double-quoted scalar.
+def quote_yaml(value: str) -> str:
+    # JSON string escaping is valid YAML for the scalar values used by the override.
+    return json.dumps(value)
