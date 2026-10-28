@@ -54,3 +54,26 @@ def initialization_hooks(plan: SandboxPlan, recipe_hooks: list[dict[str, Any]], 
 def quote_yaml(value: str) -> str:
     # JSON string escaping is valid YAML for the scalar values used by the override.
     return json.dumps(value)
+
+
+# Protect resolved values from a second Compose interpolation without changing mapping keys.
+def _compose_literals(value: Any) -> Any:
+    # If the value is a string, retain its literal dollar signs.
+    if isinstance(value, str):
+        # Return the escaped scalar.
+        return value.replace("$", "$$")
+
+    # If the value is a mapping, preserve its keys and escape its values.
+    if isinstance(value, Mapping):
+        # Prepare the escaped mapping.
+        mapping: dict[str, Any] = {}
+
+        # For each key and value in the mapping.
+        for key, item in value.items():
+            # Compose literals.
+            mapping[key] = _compose_literals(item)
+
+        # Return the escaped mapping.
+        return mapping
+
+    # If the value is an array, escape each element in order.
