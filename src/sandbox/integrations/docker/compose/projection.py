@@ -531,6 +531,20 @@ def _service_secrets(value: object, field: str) -> tuple[str, ...]:
     return tuple(names)
 
 
+# Project every lifecycle hook sequence.
+def _hooks(service: Mapping[str, Any], definitions: object, catalogue_root: Path, field: str, initialization: Initialization | None) -> HooksFacts:
+    # Prepare the generated-hook flag for the final resolution.
+    generated: bool = initialization is not None and bool(initialization.targets)
+
+    # Project each hook sequence in declaration order.
+    pre_start: tuple[HookFacts, ...] = _hook_sequence(service.get("pre_start"), definitions, catalogue_root, f"{field}.pre_start", generated = generated)
+    post_start: tuple[HookFacts, ...] = _hook_sequence(service.get("post_start"), definitions, catalogue_root, f"{field}.post_start")
+    pre_stop: tuple[HookFacts, ...] = _hook_sequence(service.get("pre_stop"), definitions, catalogue_root, f"{field}.pre_stop")
+
+    # Return the projected sequences.
+    return HooksFacts(pre_start = pre_start, post_start = post_start, pre_stop = pre_stop)
+
+
 # Project one lifecycle hook sequence.
 def _hook_sequence(value: object, definitions: object, catalogue_root: Path, field: str, *, generated: bool = False) -> tuple[HookFacts, ...]:
     # If the service does not use this lifecycle phase, return an empty sequence.
