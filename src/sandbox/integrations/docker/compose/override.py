@@ -186,3 +186,12 @@ def _compose_literals(value: Any) -> Any:
 
     # Return non-string scalar values unchanged.
     return value
+
+
+# Define the public API of the Compose override renderer.
+__all__: list[str] = [
+    "generated_initialization_hook",
+    "initialization_hooks",
+    "quote_yaml",
+    "render_override",
+]
