@@ -47,3 +47,13 @@ def state_from_status(status: str | None) -> BoxState:
 
     # Return the mapped state or the unknown fallback.
     return STATE_BY_STATUS.get(status, BoxState.UNKNOWN)
+
+
+# Report whether one container is running.
+def container_is_running(payload: Mapping[str, Any]) -> bool:
+    # Read the engine running flag with a false fallback.
+    state: Any = payload.get("State") or {}
+    if not isinstance(state, Mapping):
+        # Throw for malformed engine data.
+        raise EngineOutputInvalid("docker", "inspect", "")
+    return bool(state.get("Running"))
