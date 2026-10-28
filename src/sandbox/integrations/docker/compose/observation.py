@@ -125,3 +125,17 @@ def _has_reference(payload: Mapping[str, Any]) -> bool:
     identifier: Any = payload.get("Id")
     name: Any = payload.get("Name")
     return isinstance(identifier, str) and bool(identifier) and isinstance(name, str) and bool(name)
+
+
+# Read one required nonblank string field from an inspected payload.
+def _required_string(payload: Mapping[str, Any], field: str) -> str:
+    # Read the field without coercing it.
+    value: Any = payload.get(field)
+
+    # If the field is not a nonblank string.
+    if not isinstance(value, str) or not value:
+        # Throw for malformed engine data.
+        raise EngineOutputInvalid("docker", "inspect", "")
+
+    # Return the validated value.
+    return value
