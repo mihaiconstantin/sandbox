@@ -414,3 +414,24 @@ def _environment_files(value: object, catalogue_root: Path, field: str) -> tuple
     files: list[Path] = []
 
     # For each declared entry.
+    for index, entry in enumerate(entries):
+        # If the entry is a path string.
+        if isinstance(entry, str):
+            # Use the string as the path value.
+            path_value: object = entry
+
+        # If the entry is a mapping.
+        elif isinstance(entry, Mapping):
+            # Read the path.
+            path_value = entry.get("path")
+
+        # Otherwise, throw.
+        else:
+            # Throw.
+            raise RecipeUnresolved(f"{field}[{index}]", "Must be a path string or mapping.")
+
+        # Resolve the local environment file path.
+        files.append(_local_path(path_value, catalogue_root, f"{field}[{index}]"))
+
+    # Return the resolved files.
+    return tuple(files)
