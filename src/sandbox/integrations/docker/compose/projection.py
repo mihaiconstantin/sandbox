@@ -249,6 +249,18 @@ def project_configuration(
     )
 
     # Build the neutral effective spec.
+    spec: SandboxSpec = SandboxSpec(
+        image = image_name,
+        platform = effective_platform,
+        user = user,
+        working_directory = working_directory,
+        privileged = privileged,
+        host_network = host_network,
+        mounts = mounts,
+    )
+
+    # Return the projection.
+    return Projection(spec = spec, facts = facts)
 
 
 # Read the raw recipe pre-start hooks from one resolved configuration.
