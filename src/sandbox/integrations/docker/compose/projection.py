@@ -485,3 +485,21 @@ def _declared_secrets(value: object) -> tuple[str, ...]:
 
     # Return the declared names.
     return tuple(names)
+
+
+# Project the service secret references.
+def _service_secrets(value: object, field: str) -> tuple[str, ...]:
+    # If no secret references are declared, return an empty sequence.
+    if value is None:
+        # Return no references.
+        return ()
+
+    # Require an array of references.
+    if not isinstance(value, list):
+        # Throw.
+        raise RecipeUnresolved(field, "Must be an array of secret references.")
+
+    # Prepare the referenced names.
+    names: list[str] = []
+
+    # For each reference.
