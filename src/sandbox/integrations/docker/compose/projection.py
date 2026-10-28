@@ -131,6 +131,46 @@ class Projection:
     facts: ServiceFacts
 
 
+# Project the effective primary service into neutral requirements and private facts.
+def project_configuration(
+    configuration: Mapping[str, Any],
+    plan: SandboxPlan,
+    definition: RecipeDefinition,
+    *,
+    default_platform: str | None = None,
+    initialization: Initialization | None = None,
+) -> Projection:
+    # Require a top-level mapping and a services table.
+    configuration = _mapping(configuration, "configuration")
+    services: Mapping[str, Any] = _mapping(configuration.get("services"), "services")
+
+    # Require the selected primary service.
+    if definition.service not in services:
+        # Throw.
+        raise RecipeUnresolved("services", f"Primary service `{definition.service}` is not declared in the resolved recipe configuration.")
+
+    # Require a mapping for the selected service.
+    field: str = f"services.{definition.service}"
+    service: Mapping[str, Any] = _mapping(services[definition.service], field)
+
+    # Read the effective image or reproduce Compose's default image name.
+    image: Any = service.get("image")
+    if image is None:
+        # Use the Compose default for the selected project and service.
+        image_name: str = f"{plan.project.name}-{definition.service}"
+    elif isinstance(image, str) and image:
+        # Retain the declared image reference.
+        image_name = image
+    else:
+        # Throw.
+        raise RecipeUnresolved(f"{field}.image", "Must be a nonblank image reference.")
+
+    # Read the resolved build mapping before selecting the effective platform.
+    build: Any = service.get("build")
+
+    # Require a build mapping when Compose resolved one.
+
+
 # Read the raw recipe pre-start hooks from one resolved configuration.
 def recipe_pre_start(configuration: Mapping[str, Any], service: str) -> list[dict[str, Any]]:
     # Require the services table.
