@@ -89,6 +89,21 @@ def render_override(plan: SandboxPlan, definition: RecipeDefinition, *, pre_star
             ])
 
     # If the service requires secrets, define them at the top level.
+    if plan.secrets:
+        # Add the top-level secret section.
+        lines.append("secrets:")
+
+        # Add each secret definition in resolved order.
+        for secret in plan.secrets:
+            # Resolve the secret path so Compose does not depend on its own working directory.
+            secret_path: Path = secret.host_path.expanduser().resolve()
+
+            # Add the secret definition.
+            lines.append(f"    {secret.alias}:")
+            lines.append(f"        file: {quote_yaml(str(secret_path))}")
+
+    # Return the complete override document.
+    return "\n".join(lines) + "\n"
 
 
 # Build the fixed ownership initializer used for validated volume targets.
