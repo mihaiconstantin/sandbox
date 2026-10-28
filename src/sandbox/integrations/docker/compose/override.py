@@ -43,6 +43,29 @@ def render_override(plan: SandboxPlan, definition: RecipeDefinition, *, pre_star
     ]
 
     # Mount shared storage only in the selected primary service.
+    for volume in plan.volumes:
+        # Use the physical name as the Compose key as well as the Docker lookup name.
+        lines.extend([
+            f"            - type: {quote_yaml('volume')}",
+            f"              source: {quote_yaml(volume.name)}",
+            f"              target: {quote_yaml(volume.target)}",
+        ])
+
+    # If access hooks were prepared, replace the recipe sequence with the complete ordered list.
+    if pre_start is not None:
+        # Preserve literal shell dollars through Compose's next interpolation pass.
+        lines.append(f"        pre_start: !override {json.dumps(_compose_literals(pre_start))}")
+
+    # If the service requires secrets.
+    if plan.secrets:
+        # Add the service secret section.
+        lines.append("        secrets:")
+
+        # Add each secret in resolved order.
+        for secret in plan.secrets:
+            lines.append(f"            - {secret.alias}")
+
+    # Add the default network and its ownership labels.
 
 
 # Build the fixed ownership initializer used for validated volume targets.
