@@ -484,3 +484,4 @@ def _declared_secrets(value: object) -> tuple[str, ...]:
         names.append(name)
 
     # Return the declared names.
+    return tuple(names)
