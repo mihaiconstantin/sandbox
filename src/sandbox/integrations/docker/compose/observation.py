@@ -49,6 +49,24 @@ def state_from_status(status: str | None) -> BoxState:
     return STATE_BY_STATUS.get(status, BoxState.UNKNOWN)
 
 
+# Map one inspected volume onto a neutral volume observation.
+def volume_info(metadata: Mapping[str, Any], references: tuple[RuntimeRef, ...]) -> VolumeInfo:
+    # Read and validate the physical name.
+    name: str = _required_string(metadata, "Name")
+
+    # Read the optional display fields.
+    driver: Any = metadata.get("Driver")
+    mountpoint: Any = metadata.get("Mountpoint")
+
+    # Return the observed volume.
+    return VolumeInfo(
+        name = name,
+        driver = driver if isinstance(driver, str) else None,
+        mountpoint = mountpoint if isinstance(mountpoint, str) else None,
+        in_use_by = references,
+    )
+
+
 # Report whether one container is running.
 def container_is_running(payload: Mapping[str, Any]) -> bool:
     # Read the engine running flag with a false fallback.
