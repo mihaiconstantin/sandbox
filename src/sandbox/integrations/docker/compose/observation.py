@@ -25,3 +25,14 @@ from sandbox.integrations.docker.compose.labels import (
     RECIPE_LABEL,
     container_labels,
 )
+
+# Map the Docker status onto the neutral state vocabulary.
+STATE_BY_STATUS: dict[str, BoxState] = {
+    "created": BoxState.CREATED,
+    "running": BoxState.RUNNING,
+    "paused": BoxState.RUNNING,
+    "restarting": BoxState.STARTING,
+    "removing": BoxState.STOPPING,
+    "exited": BoxState.STOPPED,
+    "dead": BoxState.FAILED,
+}
