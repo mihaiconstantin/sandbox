@@ -36,3 +36,14 @@ STATE_BY_STATUS: dict[str, BoxState] = {
     "exited": BoxState.STOPPED,
     "dead": BoxState.FAILED,
 }
+
+
+# Map one Docker status onto a neutral state.
+def state_from_status(status: str | None) -> BoxState:
+    # Preserve an unknown or absent status as the neutral unknown state.
+    if status is None:
+        # Report the unknown state.
+        return BoxState.UNKNOWN
+
+    # Return the mapped state or the unknown fallback.
+    return STATE_BY_STATUS.get(status, BoxState.UNKNOWN)
