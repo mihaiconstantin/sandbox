@@ -531,6 +531,24 @@ def _service_secrets(value: object, field: str) -> tuple[str, ...]:
     return tuple(names)
 
 
+# Project one lifecycle hook sequence.
+def _hook_sequence(value: object, definitions: object, catalogue_root: Path, field: str, *, generated: bool = False) -> tuple[HookFacts, ...]:
+    # If the service does not use this lifecycle phase, return an empty sequence.
+    if value is None:
+        # Return no hooks.
+        return ()
+
+    # Require an array of hooks.
+    if not isinstance(value, list):
+        # Throw.
+        raise RecipeUnresolved(field, "Must be an array of lifecycle hooks.")
+
+    # Prepare the projected hooks.
+    hooks: list[HookFacts] = []
+
+    # For each hook.
+
+
 # Project an optional command or entrypoint into an immutable argument tuple.
 def _command(value: object, field: str) -> tuple[str, ...] | None:
     # If the value is absent, return no command.
