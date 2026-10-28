@@ -11,6 +11,40 @@ from sandbox.domain import PROJECT_ROOT, Initialization, RecipeDefinition, Sandb
 from sandbox.validation.identifiers import validate_identifier
 
 
+# Build the sandbox-owned Compose override for one recipe source.
+def render_override(plan: SandboxPlan, definition: RecipeDefinition, *, pre_start: list[dict[str, Any]] | None = None) -> str:
+    # Require a project identifier that is safe in labels and container paths.
+    validate_identifier(plan.project.name, "project")
+
+    # Resolve the project directory to an absolute path.
+    project_dir: Path = plan.project.directory.expanduser().resolve()
+
+    # Compute the container directory for the project.
+    target: str = f"{PROJECT_ROOT}/{plan.project.name}"
+
+    # Build the override in the repository's four-space YAML style.
+    lines: list[str] = [
+        "services:",
+        f"    {definition.service}:",
+        "        labels:",
+        f"            sb.managed: {quote_yaml('true')}",
+        f"            sb.project: {quote_yaml(plan.project.name)}",
+        f"            sb.resource: {quote_yaml('container')}",
+        f"            sb.role: {quote_yaml('box')}",
+        f"            sb.catalogue: {quote_yaml(definition.catalogue)}",
+        f"            sb.recipe: {quote_yaml(definition.recipe)}",
+        f"        working_dir: {quote_yaml(target)}",
+        "        volumes:",
+        f"            - type: {quote_yaml('bind')}",
+        f"              source: {quote_yaml(str(project_dir))}",
+        f"              target: {quote_yaml(target)}",
+        "              bind:",
+        "                  create_host_path: false",
+    ]
+
+    # Mount shared storage only in the selected primary service.
+
+
 # Build the fixed ownership initializer used for validated volume targets.
 def generated_initialization_hook(plan: SandboxPlan, initialization: Initialization) -> dict[str, Any]:
     # Keep temporary hook containers owned but distinct from the workspace.
