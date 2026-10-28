@@ -35,3 +35,16 @@ def generated_initialization_hook(plan: SandboxPlan, initialization: Initializat
         },
         "labels": labels,
     }
+
+
+# Build the ordered startup hook sequence for one initialization.
+def initialization_hooks(plan: SandboxPlan, recipe_hooks: list[dict[str, Any]], initialization: Initialization) -> list[dict[str, Any]]:
+    # Start with the generated hook so ownership is prepared before recipe code runs.
+    hooks: list[dict[str, Any]] = [generated_initialization_hook(plan, initialization)]
+
+    # Preserve every recipe hook and its relative order.
+    for hook in recipe_hooks:
+        hooks.append(dict(hook))
+
+    # Return the complete ordered sequence.
+    return hooks
