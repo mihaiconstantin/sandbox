@@ -503,3 +503,29 @@ def _service_secrets(value: object, field: str) -> tuple[str, ...]:
     names: list[str] = []
 
     # For each reference.
+    for index, entry in enumerate(value):
+        # If the entry is a secret name.
+        if isinstance(entry, str):
+            # Use the name directly.
+            source: object = entry
+
+        # If the entry is a mapping.
+        elif isinstance(entry, Mapping):
+            # Read its source.
+            source = entry.get("source")
+
+        # Otherwise, throw.
+        else:
+            # Throw.
+            raise RecipeUnresolved(f"{field}[{index}]", "Must be a secret name or mapping.")
+
+        # Require a nonblank declared name.
+        if not isinstance(source, str) or not source:
+            # Throw.
+            raise RecipeUnresolved(f"{field}[{index}]", "Must name a declared secret.")
+
+        # Record the reference.
+        names.append(source)
+
+    # Return the referenced names in resolved order.
+    return tuple(names)
