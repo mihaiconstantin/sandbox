@@ -172,3 +172,17 @@ def _compose_literals(value: Any) -> Any:
         return mapping
 
     # If the value is an array, escape each element in order.
+    if isinstance(value, list):
+        # Prepare the escaped array.
+        items: list[Any] = []
+
+        # For each element in the array.
+        for element in value:
+            # Compose literals.
+            items.append(_compose_literals(element))
+
+        # Return the escaped array.
+        return items
+
+    # Return non-string scalar values unchanged.
+    return value
