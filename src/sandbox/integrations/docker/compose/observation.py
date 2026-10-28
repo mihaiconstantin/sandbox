@@ -57,3 +57,24 @@ def container_is_running(payload: Mapping[str, Any]) -> bool:
         # Throw for malformed engine data.
         raise EngineOutputInvalid("docker", "inspect", "")
     return bool(state.get("Running"))
+
+
+# Derive the project workspace from the reported mounts.
+def _workspace(name: str, mounts: tuple[Mount, ...] | None) -> Workspace | None:
+    # If mounts are unavailable.
+    if mounts is None:
+        # Report the workspace as unavailable.
+        return None
+
+    # Compute the fixed project target.
+    target: str = f"{PROJECT_ROOT}/{name}"
+
+    # For each reported mount.
+    for mount in mounts:
+        # If the mount is the project bind at the fixed target.
+        if mount.kind == "bind" and mount.target == target:
+            # Return the live project workspace.
+            return Workspace(host_directory = Path(mount.source), target = target)
+
+    # Report that no project bind was observed.
+    return None
