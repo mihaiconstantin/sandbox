@@ -555,3 +555,19 @@ def _command(value: object, field: str) -> tuple[str, ...] | None:
 
     # Throw.
     raise RecipeUnresolved(field, "Must be a string or an array of strings.")
+
+
+# Project an optional name sequence into an immutable tuple.
+def _name_sequence(value: object, field: str) -> tuple[str, ...]:
+    # If the value is absent, return an empty sequence.
+    if value is None:
+        # Return no names.
+        return ()
+
+    # If the value is an array of strings.
+    if isinstance(value, list) and all(isinstance(item, str) and item for item in value):
+        # Return the names.
+        return tuple(value)
+
+    # Throw.
+    raise RecipeUnresolved(field, "Must be an array of nonblank strings.")
