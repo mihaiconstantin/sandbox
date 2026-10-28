@@ -197,6 +197,36 @@ def project_configuration(
 
     # Read the working directory when Compose resolved one.
     working_directory: Any = service.get("working_dir")
+    if working_directory is not None and (not isinstance(working_directory, str) or not working_directory):
+        # Throw.
+        raise RecipeUnresolved(f"{field}.working_dir", "Must be a nonblank path.")
+
+    # Read the effective security flags.
+    privileged: bool = service.get("privileged") is True
+    host_network: bool = service.get("network_mode") == "host"
+
+    # Project the service labels.
+    labels: Mapping[str, str] = _labels(service.get("labels"), f"{field}.labels")
+
+    # Project the effective mounts.
+    mounts: tuple[MountSpec, ...] = _mounts(service.get("volumes"), configuration.get("volumes"), definition.catalogue_root, f"{field}.volumes")
+
+    # Project the effective networks, or none when the service selects a network mode.
+    networks: tuple[NetworkFacts, ...] = _networks(
+        configuration.get("networks"),
+        service.get("networks"),
+        f"{field}.networks",
+        skip = host_network,
+    )
+
+    # Project the environment files as absolute local paths.
+    environment_files: tuple[Path, ...] = _environment_files(service.get("env_file"), definition.catalogue_root, f"{field}.env_file")
+
+    # Validate the declared secret forms and project the service references.
+    declared_secrets: tuple[str, ...] = _declared_secrets(configuration.get("secrets"))
+    secrets: tuple[str, ...] = _service_secrets(service.get("secrets"), f"{field}.secrets")
+
+    # Project every lifecycle hook sequence.
 
 
 # Read the raw recipe pre-start hooks from one resolved configuration.
