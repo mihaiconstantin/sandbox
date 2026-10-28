@@ -435,3 +435,19 @@ def _environment_files(value: object, catalogue_root: Path, field: str) -> tuple
 
     # Return the resolved files.
     return tuple(files)
+
+
+# Validate declared secret forms and return their names in declaration order.
+def _declared_secrets(value: object) -> tuple[str, ...]:
+    # If no secrets are declared, return an empty sequence.
+    if value is None:
+        # Return no declarations.
+        return ()
+
+    # Require a top-level secrets table.
+    declarations: Mapping[str, Any] = _mapping(value, "secrets")
+
+    # Prepare the declared names.
+    names: list[str] = []
+
+    # For each declaration.
