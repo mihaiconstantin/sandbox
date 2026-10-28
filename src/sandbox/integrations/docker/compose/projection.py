@@ -169,6 +169,34 @@ def project_configuration(
     build: Any = service.get("build")
 
     # Require a build mapping when Compose resolved one.
+    if build is not None:
+        # Require a mapping.
+        build = _mapping(build, f"{field}.build")
+
+    # Select the effective platform used by probing and image inspection.
+    platform: Any = service.get("platform") or None
+    if platform is not None and (not isinstance(platform, str) or not platform):
+        # Throw.
+        raise RecipeUnresolved(f"{field}.platform", "Must be a nonblank platform string.")
+
+    # Select the effective platform only for a locally built service.
+    effective_platform: str | None = platform if platform is not None else (default_platform if build is not None else None)
+
+    # Read the explicit service user without inventing an image default.
+    user: Any = service.get("user")
+
+    # If the user is explicitly empty, treat the value as not declared.
+    if user == "":
+        # Drop the empty user.
+        user = None
+
+    # If the user is neither a string nor an integer.
+    if user is not None and (isinstance(user, bool) or not isinstance(user, (str, int))):
+        # Throw.
+        raise RecipeUnresolved(f"{field}.user", "Must be a string or integer user.")
+
+    # Read the working directory when Compose resolved one.
+    working_directory: Any = service.get("working_dir")
 
 
 # Read the raw recipe pre-start hooks from one resolved configuration.
