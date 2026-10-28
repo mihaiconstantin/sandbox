@@ -103,3 +103,17 @@ def _networks(payload: Mapping[str, Any]) -> tuple[Network, ...] | None:
     networks: list[Network] = []
 
     # For each attached network.
+    for name, details in reported.items():
+        # Require a nonblank name and mapping details.
+        if not isinstance(name, str) or not name or not isinstance(details, Mapping):
+            # Throw for malformed engine data.
+            raise EngineOutputInvalid("docker", "inspect", "")
+
+        # Read the assigned address without fabricating one.
+        address: Any = details.get("IPAddress") or ""
+
+        # Record the network name and assigned address.
+        networks.append(Network(name = name, ip_address = address if isinstance(address, str) else ""))
+
+    # Return the reported networks, including an observed empty tuple.
+    return tuple(networks)
