@@ -67,6 +67,12 @@ def volume_info(metadata: Mapping[str, Any], references: tuple[RuntimeRef, ...])
     )
 
 
+# Build the display reference for one inspected container.
+def container_reference(payload: Mapping[str, Any]) -> RuntimeRef:
+    # Return the container identifier and normalized display name.
+    return RuntimeRef(id = _required_string(payload, "Id"), name = _required_string(payload, "Name").removeprefix("/"))
+
+
 # Report whether one container is running.
 def container_is_running(payload: Mapping[str, Any]) -> bool:
     # Read the engine running flag with a false fallback.
