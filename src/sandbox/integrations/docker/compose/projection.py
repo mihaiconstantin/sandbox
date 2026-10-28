@@ -529,3 +529,29 @@ def _service_secrets(value: object, field: str) -> tuple[str, ...]:
 
     # Return the referenced names in resolved order.
     return tuple(names)
+
+
+# Project an optional command or entrypoint into an immutable argument tuple.
+def _command(value: object, field: str) -> tuple[str, ...] | None:
+    # If the value is absent, return no command.
+    if value is None:
+        # Return no command.
+        return None
+
+    # If the value is a shell-style string, split it into arguments.
+    if isinstance(value, str):
+        # Split the command without invoking a shell.
+        return tuple(shlex.split(value))
+
+    # If the value is an array.
+    if isinstance(value, list):
+        # Require string arguments.
+        if any(not isinstance(item, str) for item in value):
+            # Throw.
+            raise RecipeUnresolved(field, "Must be an array of strings.")
+
+        # Return the arguments.
+        return tuple(value)
+
+    # Throw.
+    raise RecipeUnresolved(field, "Must be a string or an array of strings.")
