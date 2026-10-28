@@ -451,3 +451,36 @@ def _declared_secrets(value: object) -> tuple[str, ...]:
     names: list[str] = []
 
     # For each declaration.
+    for name, entry in declarations.items():
+        # Require a nonblank secret name.
+        if not isinstance(name, str) or not name:
+            # Throw.
+            raise RecipeUnresolved("secrets", "Must contain nonblank secret names.")
+
+        # Require the declaration mapping.
+        declaration: Mapping[str, Any] = _mapping(entry, f"secrets.{name}")
+
+        # Read the supported declaration forms.
+        file: Any = declaration.get("file")
+        environment: Any = declaration.get("environment")
+        external: Any = declaration.get("external", False)
+
+        # If the file declaration is invalid.
+        if file is not None and (not isinstance(file, str) or not file):
+            # Throw.
+            raise RecipeUnresolved(f"secrets.{name}.file", "Must be a nonblank path.")
+
+        # If the environment declaration is invalid.
+        if environment is not None and (not isinstance(environment, str) or not environment):
+            # Throw.
+            raise RecipeUnresolved(f"secrets.{name}.environment", "Must be a nonblank environment variable name.")
+
+        # If no supported secret source is declared.
+        if file is None and environment is None and not external:
+            # Throw.
+            raise RecipeUnresolved(f"secrets.{name}", "Must declare `file`, `environment`, or `external`.")
+
+        # Record the declaration order.
+        names.append(name)
+
+    # Return the declared names.
