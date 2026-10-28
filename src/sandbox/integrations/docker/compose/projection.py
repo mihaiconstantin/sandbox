@@ -782,3 +782,15 @@ def _name_sequence(value: object, field: str) -> tuple[str, ...]:
 
     # Throw.
     raise RecipeUnresolved(field, "Must be an array of nonblank strings.")
+
+
+# Define the public API of the Compose projection.
+__all__: list[str] = [
+    "HookFacts",
+    "HooksFacts",
+    "NetworkFacts",
+    "Projection",
+    "ServiceFacts",
+    "project_configuration",
+    "recipe_pre_start",
+]
