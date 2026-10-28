@@ -227,6 +227,28 @@ def project_configuration(
     secrets: tuple[str, ...] = _service_secrets(service.get("secrets"), f"{field}.secrets")
 
     # Project every lifecycle hook sequence.
+    hooks: HooksFacts = _hooks(service, configuration.get("volumes"), definition.catalogue_root, field, initialization)
+
+    # Build the private effective facts.
+    facts: ServiceFacts = ServiceFacts(
+        service = definition.service,
+        image = image_name,
+        platform = effective_platform,
+        user = user,
+        working_directory = working_directory,
+        privileged = privileged,
+        host_network = host_network,
+        labels = labels,
+        mounts = mounts,
+        networks = networks,
+        environment_files = environment_files,
+        declared_secrets = declared_secrets,
+        secrets = secrets,
+        build = build,
+        hooks = hooks,
+    )
+
+    # Build the neutral effective spec.
 
 
 # Read the raw recipe pre-start hooks from one resolved configuration.
