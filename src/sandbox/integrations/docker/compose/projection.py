@@ -693,6 +693,52 @@ def _hook_sequence(value: object, definitions: object, catalogue_root: Path, fie
     hooks: list[HookFacts] = []
 
     # For each hook.
+    for index, entry in enumerate(value):
+        # Require a hook mapping.
+        hook: Mapping[str, Any] = _mapping(entry, f"{field}[{index}]")
+
+        # Read the effective user.
+        user: Any = hook.get("user")
+
+        # Require an optional string or integer user.
+        if user is not None and (isinstance(user, bool) or not isinstance(user, (str, int))):
+            # Throw.
+            raise RecipeUnresolved(f"{field}[{index}].user", "Must be a string or integer user.")
+
+        # Require the privilege flag.
+        privileged: bool = hook.get("privileged") is True
+
+        # Project the hook labels.
+        labels: Mapping[str, str] = _labels(hook.get("labels"), f"{field}[{index}].labels")
+
+        # Project the optional command forms.
+        entrypoint: tuple[str, ...] | None = _command(hook.get("entrypoint"), f"{field}[{index}].entrypoint")
+        command: tuple[str, ...] | None = _command(hook.get("command"), f"{field}[{index}].command")
+
+        # Project the added and dropped capabilities.
+        cap_add: tuple[str, ...] = _name_sequence(hook.get("cap_add"), f"{field}[{index}].cap_add")
+        cap_drop: tuple[str, ...] = _name_sequence(hook.get("cap_drop"), f"{field}[{index}].cap_drop")
+
+        # Project the hook mounts.
+        mounts: tuple[MountSpec, ...] = _mounts(hook.get("volumes"), definitions, catalogue_root, f"{field}[{index}].volumes")
+
+        # Mark the first hook of the final resolution as generated.
+        origin: str = "generated" if generated and index == 0 else "recipe"
+
+        # Record the projected hook.
+        hooks.append(HookFacts(
+            user = user,
+            privileged = privileged,
+            labels = labels,
+            entrypoint = entrypoint,
+            command = command,
+            cap_add = cap_add,
+            cap_drop = cap_drop,
+            mounts = mounts,
+            origin = origin,
+        ))
+
+    # Return the projected hooks.
 
 
 # Project an optional command or entrypoint into an immutable argument tuple.
