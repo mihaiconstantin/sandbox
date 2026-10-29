@@ -73,6 +73,12 @@ def container_reference(payload: Mapping[str, Any]) -> RuntimeRef:
     return RuntimeRef(id = _required_string(payload, "Id"), name = _required_string(payload, "Name").removeprefix("/"))
 
 
+# Build the display reference for one inspected network.
+def network_reference(payload: Mapping[str, Any]) -> RuntimeRef:
+    # Return the network identifier and display name.
+    return RuntimeRef(id = _required_string(payload, "Id"), name = _required_string(payload, "Name"))
+
+
 # Report whether one container is running.
 def container_is_running(payload: Mapping[str, Any]) -> bool:
     # Read the engine running flag with a false fallback.
