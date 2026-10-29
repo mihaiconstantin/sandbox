@@ -230,6 +230,11 @@ class DockerCli:
         # Remove the exact container.
         self._run(operation, ["docker", "rm", identifier])
 
+    # Remove one existing network.
+    def remove_network(self, identifier: str, *, operation: str) -> None:
+        # Remove the exact network.
+        self._run(operation, ["docker", "network", "rm", identifier])
+
     # Create one physical volume with the supplied labels.
     def create_volume(self, name: str, labels: Mapping[str, str], *, operation: str) -> CommandResult:
         # Start the volume creation command.
