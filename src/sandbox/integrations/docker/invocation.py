@@ -127,5 +127,7 @@ __all__: list[str] = [
     "compose_build_arguments",
     "compose_config_arguments",
     "compose_environment",
+    "compose_up_arguments",
     "compose_version_arguments",
+    "user_probe_arguments",
 ]
