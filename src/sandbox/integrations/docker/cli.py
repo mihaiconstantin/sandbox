@@ -220,6 +220,11 @@ class DockerCli:
         # Start the exact container.
         self._run(operation, ["docker", "start", identifier])
 
+    # Stop one existing container.
+    def stop_container(self, identifier: str, *, operation: str) -> None:
+        # Stop the exact container with the engine's default timeout.
+        self._run(operation, ["docker", "stop", identifier])
+
     # Create one physical volume with the supplied labels.
     def create_volume(self, name: str, labels: Mapping[str, str], *, operation: str) -> CommandResult:
         # Start the volume creation command.
