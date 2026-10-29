@@ -266,3 +266,24 @@ def _validate_generated_hook(plan: SandboxPlan, hook: HookFacts, field: str, ini
         if hook.command != expected:
             # Throw.
             raise ConfigurationError(f"{field}.command", "Generated volume initialization must match the validated initialization.")
+
+
+# Validate the networks used by the primary service.
+def _validate_networks(plan: SandboxPlan, facts: ServiceFacts, service: str) -> None:
+    # Require ownership labels on every used network.
+    for network in facts.networks:
+        # If a network name is invalid.
+        if not network.name:
+            # Throw.
+            raise ConfigurationError(f"services.{service}.networks", "Must contain nonblank network names.")
+
+        # Require the sandbox ownership labels.
+        _validate_labels(
+            network.labels,
+            f"networks.{network.name}.labels",
+            {
+                MANAGED_LABEL: "true",
+                PROJECT_LABEL: plan.project.name,
+                RESOURCE_LABEL: "network",
+            },
+        )
