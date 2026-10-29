@@ -255,3 +255,14 @@ def _validate_generated_hook(plan: SandboxPlan, hook: HookFacts, field: str, ini
         raise ConfigurationError(f"{field}.cap_add", "Generated volume initialization may add only `CHOWN` and `DAC_OVERRIDE`.")
 
     # If the validated initialization is available, require the exact generated command.
+    if initialization is not None:
+        # Require the fixed role label.
+        if hook.labels.get(ROLE_LABEL) != "volume-init":
+            # Throw.
+            raise ConfigurationError(f"{field}.labels", "Generated volume initialization must carry Sandbox ownership labels.")
+
+        # Require the generated command to match the validated initialization intent.
+        expected: tuple[str, ...] = ("--from=0", f"+{initialization.uid}", *initialization.targets)
+        if hook.command != expected:
+            # Throw.
+            raise ConfigurationError(f"{field}.command", "Generated volume initialization must match the validated initialization.")
