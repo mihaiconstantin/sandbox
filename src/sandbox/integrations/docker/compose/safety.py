@@ -29,3 +29,6 @@ from sandbox.integrations.docker.compose.projection import (
     Projection,
     ServiceFacts,
 )
+
+# Match the numeric ownership initializer argument.
+_OWNER_ARGUMENT = re.compile(r"\+[0-9]+")
