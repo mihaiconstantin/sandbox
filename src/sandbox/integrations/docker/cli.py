@@ -215,6 +215,11 @@ class DockerCli:
         # Run the export with captured output.
         return self.run(arguments, operation = operation)
 
+    # Start one existing container.
+    def start_container(self, identifier: str, *, operation: str) -> None:
+        # Start the exact container.
+        self._run(operation, ["docker", "start", identifier])
+
     # Create one physical volume with the supplied labels.
     def create_volume(self, name: str, labels: Mapping[str, str], *, operation: str) -> CommandResult:
         # Start the volume creation command.
