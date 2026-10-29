@@ -254,3 +254,15 @@ def _required_string(payload: Mapping[str, Any], field: str) -> str:
 
     # Return the validated value.
     return value
+
+
+# Define the public API of the Compose observation mapper.
+__all__: list[str] = [
+    "STATE_BY_STATUS",
+    "box_observation",
+    "container_is_running",
+    "container_reference",
+    "network_reference",
+    "state_from_status",
+    "volume_info",
+]
