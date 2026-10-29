@@ -34,6 +34,45 @@ from sandbox.integrations.docker.compose.projection import (
 _OWNER_ARGUMENT = re.compile(r"\+[0-9]+")
 
 
+# Validate the Compose-specific safety envelope before any mutation.
+def validate_projection(
+    plan: SandboxPlan,
+    definition: RecipeDefinition,
+    projection: Projection,
+    *,
+    initialization: Initialization | None = None,
+) -> None:
+    # Read the effective service name and facts.
+    service: str = definition.service
+    facts: ServiceFacts = projection.facts
+
+    # Require the sandbox ownership labels on the primary service.
+    _validate_labels(
+        facts.labels,
+        f"services.{service}.labels",
+        {
+            MANAGED_LABEL: "true",
+            PROJECT_LABEL: plan.project.name,
+            RESOURCE_LABEL: "container",
+            ROLE_LABEL: "box",
+        },
+    )
+
+    # Validate lifecycle hooks before deriving any hook semantics.
+    _validate_hooks(plan, facts.hooks, service, initialization)
+
+    # Require ownership labels on every effective network when networking is effective.
+    if not facts.host_network:
+        # Validate every network attachment.
+        _validate_networks(plan, facts, service)
+
+    # Require environment files to remain inside the project or catalogue.
+    _validate_environment_files(plan, definition, facts.environment_files, f"services.{service}.env_file")
+
+    # Validate service secret references against the declared names.
+    _validate_secrets(facts, f"services.{service}.secrets")
+
+
 # Require the bound secret files to be readable regular files.
 def validate_secret_files(plan: SandboxPlan) -> None:
     # Validate every bound secret file.
