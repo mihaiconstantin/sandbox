@@ -230,3 +230,28 @@ def _validate_generated_hook(plan: SandboxPlan, hook: HookFacts, field: str, ini
         raise ConfigurationError(f"{field}.command", "Generated volume initialization must use `--from=0` and a numeric UID.")
 
     # Restrict every command argument to a declared volume destination.
+    targets: set[str] = {guest_target_key(volume.target) for volume in plan.volumes}
+
+    # Require each command argument to name a declared volume destination.
+    for argument in command[2:]:
+        # If an argument is not one of this recipe's destinations.
+        if guest_target_key(argument) not in targets:
+            # Throw.
+            raise ConfigurationError(f"{field}.command", "Generated volume initialization may target only declared volumes.")
+
+    # A generated initializer needs no extra mounts.
+    if hook.mounts:
+        # Throw.
+        raise ConfigurationError(f"{field}.volumes", "Generated volume initialization must not add mounts.")
+
+    # Require the initializer to drop all capabilities.
+    if "ALL" not in [capability.upper() for capability in hook.cap_drop]:
+        # Throw.
+        raise ConfigurationError(f"{field}.cap_drop", "Generated volume initialization must drop all capabilities.")
+
+    # Allow only ownership-related capabilities to be added.
+    if any(capability.upper() not in {"CHOWN", "DAC_OVERRIDE"} for capability in hook.cap_add):
+        # Throw.
+        raise ConfigurationError(f"{field}.cap_add", "Generated volume initialization may add only `CHOWN` and `DAC_OVERRIDE`.")
+
+    # If the validated initialization is available, require the exact generated command.
