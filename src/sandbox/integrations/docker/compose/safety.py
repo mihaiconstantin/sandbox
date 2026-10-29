@@ -363,3 +363,12 @@ def _validate_secrets(facts: ServiceFacts, field: str) -> None:
         if name not in facts.declared_secrets:
             # Throw.
             raise ConfigurationError(f"{field}[{index}]", f"Secret `{name}` is not declared in the catalogue.")
+
+
+# Define the public API of the Compose safety checks.
+__all__: list[str] = [
+    "validate_image_healthcheck",
+    "validate_projection",
+    "validate_realized",
+    "validate_secret_files",
+]
