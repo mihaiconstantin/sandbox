@@ -287,3 +287,25 @@ def _validate_networks(plan: SandboxPlan, facts: ServiceFacts, service: str) -> 
                 RESOURCE_LABEL: "network",
             },
         )
+
+
+# Validate service environment files.
+def _validate_environment_files(plan: SandboxPlan, definition: RecipeDefinition, files: tuple[Path, ...], field: str) -> None:
+    # Resolve the allowed roots once.
+    project_dir: Path = plan.project.directory.expanduser().resolve(strict = False)
+    catalogue_dir: Path = definition.catalogue_root.expanduser().resolve(strict = False)
+
+    # Validate every environment file.
+    for index, path in enumerate(files):
+        # Resolve the path without requiring it to exist yet.
+        resolved: Path = path.expanduser().resolve(strict = False)
+
+        # If the path is outside the project and catalogue.
+        if not resolved.is_relative_to(project_dir) and not resolved.is_relative_to(catalogue_dir):
+            # Throw.
+            raise ConfigurationError(f"{field}[{index}]", "Must resolve inside the project or catalogue directory.")
+
+        # If the environment file does not exist.
+        if not resolved.is_file():
+            # Throw.
+            raise ConfigurationError(f"{field}[{index}]", "Must reference an existing file.")
