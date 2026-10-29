@@ -215,6 +215,24 @@ class DockerCli:
         # Run the export with captured output.
         return self.run(arguments, operation = operation)
 
+    # List container identifiers matching every label filter.
+    def container_ids(self, filters: Mapping[str, str], *, operation: str, no_trunc: bool = False) -> tuple[str, ...]:
+        # Start the all-states identifier query.
+        arguments: list[str] = ["docker", "ps", "-aq"]
+
+        # Preserve untruncated identifiers when the caller requires them.
+        if no_trunc:
+            # Add the untruncated identifier flag.
+            arguments.append("--no-trunc")
+
+        # Add every label filter in insertion order.
+        for key, value in filters.items():
+            # Add the exact label filter.
+            arguments.extend(["--filter", f"label={key}={value}"])
+
+        # Run the query and return the listed identifiers.
+        return self._lines(self._run(operation, arguments).stdout)
+
     # Start one existing container.
     def start_container(self, identifier: str, *, operation: str) -> None:
         # Start the exact container.
