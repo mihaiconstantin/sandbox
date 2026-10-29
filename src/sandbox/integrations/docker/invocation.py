@@ -86,6 +86,28 @@ def compose_up_arguments(definition: RecipeDefinition, compose_files: Sequence[P
     return arguments
 
 
+# Build the identity probe command for the prepared image without pulling.
+def user_probe_arguments(image: str, user: str | int | None, platform: str | None) -> list[str]:
+    # Run only the standard identity utility in the prepared image.
+    arguments: list[str] = ["docker", "run", "--rm", "--no-healthcheck", "--pull=never"]
+
+    # Select the same image platform that Compose used for the build.
+    if platform:
+        # Retain Docker's platform selection.
+        arguments.extend(["--platform", platform])
+
+    # Apply an explicit Compose user; otherwise Docker uses the image's USER.
+    if user not in (None, ""):
+        # Preserve the configured user or numeric UID.
+        arguments.extend(["--user", str(user)])
+
+    # Query the effective numeric UID without starting application code.
+    arguments.extend(["--entrypoint", "/usr/bin/id", image, "-u"])
+
+    # Return the complete probe command.
+    return arguments
+
+
 # Build the version command used by the Compose prerequisite preflight.
 def compose_version_arguments() -> list[str]:
     # Return the short version probe without a project.
