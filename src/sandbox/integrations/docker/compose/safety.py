@@ -169,6 +169,34 @@ def _validate_user(value: object, allow_root: bool, field: str) -> None:
         raise ConfigurationError(field, "Root execution requires `allow_root = true` in the selected recipe.")
 
 
+# Validate lifecycle hooks so recipe hooks cannot bypass the workspace policy.
+def _validate_hooks(plan: SandboxPlan, hooks: HooksFacts, service: str, initialization: Initialization | None) -> None:
+    # Check every hook sequence exposed by the projection.
+    for hook_name, sequence in (
+        ("pre_start", hooks.pre_start),
+        ("post_start", hooks.post_start),
+        ("pre_stop", hooks.pre_stop),
+    ):
+        # Validate each hook in declaration order.
+        for hook_index, hook in enumerate(sequence):
+            # Locate the hook in the resolved configuration.
+            hook_field: str = f"services.{service}.{hook_name}[{hook_index}]"
+
+            # Allow root only for sandbox's fixed, non-recursive ownership command.
+            if hook_name == "pre_start" and hook.labels.get(ROLE_LABEL) == "volume-init":
+                # Validate the complete generated shape.
+                _validate_generated_hook(plan, hook, hook_field, initialization if hook_index == 0 else None)
+                continue
+
+            # Apply the recipe's root policy to explicit hook users.
+            _validate_user(hook.user, plan.allow_root, f"{hook_field}.user")
+
+            # If the hook requests privileged access.
+            if hook.privileged:
+                # Throw.
+                raise ConfigurationError(f"{hook_field}.privileged", "Privileged lifecycle hooks are not allowed.")
+
+
 # Validate the generated ownership initializer without trusting a recipe-provided label alone.
 def _validate_generated_hook(plan: SandboxPlan, hook: HookFacts, field: str, initialization: Initialization | None) -> None:
     # Require the helper's ownership labels.
