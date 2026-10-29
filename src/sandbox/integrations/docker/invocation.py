@@ -71,6 +71,21 @@ def compose_build_arguments(definition: RecipeDefinition, compose_files: Sequenc
     return arguments
 
 
+# Build the `docker` compose start command for one prepared service.
+def compose_up_arguments(definition: RecipeDefinition, compose_files: Sequence[Path], service: str) -> list[str]:
+    # Start with the shared compose invocation prefix.
+    arguments: list[str] = compose_arguments(definition, compose_files)
+
+    # Start the service without an implicit build or pull.
+    arguments.extend(["up", "-d", "--no-build", "--pull", "never"])
+
+    # Select the effective service last.
+    arguments.append(service)
+
+    # Return the complete command.
+    return arguments
+
+
 # Build the version command used by the Compose prerequisite preflight.
 def compose_version_arguments() -> list[str]:
     # Return the short version probe without a project.
