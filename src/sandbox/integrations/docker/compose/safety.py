@@ -167,3 +167,38 @@ def _validate_user(value: object, allow_root: bool, field: str) -> None:
     if not allow_root and (account == "root" or account == "0"):
         # Throw.
         raise ConfigurationError(field, "Root execution requires `allow_root = true` in the selected recipe.")
+
+
+# Validate the generated ownership initializer without trusting a recipe-provided label alone.
+def _validate_generated_hook(plan: SandboxPlan, hook: HookFacts, field: str, initialization: Initialization | None) -> None:
+    # Require the helper's ownership labels.
+    if (
+        hook.labels.get(MANAGED_LABEL) != "true"
+        or hook.labels.get(PROJECT_LABEL) != plan.project.name
+        or hook.labels.get(RESOURCE_LABEL) != "container"
+    ):
+        # Throw.
+        raise ConfigurationError(f"{field}.labels", "Generated volume initialization must carry Sandbox ownership labels.")
+
+    # The initializer must run as root and retain no implicit privilege.
+    if hook.user not in ("0:0", "0", 0):
+        # Throw.
+        raise ConfigurationError(f"{field}.user", "Generated volume initialization must run as root.")
+
+    # If the initializer requests privileged access.
+    if hook.privileged:
+        # Throw.
+        raise ConfigurationError(f"{field}.privileged", "Privileged lifecycle hooks are not allowed.")
+
+    # Only the standard non-recursive ownership command is permitted.
+    if hook.entrypoint != ("/bin/chown",):
+        # Throw.
+        raise ConfigurationError(f"{field}.entrypoint", "Generated volume initialization must use `/bin/chown`.")
+
+    # Require a numeric owner and at least one declared destination.
+    command: tuple[str, ...] | None = hook.command
+    if command is None or len(command) < 3 or command[0] != "--from=0" or _OWNER_ARGUMENT.fullmatch(command[1]) is None:
+        # Throw.
+        raise ConfigurationError(f"{field}.command", "Generated volume initialization must use `--from=0` and a numeric UID.")
+
+    # Restrict every command argument to a declared volume destination.
