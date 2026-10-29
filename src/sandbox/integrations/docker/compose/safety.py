@@ -136,3 +136,13 @@ def validate_realized(base: Projection, final: Projection, initialization: Initi
     ):
         # Throw.
         raise RecipeUnresolved("services", "The generated volume initialization hook is not faithful.")
+
+
+# Require an exact set of label values.
+def _validate_labels(value: Mapping[str, str], field: str, expected: Mapping[str, str]) -> None:
+    # For each expected label name and value.
+    for name, expected_value in expected.items():
+        # If a required label is missing or incorrect.
+        if value.get(name) != expected_value:
+            # Throw.
+            raise ConfigurationError(f"{field}.{name}", f"Must be `{expected_value}`.")
