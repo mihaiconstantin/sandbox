@@ -233,6 +233,14 @@ class DockerCli:
         # Run the query and return the listed identifiers.
         return self._lines(self._run(operation, arguments).stdout)
 
+    # List containers that mount one physical volume.
+    def container_ids_with_volume(self, name: str, *, operation: str) -> tuple[str, ...]:
+        # Query every container that references the volume, including stopped containers.
+        arguments: list[str] = ["docker", "ps", "-aq", "--filter", f"volume={name}"]
+
+        # Run the query and return the listed identifiers.
+        return self._lines(self._run(operation, arguments).stdout)
+
     # Start one existing container.
     def start_container(self, identifier: str, *, operation: str) -> None:
         # Start the exact container.
