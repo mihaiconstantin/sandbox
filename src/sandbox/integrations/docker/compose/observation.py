@@ -151,6 +151,27 @@ def _mounts(payload: Mapping[str, Any]) -> tuple[Mount, ...] | None:
     mounts: list[Mount] = []
 
     # For each reported mount.
+    for entry in reported:
+        # Require a mapping mount.
+        if not isinstance(entry, Mapping):
+            # Throw for malformed engine data.
+            raise EngineOutputInvalid("docker", "inspect", "")
+
+        # Read the mount type.
+        kind: Any = entry.get("Type")
+
+        # If the mount is a physical volume.
+        if kind == "volume":
+            # Record the physical volume name and guest target.
+            mounts.append(Mount(kind = "volume", source = _required_string(entry, "Name"), target = _required_string(entry, "Destination")))
+
+        # If the mount is a host bind.
+        elif kind == "bind":
+            # Record the host source and guest target.
+            mounts.append(Mount(kind = "bind", source = _required_string(entry, "Source"), target = _required_string(entry, "Destination")))
+
+    # Return the reported mounts, including an observed empty tuple.
+    return tuple(mounts)
 
 
 # Derive the project workspace from the reported mounts.
