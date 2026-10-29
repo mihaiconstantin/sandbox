@@ -96,5 +96,26 @@ class ComposeCli:
             output = output,
         )
 
+    # Start one prepared service without an implicit build or pull.
+    def up(
+        self,
+        definition: RecipeDefinition,
+        compose_files: Sequence[Path],
+        service: str,
+        environment: Mapping[str, str],
+        output: OutputSink = SILENT,
+    ) -> CommandResult:
+        # Build the no-build, no-pull start command.
+        arguments: list[str] = compose_up_arguments(definition, compose_files, service)
+
+        # Run the single start with streamed engine output.
+        return self._docker.run(
+            arguments,
+            operation = "create",
+            environment = environment,
+            capture = False,
+            output = output,
+        )
+
 # Define the public API of the Compose CLI gateway.
 __all__: list[str] = ["ComposeCli"]
