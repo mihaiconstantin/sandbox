@@ -49,6 +49,36 @@ def state_from_status(status: str | None) -> BoxState:
     return STATE_BY_STATUS.get(status, BoxState.UNKNOWN)
 
 
+# Map one inspected container onto a neutral box observation.
+def box_observation(name: str, payload: Mapping[str, Any]) -> BoxObservation:
+    # Read the configuration mapping.
+    config: Any = payload.get("Config") or {}
+    if not isinstance(config, Mapping):
+        # Throw for malformed engine data.
+        raise EngineOutputInvalid("docker", "inspect", "")
+
+    # Read the state mapping and its raw status.
+    state_payload: Any = payload.get("State") or {}
+    if not isinstance(state_payload, Mapping):
+        # Throw for malformed engine data.
+        raise EngineOutputInvalid("docker", "inspect", "")
+    status: Any = state_payload.get("Status")
+    status_text: str | None = status if isinstance(status, str) else None
+
+    # Read the optional display strings without fabricating values.
+    image: Any = config.get("Image")
+    working_directory: Any = config.get("WorkingDir")
+
+    # Map the reported mounts and networks.
+    mounts: tuple[Mount, ...] | None = _mounts(payload)
+    networks: tuple[Network, ...] | None = _networks(payload)
+
+    # Read the ownership labels and optional provenance.
+    labels: Mapping[str, str] = container_labels(payload)
+
+    # Return the complete observation.
+
+
 # Map one inspected volume onto a neutral volume observation.
 def volume_info(metadata: Mapping[str, Any], references: tuple[RuntimeRef, ...]) -> VolumeInfo:
     # Read and validate the physical name.
