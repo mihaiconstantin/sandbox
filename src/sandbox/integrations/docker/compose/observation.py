@@ -77,6 +77,21 @@ def box_observation(name: str, payload: Mapping[str, Any]) -> BoxObservation:
     labels: Mapping[str, str] = container_labels(payload)
 
     # Return the complete observation.
+    return BoxObservation(
+        name = name,
+        state = state_from_status(status_text),
+        provenance = Provenance(
+            catalogue = labels.get(CATALOGUE_LABEL) or None,
+            recipe = labels.get(RECIPE_LABEL) or None,
+        ),
+        status_text = status_text,
+        image = image if isinstance(image, str) else None,
+        working_directory = working_directory if isinstance(working_directory, str) else None,
+        workspace = _workspace(name, mounts),
+        mounts = mounts,
+        networks = networks,
+        backend = container_reference(payload) if _has_reference(payload) else None,
+    )
 
 
 # Map one inspected volume onto a neutral volume observation.
