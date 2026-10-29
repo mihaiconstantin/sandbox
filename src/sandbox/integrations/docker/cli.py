@@ -215,6 +215,22 @@ class DockerCli:
         # Run the export with captured output.
         return self.run(arguments, operation = operation)
 
+    # Create one physical volume with the supplied labels.
+    def create_volume(self, name: str, labels: Mapping[str, str], *, operation: str) -> CommandResult:
+        # Start the volume creation command.
+        arguments: list[str] = ["docker", "volume", "create"]
+
+        # Add every ownership label in insertion order.
+        for key, value in labels.items():
+            # Add the exact label.
+            arguments.extend(["--label", f"{key}={value}"])
+
+        # Name the physical volume last.
+        arguments.append(name)
+
+        # Return the raw result so the runtime can translate creation failures.
+        return self.run(arguments, operation = operation)
+
     # Run one command that must succeed.
     def _run(self, operation: str, arguments: Sequence[str]) -> CommandResult:
         # Execute the command through the injected runner.
