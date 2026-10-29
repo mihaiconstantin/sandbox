@@ -15,6 +15,7 @@ from sandbox.integrations.docker.cli import DockerCli
 from sandbox.integrations.docker.invocation import (
     compose_build_arguments,
     compose_config_arguments,
+    compose_up_arguments,
     compose_version_arguments,
 )
 
