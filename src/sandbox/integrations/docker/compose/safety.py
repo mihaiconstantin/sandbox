@@ -146,3 +146,24 @@ def _validate_labels(value: Mapping[str, str], field: str, expected: Mapping[str
         if value.get(name) != expected_value:
             # Throw.
             raise ConfigurationError(f"{field}.{name}", f"Must be `{expected_value}`.")
+
+
+# Reject explicit root execution when the recipe does not allow it.
+def _validate_user(value: object, allow_root: bool, field: str) -> None:
+    # If the user is absent, keep the image default.
+    if value is None:
+        # Return without a user override.
+        return
+
+    # If the user value is not a string or integer.
+    if isinstance(value, bool) or not isinstance(value, (str, int)):
+        # Throw.
+        raise ConfigurationError(field, "Must be a string or integer user.")
+
+    # Read the account part of a user specification.
+    account: str = str(value).split(":", 1)[0]
+
+    # If root execution is requested without permission.
+    if not allow_root and (account == "root" or account == "0"):
+        # Throw.
+        raise ConfigurationError(field, "Root execution requires `allow_root = true` in the selected recipe.")
