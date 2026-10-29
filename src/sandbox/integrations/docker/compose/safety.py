@@ -83,3 +83,35 @@ def validate_image_healthcheck(inspection: Mapping[str, Any], service: str) -> N
     if test and test != ["NONE"]:
         # Throw the current user-facing configuration failure.
         raise RecipeUnresolved(field, "The image has a HEALTHCHECK that native volume-init hooks cannot disable. Use HEALTHCHECK NONE in the image and define application healthchecks on the Compose service instead.")
+
+
+# Verify that the final projection differs from the base projection only by the generated hook.
+def validate_realized(base: Projection, final: Projection, initialization: Initialization) -> None:
+    # Compare every projected fact that the override must preserve.
+    fields: tuple[tuple[str, object, object], ...] = (
+        ("service", base.facts.service, final.facts.service),
+        ("image", base.facts.image, final.facts.image),
+        ("platform", base.facts.platform, final.facts.platform),
+        ("user", base.facts.user, final.facts.user),
+        ("working_directory", base.facts.working_directory, final.facts.working_directory),
+        ("privileged", base.facts.privileged, final.facts.privileged),
+        ("host_network", base.facts.host_network, final.facts.host_network),
+        ("labels", base.facts.labels, final.facts.labels),
+        ("mounts", base.facts.mounts, final.facts.mounts),
+        ("networks", base.facts.networks, final.facts.networks),
+        ("environment_files", base.facts.environment_files, final.facts.environment_files),
+        ("declared_secrets", base.facts.declared_secrets, final.facts.declared_secrets),
+        ("secrets", base.facts.secrets, final.facts.secrets),
+        ("build", base.facts.build, final.facts.build),
+    )
+
+    # If any effective fact changed after rendering the override.
+    for name, expected, actual in fields:
+        # If the realized value differs from the validated base projection.
+        if expected != actual:
+            # Throw.
+            raise RecipeUnresolved("services", f"The resolved configuration changed `{name}` after hook rendering.")
+
+    # Require the other hook sequences to remain unchanged.
+    base_hooks: HooksFacts = base.facts.hooks
+    final_hooks: HooksFacts = final.facts.hooks
