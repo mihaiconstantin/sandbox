@@ -89,6 +89,25 @@ def container_is_running(payload: Mapping[str, Any]) -> bool:
     return bool(state.get("Running"))
 
 
+# Map the reported mounts onto neutral values.
+def _mounts(payload: Mapping[str, Any]) -> tuple[Mount, ...] | None:
+    # If the payload does not report mounts.
+    if "Mounts" not in payload or payload.get("Mounts") is None:
+        # Report mounts as unavailable.
+        return None
+
+    # Require an array of mounts.
+    reported: Any = payload.get("Mounts")
+    if not isinstance(reported, list):
+        # Throw for malformed engine data.
+        raise EngineOutputInvalid("docker", "inspect", "")
+
+    # Prepare the mapped mounts.
+    mounts: list[Mount] = []
+
+    # For each reported mount.
+
+
 # Derive the project workspace from the reported mounts.
 def _workspace(name: str, mounts: tuple[Mount, ...] | None) -> Workspace | None:
     # If mounts are unavailable.
