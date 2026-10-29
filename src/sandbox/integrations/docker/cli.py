@@ -251,6 +251,11 @@ class DockerCli:
         # Return the raw result so the runtime can translate creation failures.
         return self.run(arguments, operation = operation)
 
+    # Remove one physical volume without forcing deletion.
+    def remove_volume(self, name: str, *, operation: str) -> None:
+        # Remove the exact volume.
+        self._run(operation, ["docker", "volume", "rm", name])
+
     # Run one interactive shell in a container and return its raw status.
     def exec_interactive(self, identifier: str, shell: str, login: bool, *, operation: str) -> CommandResult:
         # Build the interactive exec command.
