@@ -231,6 +231,19 @@ class DockerCli:
         # Return the raw result so the runtime can translate creation failures.
         return self.run(arguments, operation = operation)
 
+    # Run one interactive shell in a container and return its raw status.
+    def exec_interactive(self, identifier: str, shell: str, login: bool, *, operation: str) -> CommandResult:
+        # Build the interactive exec command.
+        arguments: list[str] = ["docker", "exec", "-it", identifier, shell]
+
+        # Append the login-shell flag when requested.
+        if login:
+            # Add the login-shell flag after the shell.
+            arguments.append("-l")
+
+        # Run the shell with inherited standard streams and no success check.
+        return self.run_interactive(arguments, operation = operation)
+
     # Run one command that must succeed.
     def _run(self, operation: str, arguments: Sequence[str]) -> CommandResult:
         # Execute the command through the injected runner.
