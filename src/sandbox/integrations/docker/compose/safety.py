@@ -115,3 +115,24 @@ def validate_realized(base: Projection, final: Projection, initialization: Initi
     # Require the other hook sequences to remain unchanged.
     base_hooks: HooksFacts = base.facts.hooks
     final_hooks: HooksFacts = final.facts.hooks
+    if final_hooks.post_start != base_hooks.post_start or final_hooks.pre_stop != base_hooks.pre_stop:
+        # Throw.
+        raise RecipeUnresolved("services", "The resolved lifecycle hooks changed after hook rendering.")
+
+    # Require the generated hook first and the recipe hooks in their original order.
+    if len(final_hooks.pre_start) != len(base_hooks.pre_start) + 1 or final_hooks.pre_start[1:] != base_hooks.pre_start:
+        # Throw.
+        raise RecipeUnresolved("services", "The resolved pre-start hooks changed after hook rendering.")
+
+    # Read the realized generated hook.
+    generated: HookFacts = final_hooks.pre_start[0]
+
+    # Require the fixed identity, labels, and validated command.
+    expected_command: tuple[str, ...] = ("--from=0", f"+{initialization.uid}", *initialization.targets)
+    if (
+        generated.origin != "generated"
+        or generated.labels.get(ROLE_LABEL) != "volume-init"
+        or generated.command != expected_command
+    ):
+        # Throw.
+        raise RecipeUnresolved("services", "The generated volume initialization hook is not faithful.")
