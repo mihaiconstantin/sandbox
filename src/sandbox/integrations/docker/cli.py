@@ -225,6 +225,11 @@ class DockerCli:
         # Stop the exact container with the engine's default timeout.
         self._run(operation, ["docker", "stop", identifier])
 
+    # Remove one existing container without forcing or removing volumes.
+    def remove_container(self, identifier: str, *, operation: str) -> None:
+        # Remove the exact container.
+        self._run(operation, ["docker", "rm", identifier])
+
     # Create one physical volume with the supplied labels.
     def create_volume(self, name: str, labels: Mapping[str, str], *, operation: str) -> CommandResult:
         # Start the volume creation command.
