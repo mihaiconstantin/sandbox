@@ -309,3 +309,18 @@ def _validate_environment_files(plan: SandboxPlan, definition: RecipeDefinition,
         if not resolved.is_file():
             # Throw.
             raise ConfigurationError(f"{field}[{index}]", "Must reference an existing file.")
+
+
+# Validate explicitly declared secrets and their service references.
+def _validate_secrets(facts: ServiceFacts, field: str) -> None:
+    # Validate every service secret reference.
+    for index, name in enumerate(facts.secrets):
+        # If the secret name is blank.
+        if not name:
+            # Throw.
+            raise ConfigurationError(f"{field}[{index}]", "Must name a declared secret.")
+
+        # If the secret is not declared.
+        if name not in facts.declared_secrets:
+            # Throw.
+            raise ConfigurationError(f"{field}[{index}]", f"Secret `{name}` is not declared in the catalogue.")
