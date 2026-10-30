@@ -290,6 +290,27 @@ class ComposeRuntime(Runtime):
         # Report the state change.
         return True
 
+    # Stop an existing box and report whether this call changed its state.
+    def stop(self, name: str) -> bool:
+        # Discover the managed box.
+        found: _FoundContainer | None = self._find_container(name, "stop")
+
+        # If the box is absent.
+        if found is None:
+            # Throw.
+            raise BoxNotFound(name, backend = "docker")
+
+        # If the box is not running, including restarting boxes.
+        if found.observation.state is not BoxState.RUNNING:
+            # Report that nothing changed.
+            return False
+
+        # Otherwise stop the running container.
+        self._docker.stop_container(found.identifier, operation = "stop")
+
+        # Report the state change.
+        return True
+
     # Verify the preparation token and artifact before any operation.
     def _accept(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> ComposePreparation:
         # Reject a token this runtime did not issue.
