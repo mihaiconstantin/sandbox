@@ -499,3 +499,10 @@ class ComposeRuntime(Runtime):
         if not is_owned_by(container_labels(payload), project):
             # Refuse to modify a container whose ownership cannot be verified.
             raise OwnershipViolation("container", container_reference(payload).id)
+
+    # Verify that one inspected network belongs to the project.
+    def _verify_network_ownership(self, payload: Mapping[str, Any], project: str) -> None:
+        # If the ownership labels are missing or incorrect.
+        if not is_owned_by(network_labels(payload), project):
+            # Refuse to modify a network whose ownership cannot be verified.
+            raise OwnershipViolation("network", network_reference(payload).id)
