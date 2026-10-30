@@ -165,3 +165,16 @@ class ComposeRuntime(Runtime):
         self._docker: DockerCli = docker
         self._compose: ComposeCli = ComposeCli(docker)
         self._interactive_terminal: Callable[[], bool] = interactive_terminal or _standard_streams_are_terminals
+
+    # List every managed box in project order.
+    def list(self) -> tuple[BoxObservation, ...]:
+        # Query every managed container identifier.
+        identifiers: tuple[str, ...] = self._docker.container_ids(managed_container_filters(), operation = "list")
+
+        # Inspect every managed candidate.
+        inspected: list[Mapping[str, Any]] = [self._docker.inspect_container(identifier, operation = "list") for identifier in identifiers]
+
+        # Prepare candidates grouped by project.
+        candidates: dict[str, list[Mapping[str, Any]]] = {}
+
+        # For each inspected managed container.
