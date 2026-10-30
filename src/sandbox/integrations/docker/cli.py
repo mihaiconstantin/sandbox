@@ -275,6 +275,30 @@ class DockerCli:
         # Run the query and return the listed names.
         return self._lines(self._run(operation, arguments).stdout)
 
+    # Inspect one volume, or prove that it is absent.
+    def inspect_volume(self, name: str, *, operation: str) -> Mapping[str, Any] | None:
+        # Inspect the exact volume.
+        arguments: list[str] = ["docker", "volume", "inspect", name]
+
+        # Run the inspection without failing immediately.
+        result: CommandResult = self.run(arguments, operation = operation)
+
+        # If inspection succeeded, return the parsed payload.
+        if result.returncode == 0:
+            # Parse the successful inspection.
+            return self._inspection(operation, result)
+
+        # List every existing volume name to distinguish absence from failure.
+        existing: tuple[str, ...] = self.volume_names(operation = operation)
+
+        # If the volume is proven absent.
+        if name not in existing:
+            # Report the absence proof.
+            return None
+
+        # Propagate the original inspection failure.
+        raise EngineFailure(self.failure(operation, arguments, result))
+
     # Start one existing container.
     def start_container(self, identifier: str, *, operation: str) -> None:
         # Start the exact container.
