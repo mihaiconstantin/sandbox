@@ -275,6 +275,14 @@ class DockerCli:
         # Run the query and return the listed names.
         return self._lines(self._run(operation, arguments).stdout)
 
+    # Inspect one container.
+    def inspect_container(self, identifier: str, *, operation: str) -> Mapping[str, Any]:
+        # Inspect the exact container.
+        arguments: list[str] = ["docker", "container", "inspect", identifier]
+
+        # Return the parsed inspection payload.
+        return self._inspect_payload(operation, arguments)
+
     # Inspect one volume, or prove that it is absent.
     def inspect_volume(self, name: str, *, operation: str) -> Mapping[str, Any] | None:
         # Inspect the exact volume.
