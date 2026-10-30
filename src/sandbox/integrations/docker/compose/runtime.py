@@ -178,3 +178,34 @@ class ComposeRuntime(Runtime):
         candidates: dict[str, list[Mapping[str, Any]]] = {}
 
         # For each inspected managed container.
+        for payload in inspected:
+            # Read the candidate labels.
+            labels: Mapping[str, str] = container_labels(payload)
+
+            # If the container lost the managed label after the server-side filter.
+            if labels.get(MANAGED_LABEL) != "true":
+                # Skip the container.
+                continue
+
+            # Skip a retained lifecycle hook or one-off probe.
+            if is_retained_container(labels):
+                # Continue to the next candidate.
+                continue
+
+            # Skip a container that does not carry the box role.
+            if not is_box_role(labels):
+                # Continue to the next candidate.
+                continue
+
+            # Read the project identity.
+            project: str | None = labels.get(PROJECT_LABEL)
+
+            # If the project name is missing or disagrees with the Compose project.
+            if not project or labels.get(COMPOSE_PROJECT_LABEL) != project:
+                # Continue to the next candidate.
+                continue
+
+            # Group the candidate by its project.
+            candidates.setdefault(project, []).append(payload)
+
+        # Prepare the observations.
