@@ -98,3 +98,13 @@ from sandbox.validation.identifiers import validate_volume_name
 def _standard_streams_are_terminals() -> bool:
     # Require both the input and output streams to be terminals.
     return os.isatty(0) and os.isatty(1)
+
+
+# Record one discovered managed container.
+@dataclass(frozen = True, slots = True)
+class _FoundContainer:
+    # Record the engine identifier used by direct state operations.
+    identifier: str
+
+    # Record the mapped observation.
+    observation: BoxObservation
