@@ -492,3 +492,10 @@ class ComposeRuntime(Runtime):
 
         # Return the attached identifiers.
         return tuple(identifiers)
+
+    # Verify that one inspected container belongs to the project.
+    def _verify_container_ownership(self, payload: Mapping[str, Any], project: str) -> None:
+        # If the ownership labels are missing or incorrect.
+        if not is_owned_by(container_labels(payload), project):
+            # Refuse to modify a container whose ownership cannot be verified.
+            raise OwnershipViolation("container", container_reference(payload).id)
