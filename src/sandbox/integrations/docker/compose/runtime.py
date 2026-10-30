@@ -155,3 +155,13 @@ class ComposePreparation:
 
     # Record the raw recipe pre-start hooks.
     _recipe_hooks: tuple[dict[str, Any], ...] = field(repr = False, compare = False)
+
+
+# Represent the Docker/Compose implementation of the runtime port.
+class ComposeRuntime(Runtime):
+    # Construct the runtime around the Docker gateway and a TTY probe.
+    def __init__(self, docker: DockerCli, *, interactive_terminal: Callable[[], bool] | None = None) -> None:
+        # Record the gateway and the terminal capability probe.
+        self._docker: DockerCli = docker
+        self._compose: ComposeCli = ComposeCli(docker)
+        self._interactive_terminal: Callable[[], bool] = interactive_terminal or _standard_streams_are_terminals
