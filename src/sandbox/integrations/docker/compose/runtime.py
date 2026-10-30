@@ -226,3 +226,21 @@ class ComposeRuntime(Runtime):
 
         # Return the observations in project order.
         return tuple(observations)
+
+    # Verify the preparation token and artifact before any operation.
+    def _accept(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> ComposePreparation:
+        # Reject a token this runtime did not issue.
+        if not isinstance(preparation, ComposePreparation) or preparation._owner is not self:
+            # Throw a typed capability error.
+            raise UnsupportedFeature("runtime-preparation", "The preparation token belongs to another runtime.")
+
+        # Require a typed artifact.
+        if not isinstance(artifact, BuildArtifact):
+            # Throw a programming error.
+            raise ValueError("artifact must be a BuildArtifact value.")
+
+        # Require the artifact to satisfy the neutral requirement before mutation.
+        require_compatible_artifact(preparation.requirements.artifact, artifact)
+
+        # Return the verified preparation.
+        return preparation
