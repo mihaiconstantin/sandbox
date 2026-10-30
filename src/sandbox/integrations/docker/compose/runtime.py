@@ -455,6 +455,18 @@ class ComposeRuntime(Runtime):
         selected: Mapping[str, Any] = candidates[0]
         return _FoundContainer(identifier = container_reference(selected).id, observation = box_observation(name, selected))
 
+    # Preflight external attachments to every project network.
+    def _preflight_network_attachments(self, payloads: tuple[Mapping[str, Any], ...], project_containers: frozenset[str], operation: str) -> None:
+        # For each project network.
+        for payload in payloads:
+            # Read every attached container identifier.
+            attached: tuple[str, ...] = self._attached_container_ids(payload, operation)
+
+            # If any attachment does not belong to the project's own containers.
+            if any(identifier not in project_containers for identifier in attached):
+                # Throw before mutating any resource.
+                raise NetworkInUse(network_reference(payload).name, backend = "docker")
+
     # Read the attached container identifiers from one inspected network.
     def _attached_container_ids(self, payload: Mapping[str, Any], operation: str) -> tuple[str, ...]:
         # Read the attached container mapping.
