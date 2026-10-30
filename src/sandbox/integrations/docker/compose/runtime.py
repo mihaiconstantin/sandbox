@@ -290,3 +290,9 @@ class ComposeRuntime(Runtime):
         user_id: int = int(output)
 
         # If the UID uses Linux's reserved all-ones value or exceeds its range.
+        if user_id >= 4_294_967_295:
+            # Throw.
+            raise ConfigurationError(f"services.{preparation._definition.service}.user", "The container user probe returned an invalid Linux UID.")
+
+        # Return the identity resolved by Docker rather than assuming a user name or UID.
+        return user_id
