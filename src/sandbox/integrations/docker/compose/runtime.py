@@ -209,3 +209,20 @@ class ComposeRuntime(Runtime):
             candidates.setdefault(project, []).append(payload)
 
         # Prepare the observations.
+        observations: list[BoxObservation] = []
+
+        # For each project in name order.
+        for project in sorted(candidates):
+            # Read the project's candidate containers.
+            contenders: list[Mapping[str, Any]] = candidates[project]
+
+            # If more than one container claims the project.
+            if len(contenders) > 1:
+                # Report the ambiguity instead of a partial listing.
+                raise BoxAmbiguous(project, len(contenders), backend = "docker")
+
+            # Map the inspected container onto an observation.
+            observations.append(box_observation(project, contenders[0]))
+
+        # Return the observations in project order.
+        return tuple(observations)
