@@ -454,3 +454,29 @@ class ComposeRuntime(Runtime):
         # Return the selected container and its mapped observation.
         selected: Mapping[str, Any] = candidates[0]
         return _FoundContainer(identifier = container_reference(selected).id, observation = box_observation(name, selected))
+
+    # Read the attached container identifiers from one inspected network.
+    def _attached_container_ids(self, payload: Mapping[str, Any], operation: str) -> tuple[str, ...]:
+        # Read the attached container mapping.
+        attached: Any = payload.get("Containers") or {}
+
+        # Require a mapping of container identifiers.
+        if not isinstance(attached, Mapping):
+            # Throw for malformed engine data.
+            raise EngineOutputInvalid("docker", operation, "")
+
+        # Prepare the identifiers.
+        identifiers: list[str] = []
+
+        # For each attached container.
+        for identifier in attached:
+            # Require a nonblank identifier.
+            if not isinstance(identifier, str) or not identifier:
+                # Throw for malformed engine data.
+                raise EngineOutputInvalid("docker", operation, "")
+
+            # Record the identifier.
+            identifiers.append(identifier)
+
+        # Return the attached identifiers.
+        return tuple(identifiers)
