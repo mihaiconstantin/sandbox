@@ -92,3 +92,9 @@ from sandbox.integrations.docker.compose.safety import (
 
 # Import volume-name validation.
 from sandbox.validation.identifiers import validate_volume_name
+
+
+# Report whether the standard streams are interactive terminals.
+def _standard_streams_are_terminals() -> bool:
+    # Require both the input and output streams to be terminals.
+    return os.isatty(0) and os.isatty(1)
