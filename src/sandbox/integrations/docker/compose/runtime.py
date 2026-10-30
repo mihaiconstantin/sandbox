@@ -296,3 +296,8 @@ class ComposeRuntime(Runtime):
 
         # Return the identity resolved by Docker rather than assuming a user name or UID.
         return user_id
+
+    # Report whether one inspected volume is eligible for ownership initialization.
+    def _eligible_volume(self, metadata: Mapping[str, Any]) -> bool:
+        # Require ordinary local storage owned by sandbox with no driver options.
+        return metadata.get("Driver") == "local" and not metadata.get("Options") and is_managed_volume(volume_labels(metadata))
