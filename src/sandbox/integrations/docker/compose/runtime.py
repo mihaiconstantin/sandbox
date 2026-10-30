@@ -124,3 +124,34 @@ class _PlannedResources:
 
     # Record the inspected project network payloads.
     network_payloads: tuple[Mapping[str, Any], ...]
+
+
+# Record the runtime-owned preparation token with neutral requirements.
+@dataclass(frozen = True, slots = True)
+class ComposePreparation:
+    # Expose the neutral requirements the caller may read.
+    requirements: RuntimeRequirements
+
+    # Record the issuing runtime.
+    _owner: object = field(repr = False, compare = False)
+
+    # Record the neutral plan.
+    _plan: SandboxPlan = field(repr = False, compare = False)
+
+    # Record the opaque recipe source.
+    _definition: RecipeDefinition = field(repr = False, compare = False)
+
+    # Record the Compose interpolation environment.
+    _environment: Mapping[str, str] = field(repr = False, compare = False)
+
+    # Record the rendered base override.
+    _override: str = field(repr = False, compare = False)
+
+    # Record the base resolved configuration.
+    _configuration: Mapping[str, Any] = field(repr = False, compare = False)
+
+    # Record the base neutral projection and verification facts.
+    _base_projection: Projection = field(repr = False, compare = False)
+
+    # Record the raw recipe pre-start hooks.
+    _recipe_hooks: tuple[dict[str, Any], ...] = field(repr = False, compare = False)
