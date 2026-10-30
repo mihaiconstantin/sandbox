@@ -267,6 +267,14 @@ class DockerCli:
         # Run the query and return the listed volume names.
         return self._lines(self._run(operation, arguments).stdout)
 
+    # List every existing volume name.
+    def volume_names(self, *, operation: str) -> tuple[str, ...]:
+        # Query the volume names without destructive intent.
+        arguments: list[str] = ["docker", "volume", "ls", "--format", "{{.Name}}"]
+
+        # Run the query and return the listed names.
+        return self._lines(self._run(operation, arguments).stdout)
+
     # Start one existing container.
     def start_container(self, identifier: str, *, operation: str) -> None:
         # Start the exact container.
