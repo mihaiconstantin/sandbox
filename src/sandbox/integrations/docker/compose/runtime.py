@@ -264,6 +264,32 @@ class ComposeRuntime(Runtime):
         # Return the observations in project order.
         return tuple(observations)
 
+    # Start an existing box and report whether this call changed its state.
+    def start(self, name: str) -> bool:
+        # Discover the managed box.
+        found: _FoundContainer | None = self._find_container(name, "start")
+
+        # If the box is absent.
+        if found is None:
+            # Throw.
+            raise BoxNotFound(name, backend = "docker")
+
+        # If the box is already running, including paused.
+        if found.observation.state is BoxState.RUNNING:
+            # Report that nothing changed.
+            return False
+
+        # If creation stopped before startup checks completed.
+        if found.observation.state is BoxState.CREATED:
+            # Refuse the direct start before the engine call.
+            raise BoxNotReady(name, state = found.observation.state.value)
+
+        # Otherwise start the stopped or uncertain container.
+        self._docker.start_container(found.identifier, operation = "start")
+
+        # Report the state change.
+        return True
+
     # Verify the preparation token and artifact before any operation.
     def _accept(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> ComposePreparation:
         # Reject a token this runtime did not issue.
