@@ -350,6 +350,37 @@ class ComposeRuntime(Runtime):
         # Return the read-only preview.
         return RemovalPlan(box = name, containers = planned.containers, networks = planned.networks)
 
+    # Remove a box and its owned runtime resources by name.
+    def remove(self, name: str) -> None:
+        # Re-discover and verify the project resources.
+        planned: _PlannedResources = self._planned_resources(name, "remove")
+
+        # If the project has no containers and no networks.
+        if not planned.containers and not planned.networks:
+            # Throw.
+            raise NothingToRemove(name)
+
+        # Preflight external network attachments before any mutation.
+        self._preflight_network_attachments(planned.network_payloads, planned.container_ids, "remove")
+
+        # For each planned container in discovery order.
+        for container in planned.containers:
+            # Inspect the container again by its engine identifier.
+            payload: Mapping[str, Any] = self._docker.inspect_container(container.id, operation = "remove")
+
+            # Verify ownership before mutation.
+            self._verify_container_ownership(payload, name)
+
+            # If the container is running, including paused.
+            if container_is_running(payload):
+                # Stop the container gracefully.
+                self._docker.stop_container(container.id, operation = "remove")
+
+            # Remove the container without forcing or removing volumes.
+            self._docker.remove_container(container.id, operation = "remove")
+
+        # For each planned network in discovery order.
+
     # Verify the preparation token and artifact before any operation.
     def _accept(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> ComposePreparation:
         # Reject a token this runtime did not issue.
