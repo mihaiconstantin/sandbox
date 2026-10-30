@@ -311,6 +311,32 @@ class ComposeRuntime(Runtime):
         # Report the state change.
         return True
 
+    # Enter a live box and return the shell exit status.
+    def enter(self, name: str, shell: str, login: bool) -> int:
+        # Discover the managed box.
+        found: _FoundContainer | None = self._find_container(name, "enter")
+
+        # If the box is absent.
+        if found is None:
+            # Throw.
+            raise BoxNotFound(name, backend = "docker")
+
+        # If the box is not running.
+        if found.observation.state is not BoxState.RUNNING:
+            # Throw.
+            raise BoxNotRunning(name, state = found.observation.state.value)
+
+        # If the caller is not attached to an interactive terminal.
+        if not self._interactive_terminal():
+            # Throw.
+            raise InteractiveTerminalRequired(backend = "docker")
+
+        # Run the shell and read its raw status.
+        result: CommandResult = self._docker.exec_interactive(found.identifier, shell, login, operation = "enter")
+
+        # Preserve a successful or positive shell status and normalize signal termination.
+        return result.returncode if result.returncode >= 0 else 1
+
     # Verify the preparation token and artifact before any operation.
     def _accept(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> ComposePreparation:
         # Reject a token this runtime did not issue.
