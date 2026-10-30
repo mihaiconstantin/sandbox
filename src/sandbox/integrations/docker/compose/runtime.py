@@ -549,6 +549,24 @@ class ComposeRuntime(Runtime):
             container_identifiers.add(reference.id)
 
         # Inspect and verify every project network.
+        for identifier in network_ids:
+            # Inspect the network.
+            payload: Mapping[str, Any] = self._docker.inspect_network(identifier, operation = operation)
+
+            # Verify ownership before including the network.
+            self._verify_network_ownership(payload, name)
+
+            # Record the display reference and payload.
+            networks.append(network_reference(payload))
+            network_payloads.append(payload)
+
+        # Return the verified resources in discovery order.
+        return _PlannedResources(
+            containers = tuple(containers),
+            networks = tuple(networks),
+            container_ids = frozenset(container_identifiers),
+            network_payloads = tuple(network_payloads),
+        )
 
     # Preflight external attachments to every project network.
     def _preflight_network_attachments(self, payloads: tuple[Mapping[str, Any], ...], project_containers: frozenset[str], operation: str) -> None:
