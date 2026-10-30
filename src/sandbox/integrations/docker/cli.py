@@ -241,6 +241,19 @@ class DockerCli:
         # Run the query and return the listed identifiers.
         return self._lines(self._run(operation, arguments).stdout)
 
+    # List network identifiers matching every label filter.
+    def network_ids(self, filters: Mapping[str, str], *, operation: str) -> tuple[str, ...]:
+        # Start the network identifier query.
+        arguments: list[str] = ["docker", "network", "ls", "-q"]
+
+        # Add every label filter in insertion order.
+        for key, value in filters.items():
+            # Add the exact label filter.
+            arguments.extend(["--filter", f"label={key}={value}"])
+
+        # Run the query and return the listed identifiers.
+        return self._lines(self._run(operation, arguments).stdout)
+
     # Start one existing container.
     def start_container(self, identifier: str, *, operation: str) -> None:
         # Start the exact container.
