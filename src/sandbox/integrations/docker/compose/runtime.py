@@ -330,3 +330,34 @@ class ComposeRuntime(Runtime):
     def _eligible_volume(self, metadata: Mapping[str, Any]) -> bool:
         # Require ordinary local storage owned by sandbox with no driver options.
         return metadata.get("Driver") == "local" and not metadata.get("Options") and is_managed_volume(volume_labels(metadata))
+
+    # Discover one managed box and map its observation.
+    def _find_container(self, name: str, operation: str) -> _FoundContainer | None:
+        # Query the exact managed-box candidates.
+        identifiers: tuple[str, ...] = self._docker.container_ids(box_filters(name), operation = operation, no_trunc = True)
+
+        # Inspect every candidate label set.
+        payloads: list[Mapping[str, Any]] = [self._docker.inspect_container(identifier, operation = operation) for identifier in identifiers]
+
+        # Prepare the accepted candidates.
+        candidates: list[Mapping[str, Any]] = []
+
+        # For each inspected candidate.
+        for payload in payloads:
+            # Read the candidate labels.
+            labels: Mapping[str, str] = container_labels(payload)
+
+            # Skip a retained lifecycle hook or one-off probe.
+            if is_retained_container(labels):
+                # Continue to the next candidate.
+                continue
+
+            # Skip a container that does not carry the box role.
+            if not is_box_role(labels):
+                # Continue to the next candidate.
+                continue
+
+            # Retain the matching candidate.
+            candidates.append(payload)
+
+        # If no matching container exists.
