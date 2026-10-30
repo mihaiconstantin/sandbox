@@ -254,6 +254,19 @@ class DockerCli:
         # Run the query and return the listed identifiers.
         return self._lines(self._run(operation, arguments).stdout)
 
+    # List volume names matching every label filter.
+    def volume_ids(self, filters: Mapping[str, str], *, operation: str) -> tuple[str, ...]:
+        # Start the volume name query.
+        arguments: list[str] = ["docker", "volume", "ls", "-q"]
+
+        # Add every label filter in insertion order.
+        for key, value in filters.items():
+            # Add the exact label filter.
+            arguments.extend(["--filter", f"label={key}={value}"])
+
+        # Run the query and return the listed volume names.
+        return self._lines(self._run(operation, arguments).stdout)
+
     # Start one existing container.
     def start_container(self, identifier: str, *, operation: str) -> None:
         # Start the exact container.
