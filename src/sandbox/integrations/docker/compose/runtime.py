@@ -244,3 +244,16 @@ class ComposeRuntime(Runtime):
 
         # Return the verified preparation.
         return preparation
+
+    # Require the selected service to exist in a resolved configuration.
+    def _require_service(self, configuration: Mapping[str, Any], service: str) -> None:
+        # Read the services table with a neutral failure for malformed output.
+        services: Any = configuration.get("services")
+        if not isinstance(services, Mapping):
+            # Throw.
+            raise RecipeUnresolved("services", "Must be a mapping.")
+
+        # If the selected service is not defined by the recipe files.
+        if service not in services:
+            # Throw.
+            raise RecipeUnresolved("services", f"Primary service `{service}` is not declared in the resolved recipe configuration.")
