@@ -380,6 +380,28 @@ class ComposeRuntime(Runtime):
             self._docker.remove_container(container.id, operation = "remove")
 
         # For each planned network in discovery order.
+        for network in planned.networks:
+            # Inspect the network again by its engine identifier.
+            payload: Mapping[str, Any] = self._docker.inspect_network(network.id, operation = "remove")
+
+            # Verify ownership before mutation.
+            self._verify_network_ownership(payload, name)
+
+            # If the network still has attached containers after the project containers were removed.
+            if self._attached_container_ids(payload, "remove"):
+                # Throw.
+                raise NetworkInUse(network.name, backend = "docker")
+
+            # Remove the unused project network.
+            self._docker.remove_network(network.id, operation = "remove")
+
+        # Re-plan without requiring any remaining resources.
+        remaining: _PlannedResources = self._planned_resources(name, "remove")
+
+        # If any project resources remain.
+        if remaining.containers or remaining.networks:
+            # Throw.
+            raise IncompleteRemoval("box", name, backend = "docker")
 
     # Verify the preparation token and artifact before any operation.
     def _accept(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> ComposePreparation:
