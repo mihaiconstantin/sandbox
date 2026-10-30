@@ -108,3 +108,19 @@ class _FoundContainer:
 
     # Record the mapped observation.
     observation: BoxObservation
+
+
+# Record the verified resources planned for removal.
+@dataclass(frozen = True, slots = True)
+class _PlannedResources:
+    # Record the project container references.
+    containers: tuple[RuntimeRef, ...]
+
+    # Record the project network references.
+    networks: tuple[RuntimeRef, ...]
+
+    # Record the project container identifiers.
+    container_ids: frozenset[str]
+
+    # Record the inspected project network payloads.
+    network_payloads: tuple[Mapping[str, Any], ...]
