@@ -166,6 +166,35 @@ class ComposeRuntime(Runtime):
         self._compose: ComposeCli = ComposeCli(docker)
         self._interactive_terminal: Callable[[], bool] = interactive_terminal or _standard_streams_are_terminals
 
+    # Plan the effective UID and eligible volume targets without mutation.
+    def plan_initialization(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> Initialization:
+        # Verify the preparation token and artifact.
+        accepted: ComposePreparation = self._accept(preparation, artifact)
+
+        # Resolve the effective numeric UID on every create path.
+        uid: int = self._probe_user(accepted)
+
+        # Collect only declared volumes that sandbox owns and can safely initialize.
+        targets: list[str] = []
+
+        # For each declared volume in order.
+        for declaration in accepted._plan.volumes:
+            # Inspect the physical volume metadata.
+            metadata: Mapping[str, Any] | None = self._docker.inspect_volume(declaration.name, operation = "plan_initialization")
+
+            # If the volume vanished after it was ensured.
+            if metadata is None:
+                # Throw.
+                raise VolumeNotFound(declaration.name)
+
+            # Retain only ordinary local storage owned by sandbox.
+            if self._eligible_volume(metadata):
+                # Retain the actual declared mount target.
+                targets.append(declaration.target)
+
+        # Return the neutral initialization intent for the validated UID.
+        return Initialization(uid = uid, targets = tuple(targets))
+
     # List every managed box in project order.
     def list(self) -> tuple[BoxObservation, ...]:
         # Query every managed container identifier.
