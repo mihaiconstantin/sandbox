@@ -257,3 +257,36 @@ class ComposeRuntime(Runtime):
         if service not in services:
             # Throw.
             raise RecipeUnresolved("services", f"Primary service `{service}` is not declared in the resolved recipe configuration.")
+
+    # Probe the effective numeric UID for a prepared box.
+    def _probe_user(self, preparation: ComposePreparation) -> int:
+        # Build the identity probe for the prepared image.
+        arguments: list[str] = user_probe_arguments(
+            preparation.requirements.spec.image,
+            preparation.requirements.spec.user,
+            preparation.requirements.spec.platform,
+        )
+
+        # Run the probe and capture only its machine output.
+        result: CommandResult = self._docker.run(arguments, operation = "probe_user")
+
+        # If the image could not execute the identity probe, report its actual failure.
+        if result.returncode != 0:
+            # Throw the engine failure with the command facts.
+            raise EngineFailure(self._docker.failure("probe_user", arguments, result))
+
+        # Require a single decimal Linux UID rather than accepting extra output as an identity.
+        output: str = result.stdout.decode("utf-8", errors = "replace").strip()
+
+        # If the output is not a bounded numeric UID.
+        if not output.isascii() or not output.isdecimal() or len(output) > 10:
+            # Throw with a bounded sample for diagnosis.
+            raise ConfigurationError(
+                f"services.{preparation._definition.service}.user",
+                f"The container user probe for image `{preparation.requirements.spec.image}` must return one numeric Linux UID; received {output[:80]!r}.",
+            )
+
+        # Convert the validated representation once.
+        user_id: int = int(output)
+
+        # If the UID uses Linux's reserved all-ones value or exceeds its range.
