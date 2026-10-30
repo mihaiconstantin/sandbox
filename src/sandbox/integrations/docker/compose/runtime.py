@@ -195,6 +195,14 @@ class ComposeRuntime(Runtime):
         # Return the neutral initialization intent for the validated UID.
         return Initialization(uid = uid, targets = tuple(targets))
 
+    # Observe one managed box by name.
+    def inspect(self, name: str) -> BoxObservation | None:
+        # Discover the managed box.
+        found: _FoundContainer | None = self._find_container(name, "inspect")
+
+        # Return the observation or absence.
+        return None if found is None else found.observation
+
     # List every managed box in project order.
     def list(self) -> tuple[BoxObservation, ...]:
         # Query every managed container identifier.
