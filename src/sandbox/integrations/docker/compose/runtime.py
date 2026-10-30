@@ -337,6 +337,19 @@ class ComposeRuntime(Runtime):
         # Preserve a successful or positive shell status and normalize signal termination.
         return result.returncode if result.returncode >= 0 else 1
 
+    # Preview the resources removed with a box without mutating them.
+    def plan_removal(self, name: str) -> RemovalPlan:
+        # Discover the verified project resources.
+        planned: _PlannedResources = self._planned_resources(name, "plan_removal")
+
+        # If the project has no containers or networks.
+        if not planned.containers and not planned.networks:
+            # Throw.
+            raise NothingToRemove(name)
+
+        # Return the read-only preview.
+        return RemovalPlan(box = name, containers = planned.containers, networks = planned.networks)
+
     # Verify the preparation token and artifact before any operation.
     def _accept(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> ComposePreparation:
         # Reject a token this runtime did not issue.
