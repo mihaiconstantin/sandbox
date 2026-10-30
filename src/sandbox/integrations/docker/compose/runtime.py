@@ -455,6 +455,35 @@ class ComposeRuntime(Runtime):
         selected: Mapping[str, Any] = candidates[0]
         return _FoundContainer(identifier = container_reference(selected).id, observation = box_observation(name, selected))
 
+    # Discover and verify the project's resources for removal.
+    def _planned_resources(self, name: str, operation: str) -> _PlannedResources:
+        # Query every container under the Compose project label.
+        container_ids: tuple[str, ...] = self._docker.container_ids(project_filters(name), operation = operation)
+
+        # Query every network under the Compose project label.
+        network_ids: tuple[str, ...] = self._docker.network_ids(project_filters(name), operation = operation)
+
+        # Prepare the verified reference collections.
+        containers: list[RuntimeRef] = []
+        networks: list[RuntimeRef] = []
+        container_identifiers: set[str] = set()
+        network_payloads: list[Mapping[str, Any]] = []
+
+        # Inspect and verify every project container.
+        for identifier in container_ids:
+            # Inspect the container.
+            payload: Mapping[str, Any] = self._docker.inspect_container(identifier, operation = operation)
+
+            # Verify ownership before including the container.
+            self._verify_container_ownership(payload, name)
+
+            # Record the display reference and identifier.
+            reference: RuntimeRef = container_reference(payload)
+            containers.append(reference)
+            container_identifiers.add(reference.id)
+
+        # Inspect and verify every project network.
+
     # Preflight external attachments to every project network.
     def _preflight_network_attachments(self, payloads: tuple[Mapping[str, Any], ...], project_containers: frozenset[str], operation: str) -> None:
         # For each project network.
