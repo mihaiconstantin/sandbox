@@ -442,3 +442,15 @@ class ComposeRuntime(Runtime):
             candidates.append(payload)
 
         # If no matching container exists.
+        if not candidates:
+            # Report absence.
+            return None
+
+        # If several candidates claim the box.
+        if len(candidates) != 1:
+            # Report the ambiguity.
+            raise BoxAmbiguous(name, len(candidates), backend = "docker")
+
+        # Return the selected container and its mapped observation.
+        selected: Mapping[str, Any] = candidates[0]
+        return _FoundContainer(identifier = container_reference(selected).id, observation = box_observation(name, selected))
