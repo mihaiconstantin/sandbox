@@ -475,6 +475,38 @@ class ComposeRuntime(Runtime):
         # Return the managed observation.
         return self._volume_info(metadata, "inspect_volume")
 
+    # List every managed shared volume in name order.
+    def list_volumes(self) -> tuple[VolumeInfo, ...]:
+        # Query every volume with the ownership label.
+        names: tuple[str, ...] = self._docker.volume_ids(managed_volume_filters(), operation = "list_volumes")
+
+        # Prepare the managed observations.
+        volumes: list[VolumeInfo] = []
+
+        # For each matching volume name.
+        for name in names:
+            # Inspect the volume, distinguishing absence from failure.
+            metadata: Mapping[str, Any] | None = self._docker.inspect_volume(name, operation = "list_volumes")
+
+            # If the volume no longer exists.
+            if metadata is None:
+                # Skip the vanished volume.
+                continue
+
+            # If the volume is not fully managed.
+            if not is_managed_volume(volume_labels(metadata)):
+                # Skip volumes that sandbox does not own.
+                continue
+
+            # Record the managed volume.
+            volumes.append(self._volume_info(metadata, "list_volumes"))
+
+        # Sort the volumes by physical name.
+        volumes.sort(key = lambda volume: volume.name)
+
+        # Return the managed volumes.
+        return tuple(volumes)
+
     # Verify the preparation token and artifact before any operation.
     def _accept(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> ComposePreparation:
         # Reject a token this runtime did not issue.
