@@ -433,6 +433,26 @@ class ComposeRuntime(Runtime):
         metadata = self._docker.inspect_volume(name, operation = "ensure_volume")
 
         # If the created volume does not exist.
+        if metadata is None:
+            # Throw.
+            raise VolumeCreateFailed(
+                name,
+                CommandFailure(
+                    backend = "docker",
+                    operation = "volume.create",
+                    command = result.arguments,
+                    exit_code = 1,
+                    diagnostic = f"The volume create command completed without creating volume `{name}`.",
+                ),
+            )
+
+        # Refuse an incomplete creation that did not carry every management label.
+        if not is_managed_volume(volume_labels(metadata)):
+            # Throw.
+            raise VolumeOwnershipError(name)
+
+        # Report the created volume.
+        return EnsuredVolume(info = self._volume_info(metadata, "ensure_volume"), created = True)
 
     # Verify the preparation token and artifact before any operation.
     def _accept(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> ComposePreparation:
