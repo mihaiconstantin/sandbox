@@ -71,6 +71,43 @@ def compose_build_arguments(definition: RecipeDefinition, compose_files: Sequenc
     return arguments
 
 
+# Build the `docker` compose start command for one prepared service.
+def compose_up_arguments(definition: RecipeDefinition, compose_files: Sequence[Path], service: str) -> list[str]:
+    # Start with the shared compose invocation prefix.
+    arguments: list[str] = compose_arguments(definition, compose_files)
+
+    # Start the service without an implicit build or pull.
+    arguments.extend(["up", "-d", "--no-build", "--pull", "never"])
+
+    # Select the effective service last.
+    arguments.append(service)
+
+    # Return the complete command.
+    return arguments
+
+
+# Build the identity probe command for the prepared image without pulling.
+def user_probe_arguments(image: str, user: str | int | None, platform: str | None) -> list[str]:
+    # Run only the standard identity utility in the prepared image.
+    arguments: list[str] = ["docker", "run", "--rm", "--no-healthcheck", "--pull=never"]
+
+    # Select the same image platform that Compose used for the build.
+    if platform:
+        # Retain Docker's platform selection.
+        arguments.extend(["--platform", platform])
+
+    # Apply an explicit Compose user; otherwise Docker uses the image's USER.
+    if user not in (None, ""):
+        # Preserve the configured user or numeric UID.
+        arguments.extend(["--user", str(user)])
+
+    # Query the effective numeric UID without starting application code.
+    arguments.extend(["--entrypoint", "/usr/bin/id", image, "-u"])
+
+    # Return the complete probe command.
+    return arguments
+
+
 # Build the version command used by the Compose prerequisite preflight.
 def compose_version_arguments() -> list[str]:
     # Return the short version probe without a project.
@@ -90,5 +127,7 @@ __all__: list[str] = [
     "compose_build_arguments",
     "compose_config_arguments",
     "compose_environment",
+    "compose_up_arguments",
     "compose_version_arguments",
+    "user_probe_arguments",
 ]

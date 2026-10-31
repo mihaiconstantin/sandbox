@@ -215,6 +215,160 @@ class DockerCli:
         # Run the export with captured output.
         return self.run(arguments, operation = operation)
 
+    # List container identifiers matching every label filter.
+    def container_ids(self, filters: Mapping[str, str], *, operation: str, no_trunc: bool = False) -> tuple[str, ...]:
+        # Start the all-states identifier query.
+        arguments: list[str] = ["docker", "ps", "-aq"]
+
+        # Preserve untruncated identifiers when the caller requires them.
+        if no_trunc:
+            # Add the untruncated identifier flag.
+            arguments.append("--no-trunc")
+
+        # Add every label filter in insertion order.
+        for key, value in filters.items():
+            # Add the exact label filter.
+            arguments.extend(["--filter", f"label={key}={value}"])
+
+        # Run the query and return the listed identifiers.
+        return self._lines(self._run(operation, arguments).stdout)
+
+    # List containers that mount one physical volume.
+    def container_ids_with_volume(self, name: str, *, operation: str) -> tuple[str, ...]:
+        # Query every container that references the volume, including stopped containers.
+        arguments: list[str] = ["docker", "ps", "-aq", "--filter", f"volume={name}"]
+
+        # Run the query and return the listed identifiers.
+        return self._lines(self._run(operation, arguments).stdout)
+
+    # List network identifiers matching every label filter.
+    def network_ids(self, filters: Mapping[str, str], *, operation: str) -> tuple[str, ...]:
+        # Start the network identifier query.
+        arguments: list[str] = ["docker", "network", "ls", "-q"]
+
+        # Add every label filter in insertion order.
+        for key, value in filters.items():
+            # Add the exact label filter.
+            arguments.extend(["--filter", f"label={key}={value}"])
+
+        # Run the query and return the listed identifiers.
+        return self._lines(self._run(operation, arguments).stdout)
+
+    # List volume names matching every label filter.
+    def volume_ids(self, filters: Mapping[str, str], *, operation: str) -> tuple[str, ...]:
+        # Start the volume name query.
+        arguments: list[str] = ["docker", "volume", "ls", "-q"]
+
+        # Add every label filter in insertion order.
+        for key, value in filters.items():
+            # Add the exact label filter.
+            arguments.extend(["--filter", f"label={key}={value}"])
+
+        # Run the query and return the listed volume names.
+        return self._lines(self._run(operation, arguments).stdout)
+
+    # List every existing volume name.
+    def volume_names(self, *, operation: str) -> tuple[str, ...]:
+        # Query the volume names without destructive intent.
+        arguments: list[str] = ["docker", "volume", "ls", "--format", "{{.Name}}"]
+
+        # Run the query and return the listed names.
+        return self._lines(self._run(operation, arguments).stdout)
+
+    # Inspect one container.
+    def inspect_container(self, identifier: str, *, operation: str) -> Mapping[str, Any]:
+        # Inspect the exact container.
+        arguments: list[str] = ["docker", "container", "inspect", identifier]
+
+        # Return the parsed inspection payload.
+        return self._inspect_payload(operation, arguments)
+
+    # Inspect one network.
+    def inspect_network(self, identifier: str, *, operation: str) -> Mapping[str, Any]:
+        # Inspect the exact network.
+        arguments: list[str] = ["docker", "network", "inspect", identifier]
+
+        # Return the parsed inspection payload.
+        return self._inspect_payload(operation, arguments)
+
+    # Inspect one volume, or prove that it is absent.
+    def inspect_volume(self, name: str, *, operation: str) -> Mapping[str, Any] | None:
+        # Inspect the exact volume.
+        arguments: list[str] = ["docker", "volume", "inspect", name]
+
+        # Run the inspection without failing immediately.
+        result: CommandResult = self.run(arguments, operation = operation)
+
+        # If inspection succeeded, return the parsed payload.
+        if result.returncode == 0:
+            # Parse the successful inspection.
+            return self._inspection(operation, result)
+
+        # List every existing volume name to distinguish absence from failure.
+        existing: tuple[str, ...] = self.volume_names(operation = operation)
+
+        # If the volume is proven absent.
+        if name not in existing:
+            # Report the absence proof.
+            return None
+
+        # Propagate the original inspection failure.
+        raise EngineFailure(self.failure(operation, arguments, result))
+
+    # Start one existing container.
+    def start_container(self, identifier: str, *, operation: str) -> None:
+        # Start the exact container.
+        self._run(operation, ["docker", "start", identifier])
+
+    # Stop one existing container.
+    def stop_container(self, identifier: str, *, operation: str) -> None:
+        # Stop the exact container with the engine's default timeout.
+        self._run(operation, ["docker", "stop", identifier])
+
+    # Remove one existing container without forcing or removing volumes.
+    def remove_container(self, identifier: str, *, operation: str) -> None:
+        # Remove the exact container.
+        self._run(operation, ["docker", "rm", identifier])
+
+    # Remove one existing network.
+    def remove_network(self, identifier: str, *, operation: str) -> None:
+        # Remove the exact network.
+        self._run(operation, ["docker", "network", "rm", identifier])
+
+    # Create one physical volume with the supplied labels.
+    def create_volume(self, name: str, labels: Mapping[str, str], *, operation: str) -> CommandResult:
+        # Start the volume creation command.
+        arguments: list[str] = ["docker", "volume", "create"]
+
+        # Add every ownership label in insertion order.
+        for key, value in labels.items():
+            # Add the exact label.
+            arguments.extend(["--label", f"{key}={value}"])
+
+        # Name the physical volume last.
+        arguments.append(name)
+
+        # Return the raw result so the runtime can translate creation failures.
+        return self.run(arguments, operation = operation)
+
+    # Remove one physical volume without forcing deletion.
+    def remove_volume(self, name: str, *, operation: str) -> None:
+        # Remove the exact volume.
+        self._run(operation, ["docker", "volume", "rm", name])
+
+    # Run one interactive shell in a container and return its raw status.
+    def exec_interactive(self, identifier: str, shell: str, login: bool, *, operation: str) -> CommandResult:
+        # Build the interactive exec command.
+        arguments: list[str] = ["docker", "exec", "-it", identifier, shell]
+
+        # Append the login-shell flag when requested.
+        if login:
+            # Add the login-shell flag after the shell.
+            arguments.append("-l")
+
+        # Run the shell with inherited standard streams and no success check.
+        return self.run_interactive(arguments, operation = operation)
+
     # Run one command that must succeed.
     def _run(self, operation: str, arguments: Sequence[str]) -> CommandResult:
         # Execute the command through the injected runner.

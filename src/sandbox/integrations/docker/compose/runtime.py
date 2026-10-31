@@ -1,0 +1,1010 @@
+# Imports.
+from __future__ import annotations
+
+import os
+import tempfile
+from collections.abc import Callable, Mapping
+from contextlib import contextmanager
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Iterator
+
+# Import domain values.
+from sandbox.domain import (
+    ArtifactRequirement,
+    ArtifactTransport,
+    BoxObservation,
+    BoxState,
+    BuildArtifact,
+    EnsuredVolume,
+    Initialization,
+    RecipeDefinition,
+    RemovalPlan,
+    RuntimeRef,
+    RuntimeRequirements,
+    SandboxPlan,
+    VolumeInfo,
+)
+
+# Import the typed public errors.
+from sandbox.errors.base import CommandFailure
+from sandbox.errors.boxes import BoxAmbiguous, BoxNotFound, BoxNotReady, BoxNotRunning
+from sandbox.errors.capabilities import UnsupportedFeature
+from sandbox.errors.configuration import ConfigurationError
+from sandbox.errors.create import CreateFailed, CreatePostconditionFailed
+from sandbox.errors.engine import EngineFailure, EngineOutputInvalid
+from sandbox.errors.recipes import RecipeUnresolved
+from sandbox.errors.removal import IncompleteRemoval, NetworkInUse, NothingToRemove
+from sandbox.errors.terminal import InteractiveTerminalRequired
+from sandbox.errors.ownership import OwnershipViolation
+from sandbox.errors.volumes import (
+    VolumeCreateFailed,
+    VolumeInUse,
+    VolumeNotFound,
+    VolumeOwnershipError,
+    VolumeReferencesUnavailable,
+)
+
+# Import the runtime port and output values.
+from sandbox.ports.output import SILENT, OutputSink
+from sandbox.ports.runtime import Runtime, RuntimePreparation, require_compatible_artifact
+
+# Import the Docker integration helpers.
+from sandbox.integrations.docker.cli import DockerCli
+from sandbox.integrations.docker.command import CommandResult
+from sandbox.integrations.docker.compose_cli import ComposeCli
+from sandbox.integrations.docker.invocation import compose_environment, user_probe_arguments
+from sandbox.integrations.docker.preflight import require_compose
+
+# Import the Compose integration values.
+from sandbox.integrations.docker.compose.labels import (
+    COMPOSE_PROJECT_LABEL,
+    MANAGED_LABEL,
+    PROJECT_LABEL,
+    box_filters,
+    container_labels,
+    is_box_role,
+    is_managed_volume,
+    is_owned_by,
+    is_retained_container,
+    managed_container_filters,
+    managed_volume_filters,
+    network_labels,
+    project_filters,
+    volume_create_labels,
+    volume_labels,
+)
+from sandbox.integrations.docker.compose.observation import (
+    box_observation,
+    container_is_running,
+    container_reference,
+    network_reference,
+    volume_info,
+)
+from sandbox.integrations.docker.compose.override import initialization_hooks, render_override
+from sandbox.integrations.docker.compose.projection import Projection, project_configuration, recipe_pre_start
+from sandbox.integrations.docker.compose.safety import (
+    validate_image_healthcheck,
+    validate_projection,
+    validate_realized,
+    validate_secret_files,
+)
+
+# Import volume-name validation.
+from sandbox.validation.identifiers import validate_volume_name
+
+
+# Report whether the standard streams are interactive terminals.
+def _standard_streams_are_terminals() -> bool:
+    # Require both the input and output streams to be terminals.
+    return os.isatty(0) and os.isatty(1)
+
+
+# Record one discovered managed container.
+@dataclass(frozen = True, slots = True)
+class _FoundContainer:
+    # Record the engine identifier used by direct state operations.
+    identifier: str
+
+    # Record the mapped observation.
+    observation: BoxObservation
+
+
+# Record the verified resources planned for removal.
+@dataclass(frozen = True, slots = True)
+class _PlannedResources:
+    # Record the project container references.
+    containers: tuple[RuntimeRef, ...]
+
+    # Record the project network references.
+    networks: tuple[RuntimeRef, ...]
+
+    # Record the project container identifiers.
+    container_ids: frozenset[str]
+
+    # Record the inspected project network payloads.
+    network_payloads: tuple[Mapping[str, Any], ...]
+
+
+# Record the runtime-owned preparation token with neutral requirements.
+@dataclass(frozen = True, slots = True)
+class ComposePreparation:
+    # Expose the neutral requirements the caller may read.
+    requirements: RuntimeRequirements
+
+    # Record the issuing runtime.
+    _owner: object = field(repr = False, compare = False)
+
+    # Record the neutral plan.
+    _plan: SandboxPlan = field(repr = False, compare = False)
+
+    # Record the opaque recipe source.
+    _definition: RecipeDefinition = field(repr = False, compare = False)
+
+    # Record the Compose interpolation environment.
+    _environment: Mapping[str, str] = field(repr = False, compare = False)
+
+    # Record the rendered base override.
+    _override: str = field(repr = False, compare = False)
+
+    # Record the base resolved configuration.
+    _configuration: Mapping[str, Any] = field(repr = False, compare = False)
+
+    # Record the base neutral projection and verification facts.
+    _base_projection: Projection = field(repr = False, compare = False)
+
+    # Record the raw recipe pre-start hooks.
+    _recipe_hooks: tuple[dict[str, Any], ...] = field(repr = False, compare = False)
+
+
+# Represent the Docker/Compose implementation of the runtime port.
+class ComposeRuntime(Runtime):
+    # Construct the runtime around the Docker gateway and a TTY probe.
+    def __init__(self, docker: DockerCli, *, interactive_terminal: Callable[[], bool] | None = None) -> None:
+        # Record the gateway and the terminal capability probe.
+        self._docker: DockerCli = docker
+        self._compose: ComposeCli = ComposeCli(docker)
+        self._interactive_terminal: Callable[[], bool] = interactive_terminal or _standard_streams_are_terminals
+
+    # Resolve read-only Compose state and expose neutral requirements.
+    def prepare(self, plan: SandboxPlan, definition: RecipeDefinition) -> ComposePreparation:
+        # Require the neutral request values.
+        if not isinstance(plan, SandboxPlan):
+            # Throw.
+            raise ValueError("plan must be a SandboxPlan.")
+        if not isinstance(definition, RecipeDefinition):
+            # Throw.
+            raise ValueError("definition must be a RecipeDefinition.")
+
+        # Require every bound secret to be delivered from a readable host file.
+        validate_secret_files(plan)
+
+        # Prepare the Compose interpolation environment without mutating process state.
+        project_directory: Path = plan.project.directory.expanduser().resolve(strict = False)
+        environment: dict[str, str] = compose_environment(plan.project.name, project_directory)
+
+        # Require the supported Compose floor before resolving the recipe.
+        require_compose(self._compose, operation = "prepare")
+
+        # Render the sandbox-owned override before any Compose invocation.
+        override: str = render_override(plan, definition)
+
+        # Resolve the recipe and the realized base configuration in one operation scope.
+        with _runtime_scope("prepare") as temporary:
+            # Write the base override for the realized resolution.
+            override_file: Path = temporary / "override.yaml"
+            override_file.write_text(override, encoding = "utf-8")
+
+            # Resolve the recipe files before applying the sandbox override.
+            recipe_configuration: Mapping[str, Any] = self._compose.configuration(definition, definition.files, environment)
+
+            # Require the selected service to exist before applying the override.
+            self._require_service(recipe_configuration, definition.service)
+
+            # Resolve the complete configuration with the override applied last.
+            configuration: Mapping[str, Any] = self._compose.configuration(definition, (*definition.files, override_file), environment)
+
+        # Project the effective primary service without leaking the Compose model.
+        projection: Projection = project_configuration(
+            configuration,
+            plan,
+            definition,
+            default_platform = environment.get("DOCKER_DEFAULT_PLATFORM") or None,
+        )
+
+        # Apply the Compose-specific safety checks before the builder runs.
+        validate_projection(plan, definition, projection)
+
+        # Require a local image from the builder.
+        requirement: ArtifactRequirement = ArtifactRequirement(
+            reference = projection.spec.image,
+            platform = projection.spec.platform,
+            transport = ArtifactTransport.LOCAL_IMAGE,
+        )
+
+        # Build the neutral requirements.
+        requirements: RuntimeRequirements = RuntimeRequirements(spec = projection.spec, artifact = requirement)
+
+        # Preserve the recipe hooks for the generated initialization sequence.
+        recipe_hooks: tuple[dict[str, Any], ...] = tuple(recipe_pre_start(configuration, definition.service))
+
+        # Return the typed preparation token.
+        return ComposePreparation(
+            requirements = requirements,
+            _owner = self,
+            _plan = plan,
+            _definition = definition,
+            _environment = dict(environment),
+            _override = override,
+            _configuration = configuration,
+            _base_projection = projection,
+            _recipe_hooks = recipe_hooks,
+        )
+
+    # Plan the effective UID and eligible volume targets without mutation.
+    def plan_initialization(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> Initialization:
+        # Verify the preparation token and artifact.
+        accepted: ComposePreparation = self._accept(preparation, artifact)
+
+        # Resolve the effective numeric UID on every create path.
+        uid: int = self._probe_user(accepted)
+
+        # Collect only declared volumes that sandbox owns and can safely initialize.
+        targets: list[str] = []
+
+        # For each declared volume in order.
+        for declaration in accepted._plan.volumes:
+            # Inspect the physical volume metadata.
+            metadata: Mapping[str, Any] | None = self._docker.inspect_volume(declaration.name, operation = "plan_initialization")
+
+            # If the volume vanished after it was ensured.
+            if metadata is None:
+                # Throw.
+                raise VolumeNotFound(declaration.name)
+
+            # Retain only ordinary local storage owned by sandbox.
+            if self._eligible_volume(metadata):
+                # Retain the actual declared mount target.
+                targets.append(declaration.target)
+
+        # Return the neutral initialization intent for the validated UID.
+        return Initialization(uid = uid, targets = tuple(targets))
+
+    # Create and start one box from a prepared artifact without building or pulling.
+    def create(
+        self,
+        preparation: RuntimePreparation,
+        artifact: BuildArtifact,
+        initialization: Initialization | None = None,
+        *,
+        output: OutputSink = SILENT,
+    ) -> BoxObservation:
+        # Verify the preparation token and artifact before mutation.
+        accepted: ComposePreparation = self._accept(preparation, artifact)
+
+        # Require a typed initialization when one is supplied.
+        if initialization is not None and not isinstance(initialization, Initialization):
+            # Throw.
+            raise ValueError("initialization must be an Initialization value or `None`.")
+
+        # Use the base override when no generated initialization hook is required.
+        selected_override: str = accepted._override
+
+        # If initialization targets require a generated hook, resolve and verify it first.
+        if initialization is not None and initialization.targets:
+            # Resolve the final override and prove the realized configuration.
+            selected_override = self._resolve_final_override(accepted, initialization)
+
+        # Write the selected override for the single Compose start.
+        with _runtime_scope("create") as temporary:
+            # Compute the temporary override path.
+            override_file: Path = temporary / "override.yaml"
+            override_file.write_text(selected_override, encoding = "utf-8")
+
+            # Run exactly one start with streamed engine output and no implicit build or pull.
+            result: CommandResult = self._compose.up(
+                accepted._definition,
+                (*accepted._definition.files, override_file),
+                accepted._definition.service,
+                accepted._environment,
+                output,
+            )
+
+        # If the start failed, preserve the command, status, and diagnostic for the caller.
+        if result.returncode != 0:
+            # Throw the neutral create failure.
+            raise CreateFailed(self._docker.failure("create", result.arguments, result))
+
+        # Observe the box that the start should have created.
+        observation: BoxObservation | None = self.inspect(accepted._plan.project.name)
+
+        # If no managed primary container can be observed.
+        if observation is None:
+            # Throw.
+            raise CreatePostconditionFailed(accepted._plan.project.name, backend = "docker")
+
+        # Return the post-create observation.
+        return observation
+
+    # Observe one managed box by name.
+    def inspect(self, name: str) -> BoxObservation | None:
+        # Discover the managed box.
+        found: _FoundContainer | None = self._find_container(name, "inspect")
+
+        # Return the observation or absence.
+        return None if found is None else found.observation
+
+    # List every managed box in project order.
+    def list(self) -> tuple[BoxObservation, ...]:
+        # Query every managed container identifier.
+        identifiers: tuple[str, ...] = self._docker.container_ids(managed_container_filters(), operation = "list")
+
+        # Inspect every managed candidate.
+        inspected: list[Mapping[str, Any]] = [self._docker.inspect_container(identifier, operation = "list") for identifier in identifiers]
+
+        # Prepare candidates grouped by project.
+        candidates: dict[str, list[Mapping[str, Any]]] = {}
+
+        # For each inspected managed container.
+        for payload in inspected:
+            # Read the candidate labels.
+            labels: Mapping[str, str] = container_labels(payload)
+
+            # If the container lost the managed label after the server-side filter.
+            if labels.get(MANAGED_LABEL) != "true":
+                # Skip the container.
+                continue
+
+            # Skip a retained lifecycle hook or one-off probe.
+            if is_retained_container(labels):
+                # Continue to the next candidate.
+                continue
+
+            # Skip a container that does not carry the box role.
+            if not is_box_role(labels):
+                # Continue to the next candidate.
+                continue
+
+            # Read the project identity.
+            project: str | None = labels.get(PROJECT_LABEL)
+
+            # If the project name is missing or disagrees with the Compose project.
+            if not project or labels.get(COMPOSE_PROJECT_LABEL) != project:
+                # Continue to the next candidate.
+                continue
+
+            # Group the candidate by its project.
+            candidates.setdefault(project, []).append(payload)
+
+        # Prepare the observations.
+        observations: list[BoxObservation] = []
+
+        # For each project in name order.
+        for project in sorted(candidates):
+            # Read the project's candidate containers.
+            contenders: list[Mapping[str, Any]] = candidates[project]
+
+            # If more than one container claims the project.
+            if len(contenders) > 1:
+                # Report the ambiguity instead of a partial listing.
+                raise BoxAmbiguous(project, len(contenders), backend = "docker")
+
+            # Map the inspected container onto an observation.
+            observations.append(box_observation(project, contenders[0]))
+
+        # Return the observations in project order.
+        return tuple(observations)
+
+    # Start an existing box and report whether this call changed its state.
+    def start(self, name: str) -> bool:
+        # Discover the managed box.
+        found: _FoundContainer | None = self._find_container(name, "start")
+
+        # If the box is absent.
+        if found is None:
+            # Throw.
+            raise BoxNotFound(name, backend = "docker")
+
+        # If the box is already running, including paused.
+        if found.observation.state is BoxState.RUNNING:
+            # Report that nothing changed.
+            return False
+
+        # If creation stopped before startup checks completed.
+        if found.observation.state is BoxState.CREATED:
+            # Refuse the direct start before the engine call.
+            raise BoxNotReady(name, state = found.observation.state.value)
+
+        # Otherwise start the stopped or uncertain container.
+        self._docker.start_container(found.identifier, operation = "start")
+
+        # Report the state change.
+        return True
+
+    # Stop an existing box and report whether this call changed its state.
+    def stop(self, name: str) -> bool:
+        # Discover the managed box.
+        found: _FoundContainer | None = self._find_container(name, "stop")
+
+        # If the box is absent.
+        if found is None:
+            # Throw.
+            raise BoxNotFound(name, backend = "docker")
+
+        # If the box is not running, including restarting boxes.
+        if found.observation.state is not BoxState.RUNNING:
+            # Report that nothing changed.
+            return False
+
+        # Otherwise stop the running container.
+        self._docker.stop_container(found.identifier, operation = "stop")
+
+        # Report the state change.
+        return True
+
+    # Enter a live box and return the shell exit status.
+    def enter(self, name: str, shell: str, login: bool) -> int:
+        # Discover the managed box.
+        found: _FoundContainer | None = self._find_container(name, "enter")
+
+        # If the box is absent.
+        if found is None:
+            # Throw.
+            raise BoxNotFound(name, backend = "docker")
+
+        # If the box is not running.
+        if found.observation.state is not BoxState.RUNNING:
+            # Throw.
+            raise BoxNotRunning(name, state = found.observation.state.value)
+
+        # If the caller is not attached to an interactive terminal.
+        if not self._interactive_terminal():
+            # Throw.
+            raise InteractiveTerminalRequired(backend = "docker")
+
+        # Run the shell and read its raw status.
+        result: CommandResult = self._docker.exec_interactive(found.identifier, shell, login, operation = "enter")
+
+        # Preserve a successful or positive shell status and normalize signal termination.
+        return result.returncode if result.returncode >= 0 else 1
+
+    # Preview the resources removed with a box without mutating them.
+    def plan_removal(self, name: str) -> RemovalPlan:
+        # Discover the verified project resources.
+        planned: _PlannedResources = self._planned_resources(name, "plan_removal")
+
+        # If the project has no containers or networks.
+        if not planned.containers and not planned.networks:
+            # Throw.
+            raise NothingToRemove(name)
+
+        # Return the read-only preview.
+        return RemovalPlan(box = name, containers = planned.containers, networks = planned.networks)
+
+    # Remove a box and its owned runtime resources by name.
+    def remove(self, name: str) -> None:
+        # Re-discover and verify the project resources.
+        planned: _PlannedResources = self._planned_resources(name, "remove")
+
+        # If the project has no containers and no networks.
+        if not planned.containers and not planned.networks:
+            # Throw.
+            raise NothingToRemove(name)
+
+        # Preflight external network attachments before any mutation.
+        self._preflight_network_attachments(planned.network_payloads, planned.container_ids, "remove")
+
+        # For each planned container in discovery order.
+        for container in planned.containers:
+            # Inspect the container again by its engine identifier.
+            payload: Mapping[str, Any] = self._docker.inspect_container(container.id, operation = "remove")
+
+            # Verify ownership before mutation.
+            self._verify_container_ownership(payload, name)
+
+            # If the container is running, including paused.
+            if container_is_running(payload):
+                # Stop the container gracefully.
+                self._docker.stop_container(container.id, operation = "remove")
+
+            # Remove the container without forcing or removing volumes.
+            self._docker.remove_container(container.id, operation = "remove")
+
+        # For each planned network in discovery order.
+        for network in planned.networks:
+            # Inspect the network again by its engine identifier.
+            payload: Mapping[str, Any] = self._docker.inspect_network(network.id, operation = "remove")
+
+            # Verify ownership before mutation.
+            self._verify_network_ownership(payload, name)
+
+            # If the network still has attached containers after the project containers were removed.
+            if self._attached_container_ids(payload, "remove"):
+                # Throw.
+                raise NetworkInUse(network.name, backend = "docker")
+
+            # Remove the unused project network.
+            self._docker.remove_network(network.id, operation = "remove")
+
+        # Re-plan without requiring any remaining resources.
+        remaining: _PlannedResources = self._planned_resources(name, "remove")
+
+        # If any project resources remain.
+        if remaining.containers or remaining.networks:
+            # Throw.
+            raise IncompleteRemoval("box", name, backend = "docker")
+
+    # Ensure a shared volume exists and report whether this call created it.
+    def ensure_volume(self, name: str) -> EnsuredVolume:
+        # Require a Docker-compatible physical volume name.
+        validate_volume_name(name)
+
+        # Inspect the existing volume, distinguishing absence from failure.
+        metadata: Mapping[str, Any] | None = self._docker.inspect_volume(name, operation = "ensure_volume")
+
+        # If the volume already exists.
+        if metadata is not None:
+            # Refuse to operate on a volume whose ownership cannot be verified.
+            if not is_managed_volume(volume_labels(metadata)):
+                # Throw.
+                raise VolumeOwnershipError(name)
+
+            # Reuse the volume without adopting or relabelling it.
+            return EnsuredVolume(info = self._volume_info(metadata, "ensure_volume"), created = False)
+
+        # Create the physical volume with the current ownership labels.
+        result: CommandResult = self._docker.create_volume(name, volume_create_labels(), operation = "ensure_volume")
+
+        # If the volume creation failed.
+        if result.returncode != 0:
+            # Throw.
+            raise VolumeCreateFailed(name, self._docker.failure("volume.create", result.arguments, result))
+
+        # Inspect the created volume to return a real observation.
+        metadata = self._docker.inspect_volume(name, operation = "ensure_volume")
+
+        # If the created volume does not exist.
+        if metadata is None:
+            # Throw.
+            raise VolumeCreateFailed(
+                name,
+                CommandFailure(
+                    backend = "docker",
+                    operation = "volume.create",
+                    command = result.arguments,
+                    exit_code = 1,
+                    diagnostic = f"The volume create command completed without creating volume `{name}`.",
+                ),
+            )
+
+        # Refuse an incomplete creation that did not carry every management label.
+        if not is_managed_volume(volume_labels(metadata)):
+            # Throw.
+            raise VolumeOwnershipError(name)
+
+        # Report the created volume.
+        return EnsuredVolume(info = self._volume_info(metadata, "ensure_volume"), created = True)
+
+    # Observe one managed shared volume by name.
+    def inspect_volume(self, name: str) -> VolumeInfo | None:
+        # Require a Docker-compatible physical volume name.
+        validate_volume_name(name)
+
+        # Inspect the volume, proving absence when inspection fails and the name is gone.
+        metadata: Mapping[str, Any] | None = self._docker.inspect_volume(name, operation = "inspect_volume")
+
+        # If the volume is absent.
+        if metadata is None:
+            # Report the absence proof.
+            return None
+
+        # If the volume does not carry every management label.
+        if not is_managed_volume(volume_labels(metadata)):
+            # Refuse to operate on a volume whose ownership cannot be verified.
+            raise VolumeOwnershipError(name)
+
+        # Return the managed observation.
+        return self._volume_info(metadata, "inspect_volume")
+
+    # List every managed shared volume in name order.
+    def list_volumes(self) -> tuple[VolumeInfo, ...]:
+        # Query every volume with the ownership label.
+        names: tuple[str, ...] = self._docker.volume_ids(managed_volume_filters(), operation = "list_volumes")
+
+        # Prepare the managed observations.
+        volumes: list[VolumeInfo] = []
+
+        # For each matching volume name.
+        for name in names:
+            # Inspect the volume, distinguishing absence from failure.
+            metadata: Mapping[str, Any] | None = self._docker.inspect_volume(name, operation = "list_volumes")
+
+            # If the volume no longer exists.
+            if metadata is None:
+                # Skip the vanished volume.
+                continue
+
+            # If the volume is not fully managed.
+            if not is_managed_volume(volume_labels(metadata)):
+                # Skip volumes that sandbox does not own.
+                continue
+
+            # Record the managed volume.
+            volumes.append(self._volume_info(metadata, "list_volumes"))
+
+        # Sort the volumes by physical name.
+        volumes.sort(key = lambda volume: volume.name)
+
+        # Return the managed volumes.
+        return tuple(volumes)
+
+    # Remove a managed shared volume by name.
+    def remove_volume(self, name: str) -> None:
+        # Require a Docker-compatible physical volume name.
+        validate_volume_name(name)
+
+        # Re-inspect the volume and verify its ownership.
+        info: VolumeInfo | None = self.inspect_volume(name)
+
+        # If the volume no longer exists.
+        if info is None:
+            # Throw.
+            raise VolumeNotFound(name)
+
+        # If the reference set cannot be established.
+        if info.in_use_by is None:
+            # Refuse removal rather than guessing.
+            raise VolumeReferencesUnavailable(name)
+
+        # If any container still references the volume.
+        if info.in_use_by:
+            # Throw.
+            raise VolumeInUse(name, backend = "docker")
+
+        # Remove the volume without forcing deletion.
+        self._docker.remove_volume(name, operation = "remove_volume")
+
+        # Re-inspect by existence only.
+        remaining: Mapping[str, Any] | None = self._docker.inspect_volume(name, operation = "remove_volume")
+
+        # If the volume still exists.
+        if remaining is not None:
+            # Throw.
+            raise IncompleteRemoval("volume", name, backend = "docker")
+
+    # Resolve the final override and prove the realized configuration.
+    def _resolve_final_override(self, preparation: ComposePreparation, initialization: Initialization) -> str:
+        # Refuse an image healthcheck that the root initialization hook cannot disable.
+        inspection: Mapping[str, Any] = self._docker.inspect_image(
+            preparation.requirements.spec.image,
+            platform = preparation.requirements.spec.platform,
+            operation = "resolve",
+        )
+        validate_image_healthcheck(inspection, preparation._definition.service)
+
+        # Preserve the recipe hooks from the base configuration and add the generated hook first.
+        pre_start: list[dict[str, Any]] = initialization_hooks(preparation._plan, list(preparation._recipe_hooks), initialization)
+
+        # Render the final override with the complete ordered hook sequence.
+        override: str = render_override(preparation._plan, preparation._definition, pre_start = pre_start)
+
+        # Resolve the final configuration before any service mutation.
+        with _runtime_scope("resolve") as temporary:
+            # Write the final override as UTF-8.
+            override_file: Path = temporary / "override.yaml"
+            override_file.write_text(override, encoding = "utf-8")
+
+            # Resolve the complete configuration with the final override applied last.
+            configuration: Mapping[str, Any] = self._compose.configuration(
+                preparation._definition,
+                (*preparation._definition.files, override_file),
+                preparation._environment,
+            )
+
+        # Project the final effective primary service.
+        projection: Projection = project_configuration(
+            configuration,
+            preparation._plan,
+            preparation._definition,
+            default_platform = preparation._environment.get("DOCKER_DEFAULT_PLATFORM") or None,
+            initialization = initialization,
+        )
+
+        # Re-apply the Compose safety checks to the realized configuration.
+        validate_projection(preparation._plan, preparation._definition, projection, initialization = initialization)
+
+        # Re-check that the realized configuration matches the validated projection.
+        validate_realized(preparation._base_projection, projection, initialization)
+
+        # Return the verified final override.
+        return override
+
+    # Verify the preparation token and artifact before any operation.
+    def _accept(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> ComposePreparation:
+        # Reject a token this runtime did not issue.
+        if not isinstance(preparation, ComposePreparation) or preparation._owner is not self:
+            # Throw a typed capability error.
+            raise UnsupportedFeature("runtime-preparation", "The preparation token belongs to another runtime.")
+
+        # Require a typed artifact.
+        if not isinstance(artifact, BuildArtifact):
+            # Throw a programming error.
+            raise ValueError("artifact must be a BuildArtifact value.")
+
+        # Require the artifact to satisfy the neutral requirement before mutation.
+        require_compatible_artifact(preparation.requirements.artifact, artifact)
+
+        # Return the verified preparation.
+        return preparation
+
+    # Require the selected service to exist in a resolved configuration.
+    def _require_service(self, configuration: Mapping[str, Any], service: str) -> None:
+        # Read the services table with a neutral failure for malformed output.
+        services: Any = configuration.get("services")
+        if not isinstance(services, Mapping):
+            # Throw.
+            raise RecipeUnresolved("services", "Must be a mapping.")
+
+        # If the selected service is not defined by the recipe files.
+        if service not in services:
+            # Throw.
+            raise RecipeUnresolved("services", f"Primary service `{service}` is not declared in the resolved recipe configuration.")
+
+    # Probe the effective numeric UID for a prepared box.
+    def _probe_user(self, preparation: ComposePreparation) -> int:
+        # Build the identity probe for the prepared image.
+        arguments: list[str] = user_probe_arguments(
+            preparation.requirements.spec.image,
+            preparation.requirements.spec.user,
+            preparation.requirements.spec.platform,
+        )
+
+        # Run the probe and capture only its machine output.
+        result: CommandResult = self._docker.run(arguments, operation = "probe_user")
+
+        # If the image could not execute the identity probe, report its actual failure.
+        if result.returncode != 0:
+            # Throw the engine failure with the command facts.
+            raise EngineFailure(self._docker.failure("probe_user", arguments, result))
+
+        # Require a single decimal Linux UID rather than accepting extra output as an identity.
+        output: str = result.stdout.decode("utf-8", errors = "replace").strip()
+
+        # If the output is not a bounded numeric UID.
+        if not output.isascii() or not output.isdecimal() or len(output) > 10:
+            # Throw with a bounded sample for diagnosis.
+            raise ConfigurationError(
+                f"services.{preparation._definition.service}.user",
+                f"The container user probe for image `{preparation.requirements.spec.image}` must return one numeric Linux UID; received {output[:80]!r}.",
+            )
+
+        # Convert the validated representation once.
+        user_id: int = int(output)
+
+        # If the UID uses Linux's reserved all-ones value or exceeds its range.
+        if user_id >= 4_294_967_295:
+            # Throw.
+            raise ConfigurationError(f"services.{preparation._definition.service}.user", "The container user probe returned an invalid Linux UID.")
+
+        # Return the identity resolved by Docker rather than assuming a user name or UID.
+        return user_id
+
+    # Report whether one inspected volume is eligible for ownership initialization.
+    def _eligible_volume(self, metadata: Mapping[str, Any]) -> bool:
+        # Require ordinary local storage owned by sandbox with no driver options.
+        return metadata.get("Driver") == "local" and not metadata.get("Options") and is_managed_volume(volume_labels(metadata))
+
+    # Discover one managed box and map its observation.
+    def _find_container(self, name: str, operation: str) -> _FoundContainer | None:
+        # Query the exact managed-box candidates.
+        identifiers: tuple[str, ...] = self._docker.container_ids(box_filters(name), operation = operation, no_trunc = True)
+
+        # Inspect every candidate label set.
+        payloads: list[Mapping[str, Any]] = [self._docker.inspect_container(identifier, operation = operation) for identifier in identifiers]
+
+        # Prepare the accepted candidates.
+        candidates: list[Mapping[str, Any]] = []
+
+        # For each inspected candidate.
+        for payload in payloads:
+            # Read the candidate labels.
+            labels: Mapping[str, str] = container_labels(payload)
+
+            # Skip a retained lifecycle hook or one-off probe.
+            if is_retained_container(labels):
+                # Continue to the next candidate.
+                continue
+
+            # Skip a container that does not carry the box role.
+            if not is_box_role(labels):
+                # Continue to the next candidate.
+                continue
+
+            # Retain the matching candidate.
+            candidates.append(payload)
+
+        # If no matching container exists.
+        if not candidates:
+            # Report absence.
+            return None
+
+        # If several candidates claim the box.
+        if len(candidates) != 1:
+            # Report the ambiguity.
+            raise BoxAmbiguous(name, len(candidates), backend = "docker")
+
+        # Return the selected container and its mapped observation.
+        selected: Mapping[str, Any] = candidates[0]
+        return _FoundContainer(identifier = container_reference(selected).id, observation = box_observation(name, selected))
+
+    # Discover and verify the project's resources for removal.
+    def _planned_resources(self, name: str, operation: str) -> _PlannedResources:
+        # Query every container under the Compose project label.
+        container_ids: tuple[str, ...] = self._docker.container_ids(project_filters(name), operation = operation)
+
+        # Query every network under the Compose project label.
+        network_ids: tuple[str, ...] = self._docker.network_ids(project_filters(name), operation = operation)
+
+        # Prepare the verified reference collections.
+        containers: list[RuntimeRef] = []
+        networks: list[RuntimeRef] = []
+        container_identifiers: set[str] = set()
+        network_payloads: list[Mapping[str, Any]] = []
+
+        # Inspect and verify every project container.
+        for identifier in container_ids:
+            # Inspect the container.
+            payload: Mapping[str, Any] = self._docker.inspect_container(identifier, operation = operation)
+
+            # Verify ownership before including the container.
+            self._verify_container_ownership(payload, name)
+
+            # Record the display reference and identifier.
+            reference: RuntimeRef = container_reference(payload)
+            containers.append(reference)
+            container_identifiers.add(reference.id)
+
+        # Inspect and verify every project network.
+        for identifier in network_ids:
+            # Inspect the network.
+            payload: Mapping[str, Any] = self._docker.inspect_network(identifier, operation = operation)
+
+            # Verify ownership before including the network.
+            self._verify_network_ownership(payload, name)
+
+            # Record the display reference and payload.
+            networks.append(network_reference(payload))
+            network_payloads.append(payload)
+
+        # Return the verified resources in discovery order.
+        return _PlannedResources(
+            containers = tuple(containers),
+            networks = tuple(networks),
+            container_ids = frozenset(container_identifiers),
+            network_payloads = tuple(network_payloads),
+        )
+
+    # Preflight external attachments to every project network.
+    def _preflight_network_attachments(self, payloads: tuple[Mapping[str, Any], ...], project_containers: frozenset[str], operation: str) -> None:
+        # For each project network.
+        for payload in payloads:
+            # Read every attached container identifier.
+            attached: tuple[str, ...] = self._attached_container_ids(payload, operation)
+
+            # If any attachment does not belong to the project's own containers.
+            if any(identifier not in project_containers for identifier in attached):
+                # Throw before mutating any resource.
+                raise NetworkInUse(network_reference(payload).name, backend = "docker")
+
+    # Read the attached container identifiers from one inspected network.
+    def _attached_container_ids(self, payload: Mapping[str, Any], operation: str) -> tuple[str, ...]:
+        # Read the attached container mapping.
+        attached: Any = payload.get("Containers") or {}
+
+        # Require a mapping of container identifiers.
+        if not isinstance(attached, Mapping):
+            # Throw for malformed engine data.
+            raise EngineOutputInvalid("docker", operation, "")
+
+        # Prepare the identifiers.
+        identifiers: list[str] = []
+
+        # For each attached container.
+        for identifier in attached:
+            # Require a nonblank identifier.
+            if not isinstance(identifier, str) or not identifier:
+                # Throw for malformed engine data.
+                raise EngineOutputInvalid("docker", operation, "")
+
+            # Record the identifier.
+            identifiers.append(identifier)
+
+        # Return the attached identifiers.
+        return tuple(identifiers)
+
+    # Verify that one inspected container belongs to the project.
+    def _verify_container_ownership(self, payload: Mapping[str, Any], project: str) -> None:
+        # If the ownership labels are missing or incorrect.
+        if not is_owned_by(container_labels(payload), project):
+            # Refuse to modify a container whose ownership cannot be verified.
+            raise OwnershipViolation("container", container_reference(payload).id)
+
+    # Verify that one inspected network belongs to the project.
+    def _verify_network_ownership(self, payload: Mapping[str, Any], project: str) -> None:
+        # If the ownership labels are missing or incorrect.
+        if not is_owned_by(network_labels(payload), project):
+            # Refuse to modify a network whose ownership cannot be verified.
+            raise OwnershipViolation("network", network_reference(payload).id)
+
+    # Build one volume observation from inspected metadata and references.
+    def _volume_info(self, metadata: Mapping[str, Any], operation: str) -> VolumeInfo:
+        # Read and validate the physical volume name.
+        name: Any = metadata.get("Name")
+        if not isinstance(name, str) or not name:
+            # Throw for malformed engine data.
+            raise EngineOutputInvalid("docker", operation, "")
+
+        # Query every container that references the volume, including stopped containers.
+        identifiers: tuple[str, ...] = self._docker.container_ids_with_volume(name, operation = operation)
+
+        # Prepare the referencing containers.
+        references: list[RuntimeRef] = []
+
+        # For each matching container.
+        for identifier in identifiers:
+            # Inspect the container.
+            payload: Mapping[str, Any] = self._docker.inspect_container(identifier, operation = operation)
+
+            # Read the actual volume mounts.
+            mounts: Any = payload.get("Mounts") or ()
+
+            # Require an array of mounts.
+            if not isinstance(mounts, list):
+                # Throw for malformed engine data.
+                raise EngineOutputInvalid("docker", operation, "")
+
+            # For each reported mount.
+            for mount in mounts:
+                # Require a mapping mount.
+                if not isinstance(mount, Mapping):
+                    # Throw for malformed engine data.
+                    raise EngineOutputInvalid("docker", operation, "")
+
+                # If the container references the requested physical volume.
+                if mount.get("Type") == "volume" and mount.get("Name") == name:
+                    # Record the container once.
+                    references.append(container_reference(payload))
+
+                    # Avoid recording the same container more than once.
+                    break
+
+        # Map the inspected metadata and references onto a neutral observation.
+        return volume_info(metadata, tuple(references))
+
+
+# Create an operation-scoped override directory and translate filesystem failures.
+@contextmanager
+def _runtime_scope(operation: str) -> Iterator[Path]:
+    # Allocate a unique operation-scoped temporary directory.
+    try:
+        # Open the temporary directory for the single runtime operation.
+        with tempfile.TemporaryDirectory(prefix = ".sb-runtime-") as temporary:
+            # Yield the operation-scoped directory.
+            yield Path(temporary)
+
+    # Translate an operation-scoped filesystem failure without leaking an OS exception.
+    except OSError as error:
+        # Throw the neutral engine failure.
+        raise EngineFailure(
+            CommandFailure(
+                backend = "docker",
+                operation = operation,
+                command = None,
+                exit_code = 1,
+                diagnostic = str(error)[:4096],
+            )
+        ) from error
+
+
+# Define the public API of the Compose runtime integration.
+__all__: list[str] = ["ComposePreparation", "ComposeRuntime"]
