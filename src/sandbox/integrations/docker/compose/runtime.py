@@ -507,6 +507,40 @@ class ComposeRuntime(Runtime):
         # Return the managed volumes.
         return tuple(volumes)
 
+    # Remove a managed shared volume by name.
+    def remove_volume(self, name: str) -> None:
+        # Require a Docker-compatible physical volume name.
+        validate_volume_name(name)
+
+        # Re-inspect the volume and verify its ownership.
+        info: VolumeInfo | None = self.inspect_volume(name)
+
+        # If the volume no longer exists.
+        if info is None:
+            # Throw.
+            raise VolumeNotFound(name)
+
+        # If the reference set cannot be established.
+        if info.in_use_by is None:
+            # Refuse removal rather than guessing.
+            raise VolumeReferencesUnavailable(name)
+
+        # If any container still references the volume.
+        if info.in_use_by:
+            # Throw.
+            raise VolumeInUse(name, backend = "docker")
+
+        # Remove the volume without forcing deletion.
+        self._docker.remove_volume(name, operation = "remove_volume")
+
+        # Re-inspect by existence only.
+        remaining: Mapping[str, Any] | None = self._docker.inspect_volume(name, operation = "remove_volume")
+
+        # If the volume still exists.
+        if remaining is not None:
+            # Throw.
+            raise IncompleteRemoval("volume", name, backend = "docker")
+
     # Verify the preparation token and artifact before any operation.
     def _accept(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> ComposePreparation:
         # Reject a token this runtime did not issue.
