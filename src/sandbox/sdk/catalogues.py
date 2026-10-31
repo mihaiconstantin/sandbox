@@ -103,6 +103,22 @@ class CatalogueOperations:
             for name in sorted(declaration.recipes)
         )
 
+    # Resolve a registered catalogue recipe for another SDK operation.
+    def resolve_recipe(self, catalogue: str, recipe: str | None) -> ResolvedCatalogueRecipe:
+        # Load the registered catalogue.
+        declaration: Catalogue = self._load(catalogue)
+
+        # Require the manifest identity to match the selected registration.
+        if declaration.name != catalogue:
+            # Throw.
+            raise RecipeUnresolved(
+                "catalogue.name",
+                f"Manifest name `{declaration.name}` does not match the selected catalogue `{catalogue}`.",
+            )
+
+        # Resolve the selected recipe into its parent-first form.
+        return self._resolve(declaration, recipe)
+
     # Plan the removal of a registered catalogue without changing anything.
     def plan_removal(self, name: str) -> CatalogueRemovalPlan | None:
         # Validate the catalogue name before planning its removal.
