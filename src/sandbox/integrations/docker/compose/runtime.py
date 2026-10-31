@@ -616,6 +616,37 @@ class ComposeRuntime(Runtime):
             # Throw.
             raise IncompleteRemoval("volume", name, backend = "docker")
 
+    # Resolve the final override and prove the realized configuration.
+    def _resolve_final_override(self, preparation: ComposePreparation, initialization: Initialization) -> str:
+        # Refuse an image healthcheck that the root initialization hook cannot disable.
+        inspection: Mapping[str, Any] = self._docker.inspect_image(
+            preparation.requirements.spec.image,
+            platform = preparation.requirements.spec.platform,
+            operation = "resolve",
+        )
+        validate_image_healthcheck(inspection, preparation._definition.service)
+
+        # Preserve the recipe hooks from the base configuration and add the generated hook first.
+        pre_start: list[dict[str, Any]] = initialization_hooks(preparation._plan, list(preparation._recipe_hooks), initialization)
+
+        # Render the final override with the complete ordered hook sequence.
+        override: str = render_override(preparation._plan, preparation._definition, pre_start = pre_start)
+
+        # Resolve the final configuration before any service mutation.
+        with _runtime_scope("resolve") as temporary:
+            # Write the final override as UTF-8.
+            override_file: Path = temporary / "override.yaml"
+            override_file.write_text(override, encoding = "utf-8")
+
+            # Resolve the complete configuration with the final override applied last.
+            configuration: Mapping[str, Any] = self._compose.configuration(
+                preparation._definition,
+                (*preparation._definition.files, override_file),
+                preparation._environment,
+            )
+
+        # Project the final effective primary service.
+
     # Verify the preparation token and artifact before any operation.
     def _accept(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> ComposePreparation:
         # Reject a token this runtime did not issue.
