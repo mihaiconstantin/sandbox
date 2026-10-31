@@ -44,3 +44,20 @@ class CatalogueOperations:
     def list(self) -> tuple[CatalogueRegistration, ...]:
         # Return the validated registrations.
         return self._store.registrations()
+
+    # Report whether a catalogue is registered and present on disk.
+    def installation(self, name: str) -> CatalogueInstallState:
+        # Validate the catalogue name before using it in a path.
+        validate_identifier(name, "catalogue")
+
+        # Compute the canonical destination without requiring it to exist.
+        destination: Path = self._store.destination(name)
+
+        # Determine whether the catalogue is registered.
+        registered: bool = any(item.name == name for item in self._store.registrations())
+
+        # Determine whether the canonical directory exists or is a symlink.
+        directory_present: bool = destination.exists() or destination.is_symlink()
+
+        # Return the observed installation state.
+        return CatalogueInstallState(registered = registered, directory_present = directory_present)
