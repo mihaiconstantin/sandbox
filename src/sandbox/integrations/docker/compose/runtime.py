@@ -454,6 +454,27 @@ class ComposeRuntime(Runtime):
         # Report the created volume.
         return EnsuredVolume(info = self._volume_info(metadata, "ensure_volume"), created = True)
 
+    # Observe one managed shared volume by name.
+    def inspect_volume(self, name: str) -> VolumeInfo | None:
+        # Require a Docker-compatible physical volume name.
+        validate_volume_name(name)
+
+        # Inspect the volume, proving absence when inspection fails and the name is gone.
+        metadata: Mapping[str, Any] | None = self._docker.inspect_volume(name, operation = "inspect_volume")
+
+        # If the volume is absent.
+        if metadata is None:
+            # Report the absence proof.
+            return None
+
+        # If the volume does not carry every management label.
+        if not is_managed_volume(volume_labels(metadata)):
+            # Refuse to operate on a volume whose ownership cannot be verified.
+            raise VolumeOwnershipError(name)
+
+        # Return the managed observation.
+        return self._volume_info(metadata, "inspect_volume")
+
     # Verify the preparation token and artifact before any operation.
     def _accept(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> ComposePreparation:
         # Reject a token this runtime did not issue.
