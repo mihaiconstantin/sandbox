@@ -773,3 +773,32 @@ class ComposeRuntime(Runtime):
         references: list[RuntimeRef] = []
 
         # For each matching container.
+        for identifier in identifiers:
+            # Inspect the container.
+            payload: Mapping[str, Any] = self._docker.inspect_container(identifier, operation = operation)
+
+            # Read the actual volume mounts.
+            mounts: Any = payload.get("Mounts") or ()
+
+            # Require an array of mounts.
+            if not isinstance(mounts, list):
+                # Throw for malformed engine data.
+                raise EngineOutputInvalid("docker", operation, "")
+
+            # For each reported mount.
+            for mount in mounts:
+                # Require a mapping mount.
+                if not isinstance(mount, Mapping):
+                    # Throw for malformed engine data.
+                    raise EngineOutputInvalid("docker", operation, "")
+
+                # If the container references the requested physical volume.
+                if mount.get("Type") == "volume" and mount.get("Name") == name:
+                    # Record the container once.
+                    references.append(container_reference(payload))
+
+                    # Avoid recording the same container more than once.
+                    break
+
+        # Map the inspected metadata and references onto a neutral observation.
+        return volume_info(metadata, tuple(references))
