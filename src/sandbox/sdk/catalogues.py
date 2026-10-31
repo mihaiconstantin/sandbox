@@ -39,3 +39,8 @@ class CatalogueOperations:
     def __init__(self, store: ConfigurationStore) -> None:
         # Retain the configuration store.
         self._store: ConfigurationStore = store
+
+    # List every registered catalogue in name order.
+    def list(self) -> tuple[CatalogueRegistration, ...]:
+        # Return the validated registrations.
+        return self._store.registrations()
