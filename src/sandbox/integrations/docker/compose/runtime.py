@@ -619,3 +619,19 @@ class ComposeRuntime(Runtime):
         if not is_owned_by(network_labels(payload), project):
             # Refuse to modify a network whose ownership cannot be verified.
             raise OwnershipViolation("network", network_reference(payload).id)
+
+    # Build one volume observation from inspected metadata and references.
+    def _volume_info(self, metadata: Mapping[str, Any], operation: str) -> VolumeInfo:
+        # Read and validate the physical volume name.
+        name: Any = metadata.get("Name")
+        if not isinstance(name, str) or not name:
+            # Throw for malformed engine data.
+            raise EngineOutputInvalid("docker", operation, "")
+
+        # Query every container that references the volume, including stopped containers.
+        identifiers: tuple[str, ...] = self._docker.container_ids_with_volume(name, operation = operation)
+
+        # Prepare the referencing containers.
+        references: list[RuntimeRef] = []
+
+        # For each matching container.
