@@ -166,6 +166,31 @@ class ComposeRuntime(Runtime):
         self._compose: ComposeCli = ComposeCli(docker)
         self._interactive_terminal: Callable[[], bool] = interactive_terminal or _standard_streams_are_terminals
 
+    # Resolve read-only Compose state and expose neutral requirements.
+    def prepare(self, plan: SandboxPlan, definition: RecipeDefinition) -> ComposePreparation:
+        # Require the neutral request values.
+        if not isinstance(plan, SandboxPlan):
+            # Throw.
+            raise ValueError("plan must be a SandboxPlan.")
+        if not isinstance(definition, RecipeDefinition):
+            # Throw.
+            raise ValueError("definition must be a RecipeDefinition.")
+
+        # Require every bound secret to be delivered from a readable host file.
+        validate_secret_files(plan)
+
+        # Prepare the Compose interpolation environment without mutating process state.
+        project_directory: Path = plan.project.directory.expanduser().resolve(strict = False)
+        environment: dict[str, str] = compose_environment(plan.project.name, project_directory)
+
+        # Require the supported Compose floor before resolving the recipe.
+        require_compose(self._compose, operation = "prepare")
+
+        # Render the sandbox-owned override before any Compose invocation.
+        override: str = render_override(plan, definition)
+
+        # Resolve the recipe and the realized base configuration in one operation scope.
+
     # Plan the effective UID and eligible volume targets without mutation.
     def plan_initialization(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> Initialization:
         # Verify the preparation token and artifact.
