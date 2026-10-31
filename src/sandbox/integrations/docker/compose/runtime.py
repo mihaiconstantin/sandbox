@@ -296,6 +296,35 @@ class ComposeRuntime(Runtime):
             selected_override = self._resolve_final_override(accepted, initialization)
 
         # Write the selected override for the single Compose start.
+        with _runtime_scope("create") as temporary:
+            # Compute the temporary override path.
+            override_file: Path = temporary / "override.yaml"
+            override_file.write_text(selected_override, encoding = "utf-8")
+
+            # Run exactly one start with streamed engine output and no implicit build or pull.
+            result: CommandResult = self._compose.up(
+                accepted._definition,
+                (*accepted._definition.files, override_file),
+                accepted._definition.service,
+                accepted._environment,
+                output,
+            )
+
+        # If the start failed, preserve the command, status, and diagnostic for the caller.
+        if result.returncode != 0:
+            # Throw the neutral create failure.
+            raise CreateFailed(self._docker.failure("create", result.arguments, result))
+
+        # Observe the box that the start should have created.
+        observation: BoxObservation | None = self.inspect(accepted._plan.project.name)
+
+        # If no managed primary container can be observed.
+        if observation is None:
+            # Throw.
+            raise CreatePostconditionFailed(accepted._plan.project.name, backend = "docker")
+
+        # Return the post-create observation.
+        return observation
 
     # Observe one managed box by name.
     def inspect(self, name: str) -> BoxObservation | None:
