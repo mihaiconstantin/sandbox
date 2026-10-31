@@ -86,3 +86,34 @@ class CatalogueOperations:
 
         # Return the registered catalogue directory.
         return self._store.resolve(name)
+
+    # Plan the removal of a registered catalogue without changing anything.
+    def plan_removal(self, name: str) -> CatalogueRemovalPlan | None:
+        # Validate the catalogue name before planning its removal.
+        validate_identifier(name, "catalogue")
+
+        # Find the registration in name order.
+        registration: CatalogueRegistration | None = next(
+            (item for item in self._store.registrations() if item.name == name),
+            None,
+        )
+
+        # If the catalogue is not registered.
+        if registration is None:
+            # Return no plan.
+            return None
+
+        # Collect the catalogue-scoped secret bindings.
+        bindings: tuple[CatalogueBinding, ...] = tuple(
+            CatalogueBinding(binding.alias, binding.host_path)
+            for binding in self._store.secret_bindings(name)
+        )
+
+        # Enrich the registration with its bindings.
+        enriched: CatalogueRegistration = replace(registration, bindings = bindings)
+
+        # Require the registered path to be canonical before planning any change.
+        removal.canonical_catalogue_directory(enriched, self._store.home)
+
+        # Return the validated plan.
+        return CatalogueRemovalPlan(home = self._store.home, registration = enriched)
