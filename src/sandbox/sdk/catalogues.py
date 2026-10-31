@@ -31,3 +31,11 @@ from sandbox.sdk.results import CatalogueInstallState, RecipeListing
 
 # Define the source value that selects the bundled catalogue.
 BUNDLED_CATALOGUE_SOURCE: str = BUNDLED_CATALOGUE_TYPE
+
+
+# Expose catalogue discovery, installation, validation, and removal.
+class CatalogueOperations:
+    # Bind the operations to the client-owned configuration store.
+    def __init__(self, store: ConfigurationStore) -> None:
+        # Retain the configuration store.
+        self._store: ConfigurationStore = store
