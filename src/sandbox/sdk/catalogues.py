@@ -61,3 +61,20 @@ class CatalogueOperations:
 
         # Return the observed installation state.
         return CatalogueInstallState(registered = registered, directory_present = directory_present)
+
+    # Install a catalogue and return its installed path.
+    def install(self, name: str, source: str = BUNDLED_CATALOGUE_SOURCE, *, force: bool = False) -> Path:
+        # Validate the catalogue name before installing it.
+        validate_identifier(name, "catalogue")
+
+        # Require exact replacement intent.
+        if type(force) is not bool:
+            # Throw a programming error for Python API misuse.
+            raise TypeError("force must be a Boolean.")
+
+        # Classify the source before checking the registration.
+        catalogue_source: sources.CatalogueSource = sources.source_for(source)
+
+        # Install the catalogue through the store-bound installer.
+        installer: CatalogueInstaller = CatalogueInstaller(self._store.home, self._store)
+        return installer.install(name, catalogue_source, force)
