@@ -702,6 +702,22 @@ class ComposeRuntime(Runtime):
             )
 
         # Project the final effective primary service.
+        projection: Projection = project_configuration(
+            configuration,
+            preparation._plan,
+            preparation._definition,
+            default_platform = preparation._environment.get("DOCKER_DEFAULT_PLATFORM") or None,
+            initialization = initialization,
+        )
+
+        # Re-apply the Compose safety checks to the realized configuration.
+        validate_projection(preparation._plan, preparation._definition, projection, initialization = initialization)
+
+        # Re-check that the realized configuration matches the validated projection.
+        validate_realized(preparation._base_projection, projection, initialization)
+
+        # Return the verified final override.
+        return override
 
     # Verify the preparation token and artifact before any operation.
     def _accept(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> ComposePreparation:
