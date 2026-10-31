@@ -117,3 +117,11 @@ class CatalogueOperations:
 
         # Return the validated plan.
         return CatalogueRemovalPlan(home = self._store.home, registration = enriched)
+
+    # Load and validate a registered catalogue.
+    def _load(self, name: str) -> Catalogue:
+        # Validate the catalogue name before resolving it.
+        validate_identifier(name, "catalogue")
+
+        # Load the manifest from the registered catalogue directory.
+        return manifest.load_catalogue(self._store.resolve(name))
