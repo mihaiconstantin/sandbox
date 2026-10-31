@@ -92,6 +92,17 @@ class CatalogueOperations:
         # Load the registered catalogue through the same validation rules.
         self._load(name)
 
+    # Return the recipes of a registered catalogue in name order.
+    def recipes(self, catalogue: str) -> tuple[RecipeListing, ...]:
+        # Load the catalogue declarations.
+        declaration: Catalogue = self._load(catalogue)
+
+        # Return the sorted recipe listings with the default marker.
+        return tuple(
+            RecipeListing(name = name, is_default = name == declaration.default_recipe)
+            for name in sorted(declaration.recipes)
+        )
+
     # Plan the removal of a registered catalogue without changing anything.
     def plan_removal(self, name: str) -> CatalogueRemovalPlan | None:
         # Validate the catalogue name before planning its removal.
