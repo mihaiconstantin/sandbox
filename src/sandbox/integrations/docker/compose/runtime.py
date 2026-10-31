@@ -190,6 +190,32 @@ class ComposeRuntime(Runtime):
         override: str = render_override(plan, definition)
 
         # Resolve the recipe and the realized base configuration in one operation scope.
+        with _runtime_scope("prepare") as temporary:
+            # Write the base override for the realized resolution.
+            override_file: Path = temporary / "override.yaml"
+            override_file.write_text(override, encoding = "utf-8")
+
+            # Resolve the recipe files before applying the sandbox override.
+            recipe_configuration: Mapping[str, Any] = self._compose.configuration(definition, definition.files, environment)
+
+            # Require the selected service to exist before applying the override.
+            self._require_service(recipe_configuration, definition.service)
+
+            # Resolve the complete configuration with the override applied last.
+            configuration: Mapping[str, Any] = self._compose.configuration(definition, (*definition.files, override_file), environment)
+
+        # Project the effective primary service without leaking the Compose model.
+        projection: Projection = project_configuration(
+            configuration,
+            plan,
+            definition,
+            default_platform = environment.get("DOCKER_DEFAULT_PLATFORM") or None,
+        )
+
+        # Apply the Compose-specific safety checks before the builder runs.
+        validate_projection(plan, definition, projection)
+
+        # Require a local image from the builder.
 
     # Plan the effective UID and eligible volume targets without mutation.
     def plan_initialization(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> Initialization:
