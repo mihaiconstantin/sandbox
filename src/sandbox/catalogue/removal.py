@@ -59,3 +59,35 @@ def canonical_catalogue_directory(registration: CatalogueRegistration, home: Pat
 
     # Return the canonical catalogue directory.
     return catalogue_dir
+
+
+# Remove the files of a registered catalogue.
+def remove_catalogue_directory(catalogue_dir: Path, name: str) -> None:
+    # If the path is a symbolic link.
+    if catalogue_dir.is_symlink():
+        # Throw.
+        raise RegistryError(f"Catalogue `{name}` path `{catalogue_dir}` is a symbolic link.")
+
+    # If the directory does not exist.
+    if not catalogue_dir.exists():
+        # Return.
+        return
+
+    # If the path is not a directory.
+    if not catalogue_dir.is_dir():
+        # Throw.
+        raise RegistryError(f"Catalogue `{name}` path `{catalogue_dir}` is not a directory.")
+
+    # Remove the directory.
+    try:
+        # Delete the catalogue files.
+        shutil.rmtree(catalogue_dir)
+
+    # If deletion fails.
+    except OSError as error:
+        # Throw.
+        raise IncompleteRemoval(
+            "catalogue",
+            name,
+            detail = f"Catalogue `{name}` could not be deleted from `{catalogue_dir}`: {error}. The registry was not changed; rerun the command to finish.",
+        ) from error
