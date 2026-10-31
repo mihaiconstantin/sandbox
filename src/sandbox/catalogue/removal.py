@@ -36,3 +36,26 @@ def load_catalogue_registration(home: Path, name: str) -> CatalogueRegistration 
 
     # Return the registration enriched with its bindings.
     return replace(registration, bindings = bindings)
+
+
+# Validate a registered catalogue and return its canonical directory.
+def canonical_catalogue_directory(registration: CatalogueRegistration, home: Path) -> Path:
+    # Resolve the `sandbox` and managed catalogue roots without requiring either to exist.
+    sandbox_root: Path = home.expanduser().resolve()
+    catalogue_root: Path = sandbox_root / registry.CATALOGUE_ROOT
+
+    # If the managed catalogue root resolves outside the `sandbox`.
+    if not catalogue_root.resolve().is_relative_to(sandbox_root):
+        # Throw.
+        raise RegistryError(f"Catalogue `{registration.name}` is not stored inside the `sandbox` directory.")
+
+    # Compute the canonical catalogue directory.
+    catalogue_dir: Path = catalogue_root / registration.name
+
+    # If the registered path is not the canonical catalogue directory.
+    if registration.path.expanduser().resolve() != catalogue_dir.resolve():
+        # Throw.
+        raise RegistryError(f"Catalogue `{registration.name}` is registered at the noncanonical path `{registration.path}`.")
+
+    # Return the canonical catalogue directory.
+    return catalogue_dir
