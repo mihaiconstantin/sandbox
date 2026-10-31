@@ -216,6 +216,30 @@ class ComposeRuntime(Runtime):
         validate_projection(plan, definition, projection)
 
         # Require a local image from the builder.
+        requirement: ArtifactRequirement = ArtifactRequirement(
+            reference = projection.spec.image,
+            platform = projection.spec.platform,
+            transport = ArtifactTransport.LOCAL_IMAGE,
+        )
+
+        # Build the neutral requirements.
+        requirements: RuntimeRequirements = RuntimeRequirements(spec = projection.spec, artifact = requirement)
+
+        # Preserve the recipe hooks for the generated initialization sequence.
+        recipe_hooks: tuple[dict[str, Any], ...] = tuple(recipe_pre_start(configuration, definition.service))
+
+        # Return the typed preparation token.
+        return ComposePreparation(
+            requirements = requirements,
+            _owner = self,
+            _plan = plan,
+            _definition = definition,
+            _environment = dict(environment),
+            _override = override,
+            _configuration = configuration,
+            _base_projection = projection,
+            _recipe_hooks = recipe_hooks,
+        )
 
     # Plan the effective UID and eligible volume targets without mutation.
     def plan_initialization(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> Initialization:
