@@ -27,3 +27,7 @@ from sandbox.validation.identifiers import validate_identifier
 
 # Import the SDK result values.
 from sandbox.sdk.results import CatalogueInstallState, RecipeListing
+
+
+# Define the source value that selects the bundled catalogue.
+BUNDLED_CATALOGUE_SOURCE: str = BUNDLED_CATALOGUE_TYPE
