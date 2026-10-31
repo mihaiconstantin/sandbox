@@ -168,3 +168,29 @@ class CatalogueOperations:
 
         # Resolve the selected recipe into its parent-first plan.
         return resolve_recipe(catalogue, directory, effective)
+
+    # Apply one validated catalogue removal plan.
+    def _remove_plan(self, plan: CatalogueRemovalPlan) -> None:
+        # Reload the registration to detect any change since planning.
+        current: CatalogueRegistration | None = next(
+            (item for item in self._store.registrations() if item.name == plan.registration.name),
+            None,
+        )
+
+        # If the catalogue is no longer registered.
+        if current is None:
+            # Throw.
+            raise RegistryError(f"Catalogue `{plan.registration.name}` is no longer registered.")
+
+        # If the registration changed since planning.
+        if current.type != plan.registration.type or current.path != plan.registration.path:
+            # Throw.
+            raise RegistryError(f"Catalogue `{plan.registration.name}` changed while planning removal.")
+
+        # Require the reloaded registration to use the canonical path.
+        catalogue_dir: Path = removal.canonical_catalogue_directory(current, self._store.home)
+
+        # Remove the catalogue files before changing the registration.
+        removal.remove_catalogue_directory(catalogue_dir, current.name)
+
+        # Remove the registration and bindings atomically.
