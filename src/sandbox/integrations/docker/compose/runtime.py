@@ -403,6 +403,37 @@ class ComposeRuntime(Runtime):
             # Throw.
             raise IncompleteRemoval("box", name, backend = "docker")
 
+    # Ensure a shared volume exists and report whether this call created it.
+    def ensure_volume(self, name: str) -> EnsuredVolume:
+        # Require a Docker-compatible physical volume name.
+        validate_volume_name(name)
+
+        # Inspect the existing volume, distinguishing absence from failure.
+        metadata: Mapping[str, Any] | None = self._docker.inspect_volume(name, operation = "ensure_volume")
+
+        # If the volume already exists.
+        if metadata is not None:
+            # Refuse to operate on a volume whose ownership cannot be verified.
+            if not is_managed_volume(volume_labels(metadata)):
+                # Throw.
+                raise VolumeOwnershipError(name)
+
+            # Reuse the volume without adopting or relabelling it.
+            return EnsuredVolume(info = self._volume_info(metadata, "ensure_volume"), created = False)
+
+        # Create the physical volume with the current ownership labels.
+        result: CommandResult = self._docker.create_volume(name, volume_create_labels(), operation = "ensure_volume")
+
+        # If the volume creation failed.
+        if result.returncode != 0:
+            # Throw.
+            raise VolumeCreateFailed(name, self._docker.failure("volume.create", result.arguments, result))
+
+        # Inspect the created volume to return a real observation.
+        metadata = self._docker.inspect_volume(name, operation = "ensure_volume")
+
+        # If the created volume does not exist.
+
     # Verify the preparation token and artifact before any operation.
     def _accept(self, preparation: RuntimePreparation, artifact: BuildArtifact) -> ComposePreparation:
         # Reject a token this runtime did not issue.
