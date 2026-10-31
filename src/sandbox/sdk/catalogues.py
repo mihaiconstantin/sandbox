@@ -78,3 +78,11 @@ class CatalogueOperations:
         # Install the catalogue through the store-bound installer.
         installer: CatalogueInstaller = CatalogueInstaller(self._store.home, self._store)
         return installer.install(name, catalogue_source, force)
+
+    # Resolve a registered catalogue to its absolute directory.
+    def locate(self, name: str) -> Path:
+        # Validate the catalogue name before resolving it.
+        validate_identifier(name, "catalogue")
+
+        # Return the registered catalogue directory.
+        return self._store.resolve(name)
