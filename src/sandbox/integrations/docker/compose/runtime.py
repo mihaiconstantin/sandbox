@@ -802,3 +802,27 @@ class ComposeRuntime(Runtime):
 
         # Map the inspected metadata and references onto a neutral observation.
         return volume_info(metadata, tuple(references))
+
+
+# Create an operation-scoped override directory and translate filesystem failures.
+@contextmanager
+def _runtime_scope(operation: str) -> Iterator[Path]:
+    # Allocate a unique operation-scoped temporary directory.
+    try:
+        # Open the temporary directory for the single runtime operation.
+        with tempfile.TemporaryDirectory(prefix = ".sb-runtime-") as temporary:
+            # Yield the operation-scoped directory.
+            yield Path(temporary)
+
+    # Translate an operation-scoped filesystem failure without leaking an OS exception.
+    except OSError as error:
+        # Throw the neutral engine failure.
+        raise EngineFailure(
+            CommandFailure(
+                backend = "docker",
+                operation = operation,
+                command = None,
+                exit_code = 1,
+                diagnostic = str(error)[:4096],
+            )
+        ) from error
