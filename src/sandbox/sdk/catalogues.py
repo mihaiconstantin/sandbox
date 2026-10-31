@@ -87,6 +87,11 @@ class CatalogueOperations:
         # Return the registered catalogue directory.
         return self._store.resolve(name)
 
+    # Validate a registered catalogue and return no result.
+    def validate(self, name: str) -> None:
+        # Load the registered catalogue through the same validation rules.
+        self._load(name)
+
     # Plan the removal of a registered catalogue without changing anything.
     def plan_removal(self, name: str) -> CatalogueRemovalPlan | None:
         # Validate the catalogue name before planning its removal.
