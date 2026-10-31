@@ -91,3 +91,7 @@ def remove_catalogue_directory(catalogue_dir: Path, name: str) -> None:
             name,
             detail = f"Catalogue `{name}` could not be deleted from `{catalogue_dir}`: {error}. The registry was not changed; rerun the command to finish.",
         ) from error
+
+
+# Define the public API of the catalogue removal helpers.
+__all__ = ["canonical_catalogue_directory", "load_catalogue_registration", "remove_catalogue_directory"]
