@@ -63,3 +63,7 @@ class RecipeListing:
         if type(self.is_default) is not bool:
             # Throw.
             raise ValueError("RecipeListing.is_default must be a Boolean.")
+
+
+# Define the public API of the `sandbox.sdk.results` module.
+__all__: list[str] = ["CatalogueInstallState", "CreateBoxResult", "RecipeListing"]
