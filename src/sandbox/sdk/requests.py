@@ -50,3 +50,7 @@ class CreateBoxRequest:
         if type(self.rebuild) is not bool:
             # Throw.
             raise ValueError("CreateBoxRequest.rebuild must be a Boolean.")
+
+
+# Define the public API of the `sandbox.sdk.requests` module.
+__all__: list[str] = ["CreateBoxRequest"]
