@@ -141,3 +141,14 @@ class CatalogueOperations:
 
         # Load the manifest from the registered catalogue directory.
         return manifest.load_catalogue(self._store.resolve(name))
+
+    # Select and resolve a recipe from a loaded catalogue.
+    def _resolve(self, catalogue: Catalogue, recipe: str | None) -> ResolvedCatalogueRecipe:
+        # Resolve the registered catalogue directory.
+        directory: Path = self._store.resolve(catalogue.name)
+
+        # Select the effective recipe from the explicit request or catalogue default.
+        effective: str = select_recipe(catalogue, recipe)
+
+        # Resolve the selected recipe into its parent-first plan.
+        return resolve_recipe(catalogue, directory, effective)
