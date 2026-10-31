@@ -270,6 +270,33 @@ class ComposeRuntime(Runtime):
         # Return the neutral initialization intent for the validated UID.
         return Initialization(uid = uid, targets = tuple(targets))
 
+    # Create and start one box from a prepared artifact without building or pulling.
+    def create(
+        self,
+        preparation: RuntimePreparation,
+        artifact: BuildArtifact,
+        initialization: Initialization | None = None,
+        *,
+        output: OutputSink = SILENT,
+    ) -> BoxObservation:
+        # Verify the preparation token and artifact before mutation.
+        accepted: ComposePreparation = self._accept(preparation, artifact)
+
+        # Require a typed initialization when one is supplied.
+        if initialization is not None and not isinstance(initialization, Initialization):
+            # Throw.
+            raise ValueError("initialization must be an Initialization value or `None`.")
+
+        # Use the base override when no generated initialization hook is required.
+        selected_override: str = accepted._override
+
+        # If initialization targets require a generated hook, resolve and verify it first.
+        if initialization is not None and initialization.targets:
+            # Resolve the final override and prove the realized configuration.
+            selected_override = self._resolve_final_override(accepted, initialization)
+
+        # Write the selected override for the single Compose start.
+
     # Observe one managed box by name.
     def inspect(self, name: str) -> BoxObservation | None:
         # Discover the managed box.
