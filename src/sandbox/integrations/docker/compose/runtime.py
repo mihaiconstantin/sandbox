@@ -1004,3 +1004,7 @@ def _runtime_scope(operation: str) -> Iterator[Path]:
                 diagnostic = str(error)[:4096],
             )
         ) from error
+
+
+# Define the public API of the Compose runtime integration.
+__all__: list[str] = ["ComposePreparation", "ComposeRuntime"]
