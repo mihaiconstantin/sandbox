@@ -42,3 +42,24 @@ class CatalogueInstallState:
         if type(self.registered) is not bool or type(self.directory_present) is not bool:
             # Throw.
             raise ValueError("CatalogueInstallState flags must be Booleans.")
+
+
+# Report one recipe declaration and its default marker.
+@dataclass(frozen = True, slots = True)
+class RecipeListing:
+    # Record the recipe name.
+    name: str
+
+    # Record whether the recipe is the catalogue default.
+    is_default: bool
+
+    def __post_init__(self) -> None:
+        # Require a nonblank recipe name.
+        if not isinstance(self.name, str) or not self.name.strip():
+            # Throw.
+            raise ValueError("RecipeListing.name must be a nonblank string.")
+
+        # Require an exact default marker.
+        if type(self.is_default) is not bool:
+            # Throw.
+            raise ValueError("RecipeListing.is_default must be a Boolean.")
