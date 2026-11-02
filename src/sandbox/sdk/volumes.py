@@ -38,3 +38,8 @@ class VolumeOperations:
 
         # Return the observed volume or the proven absence.
         return self._runtime.inspect_volume(name)
+
+    # List every managed shared volume in name order.
+    def list(self) -> tuple[VolumeInfo, ...]:
+        # Return the observations sorted by physical name.
+        return tuple(sorted(self._runtime.list_volumes(), key = lambda volume: volume.name))
