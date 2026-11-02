@@ -222,3 +222,15 @@ class CatalogueOperations:
         removal.remove_catalogue_directory(catalogue_dir, current.name)
 
         # Remove the registration and bindings atomically.
+        try:
+            # Apply the registry change after the filesystem change.
+            self._store.unregister(current.name)
+
+        # If the registration cannot be updated.
+        except OSError as error:
+            # Report the partial removal with the recovery instruction.
+            raise IncompleteRemoval(
+                "catalogue",
+                current.name,
+                f"Catalogue `{current.name}` could not be fully removed because the registry `{self._store.registry_file}` could not be updated: {error}. Rerun the command to finish.",
+            ) from error
