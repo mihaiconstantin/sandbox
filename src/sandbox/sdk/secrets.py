@@ -33,3 +33,20 @@ class SecretOperations:
 
         # Return the validated binding or its absence.
         return self._store.secret_binding(catalogue, alias)
+
+    # Bind a host secret file to a catalogue-scoped alias.
+    def bind(self, catalogue: str, alias: str, host_file: Path) -> SecretBinding:
+        # Validate the configuration keys before checking the catalogue.
+        validate_identifier(catalogue, "catalogue")
+        validate_identifier(alias, "secret")
+
+        # Require a host file path.
+        if not isinstance(host_file, Path):
+            # Throw a programming error for Python API misuse.
+            raise TypeError("host_file must be a path.")
+
+        # Require the catalogue to be registered and resolvable.
+        self._store.require(catalogue)
+
+        # Save the binding without reading the secret contents.
+        return self._store.save_secret(catalogue, alias, host_file)
