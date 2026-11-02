@@ -62,3 +62,7 @@ class SecretOperations:
 
         # Remove the binding and report whether it existed.
         return self._store.remove_secret(catalogue, alias)
+
+
+# Define the public API of the `sandbox.sdk.secrets` module.
+__all__: list[str] = ["SecretOperations"]
