@@ -19,3 +19,14 @@ class VolumeOperations:
         # Retain the runtime and the advisory sink.
         self._runtime: Runtime = runtime
         self._output: OutputSink = output
+
+    # Ensure one shared volume exists and report whether this call created it.
+    def ensure(self, name: str) -> EnsuredVolume:
+        # Reject an invalid physical volume name before reaching the runtime.
+        validate_volume_name(name)
+
+        # Report the volume phase before the runtime call.
+        self._output.progress(ProgressPhase.ENSURE_VOLUME, subject = name)
+
+        # Ensure the volume through the runtime port.
+        return self._runtime.ensure_volume(name)
