@@ -150,6 +150,34 @@ class CatalogueOperations:
         # Return the validated plan.
         return CatalogueRemovalPlan(home = self._store.home, registration = enriched)
 
+    # Remove a catalogue by name or by its validated removal plan.
+    def remove(self, target: str | CatalogueRemovalPlan) -> bool:
+        # If the caller supplied a catalogue name.
+        if isinstance(target, str):
+            # Validate the name and re-plan the removal.
+            plan: CatalogueRemovalPlan | None = self.plan_removal(target)
+
+            # If the catalogue is not registered.
+            if plan is None:
+                # Report no removal.
+                return False
+
+        # If the caller supplied a validated removal plan.
+        elif isinstance(target, CatalogueRemovalPlan):
+            # Use the plan as the revalidation target.
+            plan = target
+
+        # Otherwise.
+        else:
+            # Throw a programming error for Python API misuse.
+            raise TypeError("target must be a catalogue name or a CatalogueRemovalPlan.")
+
+        # Apply the removal plan.
+        self._remove_plan(plan)
+
+        # Report that the catalogue was removed.
+        return True
+
     # Load and validate a registered catalogue.
     def _load(self, name: str) -> Catalogue:
         # Validate the catalogue name before resolving it.
