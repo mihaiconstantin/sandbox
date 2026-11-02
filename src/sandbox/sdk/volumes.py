@@ -30,3 +30,11 @@ class VolumeOperations:
 
         # Ensure the volume through the runtime port.
         return self._runtime.ensure_volume(name)
+
+    # Observe one managed shared volume by name, or report absence.
+    def get(self, name: str) -> VolumeInfo | None:
+        # Reject an invalid physical volume name before reaching the runtime.
+        validate_volume_name(name)
+
+        # Return the observed volume or the proven absence.
+        return self._runtime.inspect_volume(name)
