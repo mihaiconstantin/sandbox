@@ -43,3 +43,14 @@ class VolumeOperations:
     def list(self) -> tuple[VolumeInfo, ...]:
         # Return the observations sorted by physical name.
         return tuple(sorted(self._runtime.list_volumes(), key = lambda volume: volume.name))
+
+    # Remove one managed shared volume by name.
+    def remove(self, name: str) -> None:
+        # Reject an invalid physical volume name before reaching the runtime.
+        validate_volume_name(name)
+
+        # Report the removal phase before the runtime call.
+        self._output.progress(ProgressPhase.REMOVE_VOLUME, subject = name)
+
+        # Apply the runtime removal policy and postcondition.
+        self._runtime.remove_volume(name)
