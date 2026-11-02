@@ -19,3 +19,8 @@ class SecretOperations:
     def __init__(self, store: ConfigurationStore) -> None:
         # Retain the configuration store.
         self._store: ConfigurationStore = store
+
+    # List every configured secret binding.
+    def list(self) -> tuple[SecretBinding, ...]:
+        # Return the validated configuration bindings.
+        return self._store.secret_bindings()
