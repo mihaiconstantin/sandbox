@@ -50,3 +50,15 @@ class SecretOperations:
 
         # Save the binding without reading the secret contents.
         return self._store.save_secret(catalogue, alias, host_file)
+
+    # Remove one catalogue-scoped secret binding.
+    def remove(self, catalogue: str, alias: str) -> bool:
+        # Validate the configuration keys before checking the catalogue.
+        validate_identifier(catalogue, "catalogue")
+        validate_identifier(alias, "secret")
+
+        # Require the catalogue to be registered and resolvable.
+        self._store.require(catalogue)
+
+        # Remove the binding and report whether it existed.
+        return self._store.remove_secret(catalogue, alias)
