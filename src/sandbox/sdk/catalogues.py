@@ -234,3 +234,7 @@ class CatalogueOperations:
                 current.name,
                 f"Catalogue `{current.name}` could not be fully removed because the registry `{self._store.registry_file}` could not be updated: {error}. Rerun the command to finish.",
             ) from error
+
+
+# Define the public API of the `sandbox.sdk.catalogues` module.
+__all__: list[str] = ["BUNDLED_CATALOGUE_SOURCE", "CatalogueOperations"]
