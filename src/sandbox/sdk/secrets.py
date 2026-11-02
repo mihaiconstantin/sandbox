@@ -24,3 +24,12 @@ class SecretOperations:
     def list(self) -> tuple[SecretBinding, ...]:
         # Return the validated configuration bindings.
         return self._store.secret_bindings()
+
+    # Read one catalogue-scoped secret binding, or report absence.
+    def get(self, catalogue: str, alias: str) -> SecretBinding | None:
+        # Validate the configuration keys before reading the binding.
+        validate_identifier(catalogue, "catalogue")
+        validate_identifier(alias, "secret")
+
+        # Return the validated binding or its absence.
+        return self._store.secret_binding(catalogue, alias)
