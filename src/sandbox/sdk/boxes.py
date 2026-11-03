@@ -90,3 +90,11 @@ class BoxOperations:
 
         # Delegate the observed-state policy to the runtime.
         return self._runtime.stop(name)
+
+    # Enter a live box and return the shell exit status.
+    def enter(self, name: str, *, shell: str, login: bool) -> int:
+        # Reject an invalid project name before reaching the runtime.
+        validate_identifier(name, "project")
+
+        # Delegate the interactive shell without SDK terminal policy or output.
+        return self._runtime.enter(name, shell, login)
