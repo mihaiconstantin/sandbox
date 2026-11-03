@@ -16,3 +16,46 @@ from sandbox.sdk.boxes import BoxOperations
 from sandbox.sdk.catalogues import CatalogueOperations
 from sandbox.sdk.secrets import SecretOperations
 from sandbox.sdk.volumes import VolumeOperations
+
+
+# Own one configuration home and expose the four public SDK operation objects.
+class SandboxClient:
+    # Bind the client to its home and explicit neutral collaborators.
+    def __init__(
+        self,
+        *,
+        home: Path,
+        runtime: Runtime,
+        builder: Builder,
+        output: OutputSink | None = None,
+    ) -> None:
+        # Require the configuration home and the two neutral ports.
+        if not isinstance(home, Path):
+            # Throw a programming error for Python API misuse.
+            raise TypeError("home must be a path.")
+        if not isinstance(runtime, Runtime):
+            # Throw a programming error for Python API misuse.
+            raise TypeError("runtime must implement the Runtime port.")
+        if not isinstance(builder, Builder):
+            # Throw a programming error for Python API misuse.
+            raise TypeError("builder must implement the Builder port.")
+
+        # Normalize the optional output sink to the stateless silent default.
+        sink: OutputSink = SILENT if output is None else output
+
+        # Require the selected sink to implement the output port.
+        if not isinstance(sink, OutputSink):
+            # Throw a programming error for Python API misuse.
+            raise TypeError("output must implement the OutputSink port.")
+
+        # Retain the home exactly as supplied without resolving or reading it.
+        self._home: Path = home
+
+        # Construct the client-owned configuration store without reading the home.
+        store: ConfigurationStore = ConfigurationStore(home)
+
+        # Eagerly construct the four operation objects and share the store.
+        self._catalogues: CatalogueOperations = CatalogueOperations(store)
+        self._secrets: SecretOperations = SecretOperations(store)
+        self._volumes: VolumeOperations = VolumeOperations(runtime, sink)
+        self._boxes: BoxOperations = BoxOperations(runtime, builder, self._catalogues, self._secrets, sink)
