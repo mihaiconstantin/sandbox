@@ -285,3 +285,7 @@ class BoxOperations:
         except OSError:
             # Leave the best-effort cleanup silent.
             return
+
+
+# Define the public API of the `sandbox.sdk.boxes` module.
+__all__: list[str] = ["BoxOperations"]
