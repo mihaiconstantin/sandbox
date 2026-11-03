@@ -128,6 +128,65 @@ class BoxOperations:
         staging_dir: Path | None = None
 
         # Prepare the image, ensure volumes, plan initialization, and create the box.
+        try:
+            # Create operation-scoped staging for a byte-carrying transport.
+            if requirements.artifact.transport is not ArtifactTransport.LOCAL_IMAGE:
+                # Create the caller-owned staging directory.
+                staging_dir = Path(tempfile.mkdtemp(prefix = "sandbox-artifact-"))
+
+            # Report the image phase before the builder can build or pull.
+            self._output.progress(ProgressPhase.PREPARE_IMAGE, subject = requirements.artifact.reference)
+
+            # Ensure the required image exists and obtain the typed artifact.
+            artifact = self._builder.prepare(
+                plan,
+                definition,
+                requirements.artifact,
+                rebuild = request.rebuild,
+                staging_dir = staging_dir,
+                output = self._output,
+            )
+
+            # Require the artifact to satisfy the runtime requirement before volume mutation.
+            require_compatible_artifact(requirements.artifact, artifact)
+
+            # Ensure each declared shared volume in plan order.
+            for declaration in plan.volumes:
+                # Report the volume phase before the runtime call.
+                self._output.progress(ProgressPhase.ENSURE_VOLUME, subject = declaration.name)
+
+                # Create the volume when absent and reuse it when present.
+                self._runtime.ensure_volume(declaration.name)
+
+            # Plan the effective UID and eligible volume targets without mutation.
+            initialization: Initialization = self._runtime.plan_initialization(preparation, artifact)
+
+            # Apply the root and initialization policy on every create path.
+            validate_initialization(plan, initialization, mounts = requirements.spec.mounts)
+
+            # Report the create phase before the runtime mutation.
+            self._output.progress(ProgressPhase.CREATE, subject = plan.project.name)
+
+            # Start from the prepared artifact without an implicit build or pull.
+            observation: BoxObservation = self._runtime.create(
+                preparation,
+                artifact,
+                initialization,
+                output = self._output,
+            )
+
+            # Return the effective recipe and the observed box.
+            return CreateBoxResult(recipe = recipe.name, box = observation)
+
+        # Always remove operation-scoped artifact staging.
+        finally:
+            # Remove the archive before its staging directory.
+            self._remove_artifact(artifact)
+
+            # Remove the staging directory when one was created.
+            if staging_dir is not None:
+                # Remove the staging tree best-effort without masking the operation result.
+                shutil.rmtree(staging_dir, ignore_errors = True)
 
     # Observe one managed box by name, or report proven absence.
     def get(self, name: str) -> BoxObservation | None:
