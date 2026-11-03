@@ -98,3 +98,11 @@ class BoxOperations:
 
         # Delegate the interactive shell without SDK terminal policy or output.
         return self._runtime.enter(name, shell, login)
+
+    # Preview the runtime resources removed with a box.
+    def plan_removal(self, name: str) -> RemovalPlan:
+        # Reject an invalid project name before reaching the runtime.
+        validate_identifier(name, "project")
+
+        # Return the read-only removal preview.
+        return self._runtime.plan_removal(name)
