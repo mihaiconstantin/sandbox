@@ -106,3 +106,14 @@ class BoxOperations:
 
         # Return the read-only removal preview.
         return self._runtime.plan_removal(name)
+
+    # Remove a box and its owned runtime resources.
+    def remove(self, name: str) -> None:
+        # Reject an invalid project name before reaching the runtime.
+        validate_identifier(name, "project")
+
+        # Report the removal phase before the runtime call.
+        self._output.progress(ProgressPhase.REMOVE, subject = name)
+
+        # Apply the runtime removal policy and postcondition.
+        self._runtime.remove(name)
