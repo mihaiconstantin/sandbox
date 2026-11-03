@@ -56,6 +56,32 @@ class BoxOperations:
         self._secrets: SecretOperations = secrets
         self._output: OutputSink = output
 
+    # Create and start a box from a registered catalogue recipe.
+    def create(self, request: CreateBoxRequest) -> CreateBoxResult:
+        # Require the public request value.
+        if not isinstance(request, CreateBoxRequest):
+            # Throw a programming error for Python API misuse.
+            raise TypeError("request must be a CreateBoxRequest.")
+
+        # Validate identifiers before touching configuration or a port.
+        validate_identifier(request.project, "project")
+        validate_identifier(request.catalogue, "catalogue")
+
+        # Resolve the project directory before any engine call.
+        project_dir: Path = self._resolve_project_dir(request.project_dir)
+
+        # Resolve the selected catalogue recipe and its registered directory.
+        recipe: ResolvedCatalogueRecipe = self._catalogues.resolve_recipe(request.catalogue, request.recipe)
+        catalogue_root: Path = self._catalogues.locate(request.catalogue)
+
+        # Resolve every secret required by the selected recipe.
+        secrets: list[Secret] = []
+
+        # Declare the required secret alias.
+        alias: str
+
+        # For each required secret.
+
     # Observe one managed box by name, or report proven absence.
     def get(self, name: str) -> BoxObservation | None:
         # Reject an invalid project name before reaching the runtime.
