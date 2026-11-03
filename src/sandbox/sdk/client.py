@@ -77,3 +77,9 @@ class SandboxClient:
     def volumes(self) -> VolumeOperations:
         # Return the eagerly constructed volume operations.
         return self._volumes
+
+    # Expose the catalogue operations.
+    @property
+    def catalogues(self) -> CatalogueOperations:
+        # Return the eagerly constructed catalogue operations.
+        return self._catalogues
