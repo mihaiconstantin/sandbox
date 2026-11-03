@@ -117,3 +117,22 @@ class BoxOperations:
 
         # Apply the runtime removal policy and postcondition.
         self._runtime.remove(name)
+
+    # Resolve one host project directory without leaking raw filesystem errors.
+    def _resolve_project_dir(self, directory: Path) -> Path:
+        # Resolve the project directory to an absolute existing path.
+        try:
+            resolved: Path = directory.expanduser().resolve(strict = True)
+
+        # If the directory cannot be resolved.
+        except OSError as error:
+            # Throw a typed configuration error.
+            raise ConfigurationError("project_dir", f"Project directory `{directory}` cannot be resolved: {error}.") from error
+
+        # If the resolved path is not a directory.
+        if not resolved.is_dir():
+            # Throw.
+            raise ConfigurationError("project_dir", f"Project directory `{resolved}` is not a directory.")
+
+        # Return the resolved project directory.
+        return resolved
