@@ -106,6 +106,28 @@ class BoxOperations:
         )
 
         # Build the opaque definition from the parent-first recipe files and service selector.
+        definition: RecipeDefinition = RecipeDefinition(
+            catalogue = request.catalogue,
+            recipe = recipe.name,
+            catalogue_root = catalogue_root,
+            files = recipe.compose,
+            service = recipe.service,
+        )
+
+        # Resolve read-only runtime state and expose neutral requirements.
+        preparation: RuntimePreparation = self._runtime.prepare(plan, definition)
+
+        # Read the neutral requirements the runtime exposes.
+        requirements: RuntimeRequirements = preparation.requirements
+
+        # Validate neutral policy before any image or volume mutation.
+        validate_spec(plan, requirements.spec, catalogue_root = catalogue_root)
+
+        # Track the prepared artifact and the operation-scoped staging directory.
+        artifact: BuildArtifact | None = None
+        staging_dir: Path | None = None
+
+        # Prepare the image, ensure volumes, plan initialization, and create the box.
 
     # Observe one managed box by name, or report proven absence.
     def get(self, name: str) -> BoxObservation | None:
