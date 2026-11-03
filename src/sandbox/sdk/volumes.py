@@ -54,3 +54,7 @@ class VolumeOperations:
 
         # Apply the runtime removal policy and postcondition.
         self._runtime.remove_volume(name)
+
+
+# Define the public API of the `sandbox.sdk.volumes` module.
+__all__: list[str] = ["VolumeOperations"]
