@@ -89,3 +89,7 @@ class SandboxClient:
     def secrets(self) -> SecretOperations:
         # Return the eagerly constructed secret operations.
         return self._secrets
+
+
+# Define the public API of the `sandbox.sdk.client` module.
+__all__: list[str] = ["SandboxClient"]
