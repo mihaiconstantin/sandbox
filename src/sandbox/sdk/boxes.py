@@ -79,3 +79,14 @@ class BoxOperations:
 
         # Delegate the observed-state policy to the runtime.
         return self._runtime.start(name)
+
+    # Stop an existing box and report whether this call changed its state.
+    def stop(self, name: str) -> bool:
+        # Reject an invalid project name before reaching the runtime.
+        validate_identifier(name, "project")
+
+        # Report the stop phase even for a no-op transition.
+        self._output.progress(ProgressPhase.STOP, subject = name)
+
+        # Delegate the observed-state policy to the runtime.
+        return self._runtime.stop(name)
