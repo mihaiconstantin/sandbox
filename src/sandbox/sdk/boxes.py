@@ -36,3 +36,22 @@ from sandbox.sdk.catalogues import CatalogueOperations
 from sandbox.sdk.requests import CreateBoxRequest
 from sandbox.sdk.results import CreateBoxResult
 from sandbox.sdk.secrets import SecretOperations
+
+
+# Expose box creation and lifecycle use cases over the neutral ports.
+class BoxOperations:
+    # Bind the operations to their ports, configuration operations, and output sink.
+    def __init__(
+        self,
+        runtime: Runtime,
+        builder: Builder,
+        catalogues: CatalogueOperations,
+        secrets: SecretOperations,
+        output: OutputSink,
+    ) -> None:
+        # Retain the ports and the advisory sink.
+        self._runtime: Runtime = runtime
+        self._builder: Builder = builder
+        self._catalogues: CatalogueOperations = catalogues
+        self._secrets: SecretOperations = secrets
+        self._output: OutputSink = output
