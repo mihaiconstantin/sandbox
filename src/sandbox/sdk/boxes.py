@@ -136,3 +136,20 @@ class BoxOperations:
 
         # Return the resolved project directory.
         return resolved
+
+    # Remove the prepared archive when one was written.
+    def _remove_artifact(self, artifact: BuildArtifact | None) -> None:
+        # If no archive was written.
+        if artifact is None or artifact.archive_path is None:
+            # Return.
+            return
+
+        # Remove the operation-scoped archive without masking the operation result.
+        try:
+            # Delete the archive if it still exists.
+            artifact.archive_path.unlink(missing_ok = True)
+
+        # Ignore cleanup filesystem failures.
+        except OSError:
+            # Leave the best-effort cleanup silent.
+            return
