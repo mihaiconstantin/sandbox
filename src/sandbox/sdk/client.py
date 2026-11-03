@@ -71,3 +71,9 @@ class SandboxClient:
     def boxes(self) -> BoxOperations:
         # Return the eagerly constructed box operations.
         return self._boxes
+
+    # Expose the shared-volume operations.
+    @property
+    def volumes(self) -> VolumeOperations:
+        # Return the eagerly constructed volume operations.
+        return self._volumes
