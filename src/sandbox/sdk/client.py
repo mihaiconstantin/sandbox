@@ -83,3 +83,9 @@ class SandboxClient:
     def catalogues(self) -> CatalogueOperations:
         # Return the eagerly constructed catalogue operations.
         return self._catalogues
+
+    # Expose the secret operations.
+    @property
+    def secrets(self) -> SecretOperations:
+        # Return the eagerly constructed secret operations.
+        return self._secrets
