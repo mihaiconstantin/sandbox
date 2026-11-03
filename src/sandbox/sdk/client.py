@@ -65,3 +65,9 @@ class SandboxClient:
     def home(self) -> Path:
         # Return the home exactly as supplied.
         return self._home
+
+    # Expose the box operations.
+    @property
+    def boxes(self) -> BoxOperations:
+        # Return the eagerly constructed box operations.
+        return self._boxes
