@@ -59,3 +59,9 @@ class SandboxClient:
         self._secrets: SecretOperations = SecretOperations(store)
         self._volumes: VolumeOperations = VolumeOperations(runtime, sink)
         self._boxes: BoxOperations = BoxOperations(runtime, builder, self._catalogues, self._secrets, sink)
+
+    # Expose the configuration home supplied at construction.
+    @property
+    def home(self) -> Path:
+        # Return the home exactly as supplied.
+        return self._home
