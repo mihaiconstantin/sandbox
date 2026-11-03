@@ -68,3 +68,14 @@ class BoxOperations:
     def list(self) -> tuple[BoxObservation, ...]:
         # Return the observations sorted by box name.
         return tuple(sorted(self._runtime.list(), key = lambda observation: observation.name))
+
+    # Start an existing box and report whether this call changed its state.
+    def start(self, name: str) -> bool:
+        # Reject an invalid project name before reaching the runtime.
+        validate_identifier(name, "project")
+
+        # Report the start phase even for a no-op transition.
+        self._output.progress(ProgressPhase.START, subject = name)
+
+        # Delegate the observed-state policy to the runtime.
+        return self._runtime.start(name)
