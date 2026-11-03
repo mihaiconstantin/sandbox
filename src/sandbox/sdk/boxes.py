@@ -55,3 +55,11 @@ class BoxOperations:
         self._catalogues: CatalogueOperations = catalogues
         self._secrets: SecretOperations = secrets
         self._output: OutputSink = output
+
+    # Observe one managed box by name, or report proven absence.
+    def get(self, name: str) -> BoxObservation | None:
+        # Reject an invalid project name before reaching the runtime.
+        validate_identifier(name, "project")
+
+        # Return the observed box or the proven absence.
+        return self._runtime.inspect(name)
