@@ -81,6 +81,31 @@ class BoxOperations:
         alias: str
 
         # For each required secret.
+        for alias in recipe.secrets:
+            # Read the validated catalogue-scoped binding.
+            binding: SecretBinding | None = self._secrets.get(request.catalogue, alias)
+
+            # If the secret has no user binding.
+            if binding is None:
+                # Throw with the current catalogue, alias, and recipe facts.
+                raise MissingSecret(request.catalogue, alias, recipe.name)
+
+            # Record the resolved host file.
+            secrets.append(Secret(alias = binding.alias, host_path = binding.host_path))
+
+        # Build the neutral plan from the project and resolved recipe.
+        plan: SandboxPlan = SandboxPlan(
+            project = Project(name = request.project, directory = project_dir),
+            workspace = Workspace(host_directory = project_dir, target = project_target(request.project)),
+            volumes = tuple(
+                VolumeDeclaration(name = volume.name, scope = volume.scope, target = volume.target)
+                for volume in recipe.volumes
+            ),
+            secrets = tuple(secrets),
+            allow_root = recipe.allow_root,
+        )
+
+        # Build the opaque definition from the parent-first recipe files and service selector.
 
     # Observe one managed box by name, or report proven absence.
     def get(self, name: str) -> BoxObservation | None:
