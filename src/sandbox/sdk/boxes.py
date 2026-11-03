@@ -63,3 +63,8 @@ class BoxOperations:
 
         # Return the observed box or the proven absence.
         return self._runtime.inspect(name)
+
+    # List every managed box in name order.
+    def list(self) -> tuple[BoxObservation, ...]:
+        # Return the observations sorted by box name.
+        return tuple(sorted(self._runtime.list(), key = lambda observation: observation.name))
