@@ -84,3 +84,18 @@ class CliOutput(OutputSink):
             return
 
         # Start or update the single status line.
+        if self._status is None:
+            # Create a transient live status with a neutral spinner.
+            self._status = Live(
+                Spinner("dots", text = text),
+                console = self._console,
+                transient = True,
+                auto_refresh = True,
+                refresh_per_second = 12.5,
+            )
+
+            # Render the first status immediately.
+            self._status.start(refresh = True)
+        else:
+            # Update the existing status with a new phase.
+            self._status.update(Spinner("dots", text = text), refresh = True)
