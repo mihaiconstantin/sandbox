@@ -40,3 +40,9 @@ def stream_is_terminal(stream: object) -> bool:
 def term_is_dumb() -> bool:
     # Read the terminal type.
     return os.environ.get("TERM", "").strip().lower() in ("dumb", "unknown")
+
+
+# Report whether the environment disables color explicitly.
+def no_color_requested() -> bool:
+    # Treat any non-empty `NO_COLOR` as a color veto.
+    return bool(os.environ.get("NO_COLOR"))
