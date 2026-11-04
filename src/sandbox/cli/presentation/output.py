@@ -100,6 +100,31 @@ class CliOutput(OutputSink):
             # Update the existing status with a new phase.
             self._status.update(Spinner("dots", text = text), refresh = True)
 
+    # Forward one opaque child chunk to stderr without markup parsing.
+    def process_output(self, channel: OutputChannel, data: bytes) -> None:
+        # Normalize the channel while accepting protocol-compatible string values.
+        normalized: OutputChannel = channel if isinstance(channel, OutputChannel) else OutputChannel(channel)
+
+        # Decode incrementally so split UTF-8 sequences survive.
+        text: str = self._decoders[normalized].decode(data)
+
+        # Ignore an incomplete chunk with no decodable text yet.
+        if not text:
+            # Return until the next chunk supplies the remaining bytes.
+            return
+
+        # Strip ANSI and unsafe controls on a pipe.
+        if not self._is_terminal:
+            # Keep line structure while removing terminal control sequences.
+            text = sanitize_process_output(text)
+
+        # Suspend the status before writing raw child output.
+        self._stop_status()
+
+        # Write and flush without Rich markup or wrapping.
+        self._console.file.write(text)
+        self._console.file.flush()
+
     # Stop and drop the current status line before raw output.
     def _stop_status(self) -> None:
         # Clear the plain fallback status marker.
