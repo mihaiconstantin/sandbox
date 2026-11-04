@@ -125,6 +125,37 @@ class CliOutput(OutputSink):
         self._console.file.write(text)
         self._console.file.flush()
 
+    # Stop the transient status before the invocation completes.
+    def close(self) -> None:
+        # Ignore repeated finalization.
+        if self._closed:
+            # Return without decoding the children twice.
+            return
+
+        # Mark the sink as closed.
+        self._closed = True
+
+        # Stop and discard the active status line.
+        self._stop_status()
+
+        # Flush any final decoder replacement characters.
+        for decoder in self._decoders.values():
+            # Decode the final bytes.
+            text: str = decoder.decode(b"", final = True)
+
+            # Write a final replacement character when needed.
+            if text:
+                # Sanitize pipe output.
+                if not self._is_terminal:
+                    # Strip terminal controls.
+                    text = sanitize_process_output(text)
+
+                # Write the final text plainly.
+                self._console.file.write(text)
+
+        # Flush whatever the decoders completed.
+        self._console.file.flush()
+
     # Stop and drop the current status line before raw output.
     def _stop_status(self) -> None:
         # Clear the plain fallback status marker.
