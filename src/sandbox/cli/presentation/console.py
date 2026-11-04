@@ -74,3 +74,22 @@ def stderr_console() -> Console:
 
     # Build the one console for this invocation.
     return Console(**kwargs)
+
+
+# Own the one stderr Rich console constructed for one CLI invocation.
+@dataclass
+class CliPresentation:
+    # Hold the single stderr console.
+    err: Console
+
+    # Report whether stderr is an interactive terminal.
+    is_terminal: bool = False
+
+    # Report whether the terminal is dumb or unknown.
+    is_dumb_terminal: bool = False
+
+    # Hold the composition-supplied runtime vocabulary.
+    vocabulary: RuntimeVocabulary = DOCKER_VOCABULARY
+
+    # Expose the SDK output sink bound to this console.
+    output: CliOutput = field(init = False)
