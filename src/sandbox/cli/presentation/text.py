@@ -42,3 +42,7 @@ def sanitize_process_output(value: str) -> str:
 
     # Keep newline, carriage return, and tab; remove other controls.
     return re.sub(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]", "", value)
+
+
+# Define the public API of the `sandbox.cli.presentation.text` module.
+__all__: list[str] = ["sanitize_process_output", "sanitize_value", "strip_ansi"]
