@@ -98,3 +98,33 @@ class CliPresentation:
     def __post_init__(self) -> None:
         # Allow transient status only on a real, non-dumb terminal.
         self.output = CliOutput(self.err, is_terminal = self.is_terminal and not self.is_dumb_terminal)
+
+    # Construct the production presentation with pipe-safe console settings.
+    @classmethod
+    def attach(
+        cls,
+        *,
+        vocabulary: RuntimeVocabulary | None = None,
+        console: Console | None = None,
+    ) -> CliPresentation:
+        # Honor an explicitly injected console without changing its policy.
+        if console is not None:
+            # Read the injected console's own terminal facts.
+            return cls(
+                err = console,
+                is_terminal = bool(console.is_terminal),
+                is_dumb_terminal = bool(console.is_dumb_terminal),
+                vocabulary = vocabulary or DOCKER_VOCABULARY,
+            )
+
+        # Read the interactive and dumb terminal facts.
+        is_terminal: bool = stream_is_terminal(sys.stderr)
+        is_dumb: bool = term_is_dumb()
+
+        # Build the one stderr console for this invocation.
+        return cls(
+            err = stderr_console(),
+            is_terminal = is_terminal,
+            is_dumb_terminal = is_dumb,
+            vocabulary = vocabulary or DOCKER_VOCABULARY,
+        )
