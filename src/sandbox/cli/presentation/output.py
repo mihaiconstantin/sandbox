@@ -64,3 +64,23 @@ class CliOutput(OutputSink):
     def __enter__(self) -> CliOutput:
         # Return the sink for direct use inside the scope.
         return self
+
+    # Report one advisory progress phase as transient stderr status.
+    def progress(self, phase: ProgressPhase, *, subject: str | None = None) -> None:
+        # Suppress status when the stream is not an interactive terminal.
+        if not self._is_terminal or self._closed:
+            # The silent pipe path is deterministic.
+            return
+
+        # Render the phase text.
+        text: str = phase_text(phase, subject)
+
+        # Fall back to a plain status line for a dumb console that was explicitly injected.
+        if self._console.is_dumb_terminal:
+            # Replace the transient line without Rich live rendering.
+            self._console.file.write(f"{text}\r")
+            self._console.file.flush()
+            self._plain_status = True
+            return
+
+        # Start or update the single status line.
