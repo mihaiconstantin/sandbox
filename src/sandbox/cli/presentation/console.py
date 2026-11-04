@@ -46,3 +46,31 @@ def term_is_dumb() -> bool:
 def no_color_requested() -> bool:
     # Treat any non-empty `NO_COLOR` as a color veto.
     return bool(os.environ.get("NO_COLOR"))
+
+
+# Construct the one stderr Rich console for one invocation.
+def stderr_console() -> Console:
+    # Read the interactive and dumb terminal facts.
+    is_terminal: bool = stream_is_terminal(sys.stderr)
+    is_dumb: bool = term_is_dumb()
+
+    # Construct the stderr console without pinning `file=`.
+    kwargs: dict[str, Any] = {
+        "stderr": True,
+        "markup": False,
+        "emoji": False,
+        "highlight": False,
+    }
+
+    # Use deterministic settings on a pipe or dumb terminal.
+    if not is_terminal or is_dumb:
+        # Disable animation, color, and host-dependent width.
+        kwargs.update(force_terminal = False, color_system = None, width = 80)
+
+    # Honor `NO_COLOR` on any stream.
+    if no_color_requested():
+        # Disable color output.
+        kwargs["no_color"] = True
+
+    # Build the one console for this invocation.
+    return Console(**kwargs)
