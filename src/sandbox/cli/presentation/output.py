@@ -174,3 +174,7 @@ class CliOutput(OutputSink):
             # Stop it and clear it so the next phase can start a fresh line.
             self._status.stop()
             self._status = None
+
+
+# Define the public API of the `sandbox.cli.presentation.output` module.
+__all__: list[str] = ["CliOutput", "phase_text"]
