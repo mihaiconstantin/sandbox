@@ -59,3 +59,8 @@ class CliOutput(OutputSink):
         self._status: Live | None = None
         self._plain_status: bool = False
         self._closed: bool = False
+
+    # Scope transient status and child decoding to one command operation.
+    def __enter__(self) -> CliOutput:
+        # Return the sink for direct use inside the scope.
+        return self
