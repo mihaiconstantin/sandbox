@@ -128,3 +128,8 @@ class CliPresentation:
             is_dumb_terminal = is_dumb,
             vocabulary = vocabulary or DOCKER_VOCABULARY,
         )
+
+    # Stop transient status before the invocation completes.
+    def close(self) -> None:
+        # Finalize the output sink.
+        self.output.close()
