@@ -133,3 +133,7 @@ class CliPresentation:
     def close(self) -> None:
         # Finalize the output sink.
         self.output.close()
+
+
+# Define the public API of the `sandbox.cli.presentation.console` module.
+__all__: list[str] = ["CliPresentation", "no_color_requested", "stderr_console", "stream_is_terminal", "term_is_dumb"]
