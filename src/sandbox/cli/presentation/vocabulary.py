@@ -42,3 +42,21 @@ class RuntimeVocabulary:
     def label(self) -> str:
         # Capitalize the configured scalar noun.
         return self.noun.capitalize()
+
+
+# Define the Docker defaults used by direct Click invocations without composition.
+DOCKER_VOCABULARY: RuntimeVocabulary = RuntimeVocabulary(
+    backend = "docker",
+    title = "Docker",
+    tool = "`docker`",
+    noun = "container",
+    plural = "containers",
+)
+
+
+# Keep the neutral alias for callers that name the fallback explicitly.
+NEUTRAL_VOCABULARY: RuntimeVocabulary = DOCKER_VOCABULARY
+
+
+# Define the public API of the `sandbox.cli.presentation.vocabulary` module.
+__all__: list[str] = ["DOCKER_VOCABULARY", "NEUTRAL_VOCABULARY", "RuntimeVocabulary"]
