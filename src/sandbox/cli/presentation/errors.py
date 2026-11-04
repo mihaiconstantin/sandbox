@@ -40,3 +40,14 @@ from sandbox.cli.presentation.text import sanitize_value
 
 # Import the runtime vocabulary used for backend nouns.
 from sandbox.cli.presentation.vocabulary import RuntimeVocabulary
+
+
+# Render one backend noun pair from the error label and the supplied vocabulary.
+def backend_nouns(error_backend: str | None, vocabulary: RuntimeVocabulary) -> tuple[str, str, str]:
+    # Use the composition vocabulary when the labels agree.
+    if error_backend is None or error_backend == vocabulary.backend:
+        # Return the supplied backend, singular, and plural nouns.
+        return vocabulary.backend, vocabulary.noun, vocabulary.plural
+
+    # Fall back to neutral nouns for an unknown backend label.
+    return error_backend, "box", "boxes"
