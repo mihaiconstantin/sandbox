@@ -65,6 +65,11 @@ class CliOutput(OutputSink):
         # Return the sink for direct use inside the scope.
         return self
 
+    # Finalize transient output when the operation scope ends.
+    def __exit__(self, *_: object) -> None:
+        # Stop status and flush child decoding.
+        self.close()
+
     # Report one advisory progress phase as transient stderr status.
     def progress(self, phase: ProgressPhase, *, subject: str | None = None) -> None:
         # Suppress status when the stream is not an interactive terminal.
