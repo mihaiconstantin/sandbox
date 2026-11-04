@@ -35,3 +35,9 @@ class TableRenderer:
         for row in safe_rows:
             # Format the complete row, including incidental final-column padding.
             click.echo("  ".join(value.ljust(widths[index]) for index, value in enumerate(row)))
+
+
+# Render one table through the compatibility formatter.
+def render_table(headers: Sequence[str], rows: Sequence[Sequence[str]], *, color: bool | None = None) -> None:
+    # Delegate to the shared renderer.
+    TableRenderer().render(headers, rows, color = color)
