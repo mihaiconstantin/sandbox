@@ -36,3 +36,9 @@ class RuntimeVocabulary:
             if not isinstance(value, str) or not value.strip():
                 # Throw.
                 raise ValueError(f"RuntimeVocabulary.{field_name} must be a nonblank string.")
+
+    # Render the capitalized resource label used by the status report.
+    @property
+    def label(self) -> str:
+        # Capitalize the configured scalar noun.
+        return self.noun.capitalize()
