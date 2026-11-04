@@ -99,3 +99,17 @@ class CliOutput(OutputSink):
         else:
             # Update the existing status with a new phase.
             self._status.update(Spinner("dots", text = text), refresh = True)
+
+    # Stop and drop the current status line before raw output.
+    def _stop_status(self) -> None:
+        # Clear the plain fallback status marker.
+        if self._plain_status:
+            # Flush the transient line before durable output.
+            self._console.file.flush()
+            self._plain_status = False
+
+        # If a Rich status is active.
+        if self._status is not None:
+            # Stop it and clear it so the next phase can start a fresh line.
+            self._status.stop()
+            self._status = None
