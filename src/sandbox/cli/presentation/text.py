@@ -22,3 +22,12 @@ def strip_ansi(value: str) -> str:
     value = _CSI.sub("", value)
     value = _OSC.sub("", value)
     return _ESCAPE.sub("", value)
+
+
+# Remove control characters that would corrupt a single-line display value.
+def sanitize_value(value: object) -> str:
+    # Convert the value to display text.
+    text: str = value if isinstance(value, str) else str(value)
+
+    # Remove ANSI sequences and every C0/C1 control character.
+    return _CONTROL.sub("", _ESCAPE.sub("", _OSC.sub("", _CSI.sub("", text))))
