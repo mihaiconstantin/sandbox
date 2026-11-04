@@ -21,3 +21,18 @@ class RuntimeVocabulary:
 
     # Display the plural resource noun.
     plural: str
+
+    # Require meaningful display values.
+    def __post_init__(self) -> None:
+        # Require every vocabulary part to be a nonblank string.
+        for field_name, value in (
+            ("backend", self.backend),
+            ("title", self.title),
+            ("tool", self.tool),
+            ("noun", self.noun),
+            ("plural", self.plural),
+        ):
+            # If the value is missing.
+            if not isinstance(value, str) or not value.strip():
+                # Throw.
+                raise ValueError(f"RuntimeVocabulary.{field_name} must be a nonblank string.")
