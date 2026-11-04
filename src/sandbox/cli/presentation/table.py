@@ -41,3 +41,7 @@ class TableRenderer:
 def render_table(headers: Sequence[str], rows: Sequence[Sequence[str]], *, color: bool | None = None) -> None:
     # Delegate to the shared renderer.
     TableRenderer().render(headers, rows, color = color)
+
+
+# Define the public API of the `sandbox.cli.presentation.table` module.
+__all__: list[str] = ["TableRenderer", "render_table"]
