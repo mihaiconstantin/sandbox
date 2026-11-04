@@ -39,3 +39,23 @@ def phase_text(phase: ProgressPhase, subject: str | None) -> str:
             return f"Removing volume `{safe_subject or ''}`".rstrip()
         case _:
             return "Working"
+
+
+# Translate SDK output into transient status and raw child output on stderr.
+class CliOutput(OutputSink):
+    # Bind the sink to the per-invocation stderr console and TTY policy.
+    def __init__(self, console: Console, *, is_terminal: bool | None = None) -> None:
+        # Store the console and whether transient status is allowed.
+        self._console: Console = console
+        self._is_terminal: bool = bool(console.is_terminal) if is_terminal is None else is_terminal
+
+        # Create one incremental UTF-8 decoder per child channel.
+        self._decoders: dict[OutputChannel, codecs.IncrementalDecoder] = {
+            OutputChannel.STDOUT: codecs.getincrementaldecoder("utf-8")(errors = "replace"),
+            OutputChannel.STDERR: codecs.getincrementaldecoder("utf-8")(errors = "replace"),
+        }
+
+        # Track the active status and whether the invocation has finished.
+        self._status: Live | None = None
+        self._plain_status: bool = False
+        self._closed: bool = False
