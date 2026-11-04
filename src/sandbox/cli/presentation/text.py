@@ -31,3 +31,14 @@ def sanitize_value(value: object) -> str:
 
     # Remove ANSI sequences and every C0/C1 control character.
     return _CONTROL.sub("", _ESCAPE.sub("", _OSC.sub("", _CSI.sub("", text))))
+
+
+# Remove ANSI and unsafe controls from opaque child output while keeping lines.
+def sanitize_process_output(value: str) -> str:
+    # Remove ANSI sequences first.
+    value = _CSI.sub("", value)
+    value = _OSC.sub("", value)
+    value = _ESCAPE.sub("", value)
+
+    # Keep newline, carriage return, and tab; remove other controls.
+    return re.sub(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]", "", value)
