@@ -34,3 +34,9 @@ def stream_is_terminal(stream: object) -> bool:
 
     # Treat a missing probe as a pipe.
     return False
+
+
+# Report whether the selected terminal is declared dumb or unknown.
+def term_is_dumb() -> bool:
+    # Read the terminal type.
+    return os.environ.get("TERM", "").strip().lower() in ("dumb", "unknown")
