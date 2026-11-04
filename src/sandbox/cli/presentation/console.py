@@ -93,3 +93,8 @@ class CliPresentation:
 
     # Expose the SDK output sink bound to this console.
     output: CliOutput = field(init = False)
+
+    # Build the output sink after the console policy is known.
+    def __post_init__(self) -> None:
+        # Allow transient status only on a real, non-dumb terminal.
+        self.output = CliOutput(self.err, is_terminal = self.is_terminal and not self.is_dumb_terminal)
