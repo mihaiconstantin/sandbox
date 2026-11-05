@@ -177,3 +177,36 @@ class ErrorPresenter:
 
         # Retain the one stderr console when presentation supplied it.
         self.console: Console | None = console
+
+    # Render one public error to its compatibility message.
+    def render(self, error: SandboxError) -> str:
+        # Read the backend vocabulary nouns for this failure.
+        backend, noun, plural = backend_nouns(getattr(error, "backend", None), self.vocabulary)
+
+        # Render box state failures before lookup failures.
+        if isinstance(error, BoxNotReady):
+            # Return the partial-creation recovery message.
+            return f"The `{backend}` {noun} for project `{error.name}` has not completed creation. Rerun `sb create box` with its recipe and project directory."
+
+        # Render non-running boxes.
+        if isinstance(error, BoxNotRunning):
+            # Return the not-running message.
+            return f"The `{backend}` {noun} for project `{error.name}` is not running."
+
+        # Render the generic state condition.
+        if isinstance(error, BoxStateError):
+            # Keep the supplied detail when one exists.
+            detail: str = f": {error.detail}" if error.detail else ""
+            return f"Box `{error.name}` is not in a usable state{detail}."
+
+        # Render absent boxes.
+        if isinstance(error, BoxNotFound):
+            # Return the compatibility lookup message.
+            return f"No `{backend}` {noun} exists for project `{error.name}`."
+
+        # Render ambiguous boxes.
+        if isinstance(error, BoxAmbiguous):
+            # Return the compatibility ambiguity message.
+            return f"Multiple `{backend}` {plural} exist for project `{error.name}`."
+
+        # Render volume ownership failures.
