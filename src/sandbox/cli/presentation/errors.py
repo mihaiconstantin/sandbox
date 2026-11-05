@@ -210,3 +210,33 @@ class ErrorPresenter:
             return f"Multiple `{backend}` {plural} exist for project `{error.name}`."
 
         # Render volume ownership failures.
+        if isinstance(error, VolumeOwnershipError):
+            # Return the ownership message.
+            return f"Cannot verify `sandbox` ownership of volume `{error.name}`."
+
+        # Render generic ownership failures.
+        if isinstance(error, OwnershipViolation):
+            # Return the ownership message for the reported resource kind.
+            return f"Cannot verify `sandbox` ownership of {error.resource_kind} `{error.identifier}`."
+
+        # Render absent removal resources.
+        if isinstance(error, NothingToRemove):
+            # Return the preserved absent-box message.
+            return f"No `sandbox` resources exist for project `{error.name}`."
+
+        # Render networks still in use.
+        if isinstance(error, NetworkInUse):
+            # Return the attached-container refusal.
+            return f"Network `{error.name}` still has attached `{backend}` containers."
+
+        # Render volumes still referenced.
+        if isinstance(error, VolumeInUse):
+            # Return the reference refusal.
+            return f"Volume `{error.name}` is still referenced by `{backend}` containers."
+
+        # Render missing volumes.
+        if isinstance(error, VolumeNotFound):
+            # Return the missing-volume message.
+            return f"Volume `{error.name}` no longer exists."
+
+        # Render unavailable volume references.
