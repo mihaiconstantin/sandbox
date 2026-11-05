@@ -116,3 +116,9 @@ class CliContext:
 
         # Otherwise construct a fresh presentation with the requested vocabulary.
         return cls(client_factory = client_factory, console = console, vocabulary = vocabulary or DOCKER_VOCABULARY)
+
+
+# Compute the default `sandbox` configuration home.
+def default_home() -> Path:
+    # Return the documented default home without reading or resolving it.
+    return Path.home() / ".sandbox"
