@@ -166,3 +166,14 @@ def prerequisite_message(error: PrerequisiteError) -> str:
     # Return the structured generic prerequisite message.
     suffix = f": {diagnostic}" if diagnostic else ""
     return f"Prerequisite `{tool}` is {error.kind.value}{suffix}."
+
+
+# Present the public error family as one plain stderr failure.
+class ErrorPresenter:
+    # Bind the presenter to the composition-supplied runtime vocabulary.
+    def __init__(self, vocabulary: RuntimeVocabulary, *, console: Console | None = None) -> None:
+        # Retain the vocabulary used for absent-resource nouns.
+        self.vocabulary: RuntimeVocabulary = vocabulary
+
+        # Retain the one stderr console when presentation supplied it.
+        self.console: Console | None = console
