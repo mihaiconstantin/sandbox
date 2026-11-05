@@ -18,3 +18,10 @@ from sandbox.errors.base import SandboxError
 from sandbox.cli.presentation.console import CliPresentation
 from sandbox.cli.presentation.errors import ErrorPresenter
 from sandbox.cli.presentation.vocabulary import DOCKER_VOCABULARY, RuntimeVocabulary
+
+
+# Represent the composition-supplied factory that builds one client per home.
+@runtime_checkable
+class ClientFactory(Protocol):
+    # Build a client bound to one configuration home and presentation sink.
+    def for_home(self, home: Path, *, output: OutputSink = SILENT) -> SandboxClient: ...
