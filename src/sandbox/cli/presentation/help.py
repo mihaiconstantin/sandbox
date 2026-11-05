@@ -97,3 +97,19 @@ class SandboxContext(click.Context):
         if not is_terminal or term_is_dumb() or no_color_requested():
             # Pin plain output.
             self.color = False
+
+
+# Apply the styled help context to a command and its subcommands.
+def apply_styled_context(command: click.Command) -> None:
+    # Use the styled context for this command.
+    command.context_class = SandboxContext
+
+    # If the command is a group.
+    if isinstance(command, click.Group):
+        # Declare the subcommand.
+        subcommand: click.Command
+
+        # Recurse into each subcommand.
+        for subcommand in command.commands.values():
+            # Apply the same context recursively.
+            apply_styled_context(subcommand)
