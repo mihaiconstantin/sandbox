@@ -44,3 +44,42 @@ class CliContext:
 
     # Hold the single error presenter.
     errors: ErrorPresenter = field(init = False)
+
+    # Accept the composition factory plus direct test injections.
+    def __init__(
+        self,
+        presentation: CliPresentation | None = None,
+        errors: ErrorPresenter | None = None,
+        *,
+        client_factory: ClientFactory | None = None,
+        console: Any | None = None,
+        vocabulary: RuntimeVocabulary | None = None,
+    ) -> None:
+        # Retain the composition-supplied factory after protocol validation.
+        if client_factory is not None and not isinstance(client_factory, ClientFactory):
+            # Throw a programming error for an unusable injection.
+            raise TypeError("client_factory must implement ClientFactory.")
+
+        # Retain the resolved factory.
+        self.client_factory = client_factory
+
+        # Prefer the explicit console, then the supplied presentation.
+        selected_console: Any | None = console if console is not None else (presentation.err if presentation is not None else None)
+
+        # Resolve the vocabulary from explicit input, errors, or presentation.
+        selected_vocabulary: RuntimeVocabulary = (
+            vocabulary
+            or (errors.vocabulary if errors is not None else None)
+            or (presentation.vocabulary if presentation is not None else None)
+            or DOCKER_VOCABULARY
+        )
+
+        # Retain the resolved vocabulary and console.
+        self.console = selected_console
+        self.vocabulary = selected_vocabulary
+
+        # Construct the presentation when one was not injected.
+        self.presentation = presentation if presentation is not None else CliPresentation.attach(vocabulary = selected_vocabulary, console = selected_console)
+
+        # Bind the single presenter to the same console and vocabulary.
+        self.errors = errors if errors is not None else ErrorPresenter(selected_vocabulary, console = self.presentation.err)
