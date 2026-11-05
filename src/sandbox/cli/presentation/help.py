@@ -22,3 +22,28 @@ class StyledHelpFormatter(click.HelpFormatter):
 
         # Set the current section to `None`.
         self._section: str | None = None
+
+    # Track the section being written so definition lists can be styled selectively.
+    @contextmanager
+    def section(self: StyledHelpFormatter, name: str) -> Generator[None]:
+        # Save the previous section before entering the new one.
+        previous: str | None = self._section
+
+        # Use the conventional heading for positional arguments.
+        if name == "Positional arguments":
+            # Rename the section.
+            name = "Arguments"
+
+        # Record the active section name.
+        self._section = name
+
+        # Track the base section context.
+        try:
+            # Enter the base formatter's section.
+            with super().section(name):
+                # Run the wrapped block.
+                yield
+        # Restore the previous section in all cases.
+        finally:
+            # Restore the previous section.
+            self._section = previous
