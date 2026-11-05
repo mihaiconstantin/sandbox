@@ -294,3 +294,32 @@ class ErrorPresenter:
             return f"The configured runtime does not support {error.feature}{detail}."
 
         # Render rejected artifacts.
+        if isinstance(error, ArtifactRejected):
+            # Prefer the artifact reference.
+            artifact: str = error.reference or error.transport
+
+            # Keep the detail when supplied.
+            detail = f": {error.detail}" if error.detail else "."
+            return f"The build artifact `{artifact}` cannot be used by the runtime{detail}."
+
+        # Render failed create postconditions.
+        if isinstance(error, CreatePostconditionFailed):
+            # Return the compatibility postcondition message.
+            return f"Box `{error.name}` was not created: no managed {noun} was observed."
+
+        # Render interactive terminal failures.
+        if isinstance(error, InteractiveTerminalRequired):
+            # Return the terminal requirement message.
+            return f"Entering a `{backend}` {noun} requires an interactive terminal."
+
+        # Render prerequisite failures.
+        if isinstance(error, PrerequisiteError):
+            # Return the tool-specific actionable message.
+            return prerequisite_message(error)
+
+        # Render root policy failures before configuration.
+        if isinstance(error, RootExecutionNotAllowed):
+            # Return the current root policy message.
+            return f"{error.field or 'configuration'}: Root execution requires `allow_root = true` in the selected recipe."
+
+        # Render configuration failures with their field path.
