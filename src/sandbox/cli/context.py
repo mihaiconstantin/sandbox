@@ -146,3 +146,17 @@ def cli_context(ctx: click.Context) -> CliContext:
     context = CliContext.create()
     root.obj = context
     return context
+
+
+# Resolve the SDK client for one command or completion callback.
+def client_for(ctx: click.Context, home: Path | None = None) -> SandboxClient:
+    # Read the normalized CLI context.
+    context: CliContext = cli_context(ctx)
+
+    # Require a composition-supplied factory before an SDK operation.
+    if context.client_factory is None:
+        # Throw a CLI-local public failure with a clean presenter message.
+        raise SandboxError("No `sandbox` client factory is configured.")
+
+    # Build the client for the selected or default home with the presentation sink.
+    return context.client_factory.for_home(default_home() if home is None else home, output = context.presentation.output)
