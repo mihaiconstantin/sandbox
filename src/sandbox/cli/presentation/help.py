@@ -63,3 +63,13 @@ class StyledHelpFormatter(click.HelpFormatter):
 
         # Otherwise.
         super().write_heading(heading)
+
+    # Write a definition list, coloring command names in the commands section.
+    def write_dl(self: StyledHelpFormatter, rows: list[tuple[str, str]], *args: Any, **kwargs: Any) -> None:
+        # If the current section lists commands.
+        if self._section == "Commands":
+            # Color the command names in the definition list.
+            rows = [(click.style(name, fg = "green", bold = True), text) for name, text in rows]
+
+        # Then, write the definition list.
+        super().write_dl(rows, *args, **kwargs)
