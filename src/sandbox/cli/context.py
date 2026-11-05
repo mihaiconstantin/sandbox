@@ -89,3 +89,30 @@ class CliContext:
     def output(self) -> OutputSink:
         # Return the presentation-owned sink.
         return self.presentation.output
+
+    # Build a context with production defaults and an optional factory.
+    @classmethod
+    def create(
+        cls,
+        client_factory: ClientFactory | None = None,
+        *,
+        presentation: CliPresentation | None = None,
+        vocabulary: RuntimeVocabulary | None = None,
+        console: Any | None = None,
+    ) -> CliContext:
+        # Reuse an explicitly supplied presentation when one was injected.
+        if presentation is not None:
+            # Build the context around the supplied presentation and vocabulary.
+            context: CliContext = cls(
+                presentation = presentation,
+                client_factory = client_factory,
+                vocabulary = vocabulary or presentation.vocabulary,
+            )
+
+            # Retain the exact presentation supplied by the caller.
+            context.presentation = presentation
+            context.errors = ErrorPresenter(context.vocabulary, console = presentation.err)
+            return context
+
+        # Otherwise construct a fresh presentation with the requested vocabulary.
+        return cls(client_factory = client_factory, console = console, vocabulary = vocabulary or DOCKER_VOCABULARY)
