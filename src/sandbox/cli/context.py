@@ -25,3 +25,22 @@ from sandbox.cli.presentation.vocabulary import DOCKER_VOCABULARY, RuntimeVocabu
 class ClientFactory(Protocol):
     # Build a client bound to one configuration home and presentation sink.
     def for_home(self, home: Path, *, output: OutputSink = SILENT) -> SandboxClient: ...
+
+
+# Bind the client factory, presentation, and error presenter for one invocation.
+@dataclass(init = False)
+class CliContext:
+    # Hold the optional composition-supplied client factory.
+    client_factory: ClientFactory | None = None
+
+    # Hold an explicitly injected stderr console, if any.
+    console: Any | None = None
+
+    # Hold the runtime vocabulary used for labels and backend nouns.
+    vocabulary: RuntimeVocabulary = DOCKER_VOCABULARY
+
+    # Hold the per-invocation presentation and its output sink.
+    presentation: CliPresentation = field(init = False)
+
+    # Hold the single error presenter.
+    errors: ErrorPresenter = field(init = False)
