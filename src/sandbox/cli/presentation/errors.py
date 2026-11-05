@@ -148,3 +148,21 @@ def prerequisite_message(error: PrerequisiteError) -> str:
         return error.hint or error.diagnostic or f"`git` is {error.kind.value}."
 
     # Render a future microsandbox prerequisite.
+    if tool == "microsandbox":
+        # Report a missing runtime.
+        if error.kind is PrerequisiteKind.MISSING:
+            # Return the runtime install hint.
+            return "The `microsandbox` runtime is not installed. Install microsandbox and retry."
+
+        # Report an unusable runtime.
+        suffix = f": {diagnostic}" if diagnostic else ""
+        return f"The `microsandbox` runtime is installed but unusable{suffix}. Run `msb doctor` for details."
+
+    # Keep an explicit hint for any future tool.
+    if error.hint:
+        # Return the supplied hint.
+        return error.hint
+
+    # Return the structured generic prerequisite message.
+    suffix = f": {diagnostic}" if diagnostic else ""
+    return f"Prerequisite `{tool}` is {error.kind.value}{suffix}."
