@@ -73,3 +73,34 @@ def command_failure_message(failure: CommandFailure) -> str:
 
     # Otherwise name the operation without a command.
     return f"The {failure.operation} operation failed{detail}."
+
+
+# Render one prerequisite failure with the documented actionable text.
+def prerequisite_message(error: PrerequisiteError) -> str:
+    # Read the structured facts.
+    tool: str = error.tool
+    diagnostic: str = error.diagnostic
+    found: str | None = error.found
+    requirement: str | None = error.requirement
+
+    # Render Docker CLI prerequisites.
+    if tool == "docker":
+        # Report a missing executable.
+        if error.kind is PrerequisiteKind.MISSING:
+            # Return the actionable install hint.
+            return "required executable `docker` was not found on PATH. Install Docker Engine and ensure it is on PATH."
+
+        # Report an unreachable daemon or permission failure.
+        if error.kind is PrerequisiteKind.UNUSABLE:
+            # Keep the diagnostic when one was captured.
+            suffix: str = f": {diagnostic}" if diagnostic else ""
+
+            # Return the daemon hint.
+            return f"Docker is installed but the daemon is not reachable{suffix}. Start Docker or check `DOCKER_HOST`."
+
+        # Report an unsupported Docker version.
+        version: str = found or "unknown"
+        required: str = requirement or "a supported version"
+        return f"Docker {version} is not supported; version {required} or newer is required."
+
+    # Render Docker Compose prerequisites.
