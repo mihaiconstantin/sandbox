@@ -270,3 +270,27 @@ class ErrorPresenter:
             return f"Volume `{error.name}` could not be created."
 
         # Render build/create/engine command failures with the shared template.
+        if isinstance(error, (EngineFailure, BuildFailed, CreateFailed)):
+            # Return the structured command failure template.
+            return command_failure_message(error.failure)
+
+        # Render malformed engine output.
+        if isinstance(error, EngineOutputInvalid):
+            # Resolve the display backend title.
+            label: str = self.vocabulary.backend.capitalize() if error.backend in (None, self.vocabulary.backend) else str(error.backend)
+
+            # Return the invalid-JSON message.
+            return f"{label} returned invalid JSON: {error.sample!r}"
+
+        # Render unsupported operations.
+        if isinstance(error, UnsupportedOperation):
+            # Return the capability message.
+            return f"Operation `{error.operation}` is not supported by the configured runtime."
+
+        # Render unsupported features.
+        if isinstance(error, UnsupportedFeature):
+            # Keep the detail when supplied.
+            detail = f": {error.detail}" if error.detail else ""
+            return f"The configured runtime does not support {error.feature}{detail}."
+
+        # Render rejected artifacts.
