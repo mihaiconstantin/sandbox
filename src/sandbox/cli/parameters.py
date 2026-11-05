@@ -50,3 +50,9 @@ def _identifier(ctx: click.Context, parameter: click.Parameter, value: str, fiel
 def project_argument(ctx: click.Context, parameter: click.Parameter, value: str) -> str:
     # Apply the project identifier rule.
     return _identifier(ctx, parameter, value, "project")
+
+
+# Validate one catalogue name supplied on the command line.
+def catalogue_argument(ctx: click.Context, parameter: click.Parameter, value: str) -> str:
+    # Apply the catalogue identifier rule.
+    return _identifier(ctx, parameter, value, "catalogue")
