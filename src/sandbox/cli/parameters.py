@@ -78,3 +78,7 @@ def volume_argument(ctx: click.Context, parameter: click.Parameter, value: str) 
 
     # Return the validated value.
     return value
+
+
+# Define the public API of the `sandbox.cli.parameters` module.
+__all__: list[str] = ["catalogue_argument", "home_option", "project_argument", "secret_argument", "volume_argument"]
