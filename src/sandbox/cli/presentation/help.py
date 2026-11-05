@@ -47,3 +47,19 @@ class StyledHelpFormatter(click.HelpFormatter):
         finally:
             # Restore the previous section.
             self._section = previous
+
+    # Write a section heading with the requested styling when applicable.
+    def write_heading(self: StyledHelpFormatter, heading: str) -> None:
+        # If the heading belongs to one of the generated help sections.
+        if heading in ("Arguments", "Options", "Commands"):
+            # Style the heading.
+            heading = click.style(f"{heading}:", bold = True, underline = True)
+
+            # Write the heading with the current indentation.
+            self.write(f"{'':>{self.current_indent}}{heading}\n\n")
+
+            # Return.
+            return
+
+        # Otherwise.
+        super().write_heading(heading)
