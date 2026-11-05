@@ -28,3 +28,19 @@ def home_option(*, exists: bool = False) -> Callable[[CommandFunction], CommandF
             help = "The `sandbox` home directory containing catalogues and configuration.",
         ),
     )
+
+
+# Convert one neutral identifier failure into a Click usage error.
+def _identifier(ctx: click.Context, parameter: click.Parameter, value: str, field: str) -> str:
+    # Validate through the shared rule.
+    try:
+        # Apply the lowercase namespace rule.
+        validate_identifier(value, field)
+
+    # Convert an invalid identifier into a Click parameter error.
+    except ConfigurationError as error:
+        # Throw with the usage exit class.
+        raise click.BadParameter(error.message) from None
+
+    # Return the validated value.
+    return value
