@@ -113,3 +113,20 @@ def apply_styled_context(command: click.Command) -> None:
         for subcommand in command.commands.values():
             # Apply the same context recursively.
             apply_styled_context(subcommand)
+
+
+# Configure the styled help text and epilog for the root command.
+def configure_help(command: click.Command) -> None:
+    # Set the styled help text.
+    command.help = inspect.cleandoc(
+        f"""
+            {click.style("`sandbox`", fg = "blue", bold = True)} or {click.style("`sb`", fg = "blue", bold = True)} is a tool for managing isolated development environments.
+        """
+    )
+
+    # Set the extended help pointer to appear after the command list.
+    command.epilog = inspect.cleandoc(
+        f"""
+        Run `{click.style("sb", fg = "blue", bold = True)} {click.style("guide", fg = "green", bold = True)}` for getting started.
+        """
+    )
