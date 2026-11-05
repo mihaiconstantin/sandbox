@@ -334,3 +334,18 @@ class ErrorPresenter:
 
         # Fall back to the neutral error text for generic classes.
         return str(error) or "The sandbox operation failed."
+
+    # Select the documented exit code for one public error.
+    def exit_code(self, error: SandboxError) -> int:
+        # Preserve a positive engine status.
+        if isinstance(error, (EngineFailure, BuildFailed, CreateFailed)):
+            # Read the structured status and normalize non-positive values.
+            return error.failure.exit_code if error.failure.exit_code > 0 else 1
+
+        # Preserve a positive volume-creation command status.
+        if isinstance(error, VolumeCreateFailed) and error.failure is not None:
+            # Read the structured status and normalize non-positive values.
+            return error.failure.exit_code if error.failure.exit_code > 0 else 1
+
+        # Use the generic command/abort failure class.
+        return 1
