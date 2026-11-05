@@ -104,3 +104,20 @@ def prerequisite_message(error: PrerequisiteError) -> str:
         return f"Docker {version} is not supported; version {required} or newer is required."
 
     # Render Docker Compose prerequisites.
+    if tool == "docker compose":
+        # Report a missing plugin.
+        if error.kind is PrerequisiteKind.MISSING:
+            # Return the plugin install hint.
+            return "Docker Compose is required but `docker compose` is not available. Install the Compose plugin (>= 5.6.0)."
+
+        # Report a version floor failure.
+        if error.kind is PrerequisiteKind.VERSION:
+            # Use the documented floor when facts omit it.
+            required = requirement or "5.6.0"
+            return f"Docker Compose {found or 'unknown'} is too old; version {required.removeprefix('>=').strip()} or newer is required."
+
+        # Report an unusable Compose installation.
+        suffix = f": {diagnostic}" if diagnostic else ""
+        return f"Docker Compose is installed but unusable{suffix}."
+
+    # Render Buildx prerequisites.
