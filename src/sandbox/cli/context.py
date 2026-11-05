@@ -160,3 +160,7 @@ def client_for(ctx: click.Context, home: Path | None = None) -> SandboxClient:
 
     # Build the client for the selected or default home with the presentation sink.
     return context.client_factory.for_home(default_home() if home is None else home, output = context.presentation.output)
+
+
+# Define the public API of the `sandbox.cli.context` module.
+__all__: list[str] = ["CliContext", "ClientFactory", "cli_context", "client_for", "default_home"]
