@@ -323,3 +323,14 @@ class ErrorPresenter:
             return f"{error.field or 'configuration'}: Root execution requires `allow_root = true` in the selected recipe."
 
         # Render configuration failures with their field path.
+        if isinstance(error, ConfigurationError):
+            # Return the compatibility field message.
+            return f"{error.field or 'configuration'}: {error.message}"
+
+        # Render recipe failures with their field path.
+        if isinstance(error, RecipeUnresolved):
+            # Keep the current field-or-message shape.
+            return f"{error.field or 'configuration'}: {error.message}" if error.field else error.message
+
+        # Fall back to the neutral error text for generic classes.
+        return str(error) or "The sandbox operation failed."
