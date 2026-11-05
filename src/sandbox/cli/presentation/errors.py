@@ -368,3 +368,7 @@ class ErrorPresenter:
 
         # Terminate with the documented exit class.
         raise SystemExit(self.exit_code(error))
+
+
+# Define the public API of the `sandbox.cli.presentation.errors` module.
+__all__: list[str] = ["ErrorPresenter", "backend_nouns", "command_failure_message", "prerequisite_message"]
