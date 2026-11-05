@@ -122,3 +122,27 @@ class CliContext:
 def default_home() -> Path:
     # Return the documented default home without reading or resolving it.
     return Path.home() / ".sandbox"
+
+
+# Normalize a raw Click object into the CLI context.
+def cli_context(ctx: click.Context) -> CliContext:
+    # Read the root object injected by composition or a test.
+    root: click.Context = ctx.find_root()
+    obj: object | None = root.obj
+
+    # Use the explicit CLI context when one was injected.
+    if isinstance(obj, CliContext):
+        # Return the injected context.
+        return obj
+
+    # Accept a bare per-home factory for direct command tests.
+    if obj is not None and isinstance(obj, ClientFactory):
+        # Wrap the factory with presentation defaults and cache it on the root.
+        context: CliContext = CliContext.create(client_factory = obj)
+        root.obj = context
+        return context
+
+    # Otherwise provide one lazy default context without a factory.
+    context = CliContext.create()
+    root.obj = context
+    return context
