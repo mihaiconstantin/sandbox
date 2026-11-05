@@ -44,3 +44,9 @@ def _identifier(ctx: click.Context, parameter: click.Parameter, value: str, fiel
 
     # Return the validated value.
     return value
+
+
+# Validate one project name supplied on the command line.
+def project_argument(ctx: click.Context, parameter: click.Parameter, value: str) -> str:
+    # Apply the project identifier rule.
+    return _identifier(ctx, parameter, value, "project")
