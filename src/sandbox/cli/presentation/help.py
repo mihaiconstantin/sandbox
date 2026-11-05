@@ -73,3 +73,27 @@ class StyledHelpFormatter(click.HelpFormatter):
 
         # Then, write the definition list.
         super().write_dl(rows, *args, **kwargs)
+
+
+# Define the Click context with deterministic pipe width and color.
+class SandboxContext(click.Context):
+    # Use the compatibility help formatter.
+    formatter_class = StyledHelpFormatter
+
+    # Configure help width and color from the stream and environment.
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        # Initialize the base context.
+        super().__init__(*args, **kwargs)
+
+        # Read whether standard output is a terminal.
+        is_terminal: bool = stream_is_terminal(sys.stdout)
+
+        # Pin the compatibility help width under a pipe.
+        if not is_terminal:
+            # Ignore `COLUMNS` and terminal probes.
+            self.terminal_width = 80
+
+        # Disable color on a pipe, a dumb terminal, or explicit `NO_COLOR`.
+        if not is_terminal or term_is_dumb() or no_color_requested():
+            # Pin plain output.
+            self.color = False
