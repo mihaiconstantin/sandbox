@@ -240,3 +240,33 @@ class ErrorPresenter:
             return f"Volume `{error.name}` no longer exists."
 
         # Render unavailable volume references.
+        if isinstance(error, VolumeReferencesUnavailable):
+            # Return the reference-unavailable message.
+            return f"Volume `{error.name}` reference information is unavailable."
+
+        # Render incomplete removals by resource kind.
+        if isinstance(error, IncompleteRemoval):
+            # Report a box/project postcondition.
+            if error.resource_kind in ("box", "project"):
+                # Return the preserved project message.
+                return f"Incomplete removal of `sandbox` project `{error.identifier}`."
+
+            # Report a volume postcondition.
+            if error.resource_kind == "volume":
+                # Return the volume message.
+                return f"Incomplete removal of `{backend}` volume `{error.identifier}`."
+
+            # Otherwise keep the catalogue detail.
+            return error.detail or f"Incomplete removal of {error.resource_kind} `{error.identifier}`."
+
+        # Render volume creation failures with command facts.
+        if isinstance(error, VolumeCreateFailed):
+            # Prefer the structured command failure when one exists.
+            if error.failure is not None:
+                # Return the engine template.
+                return command_failure_message(error.failure)
+
+            # Return the postcondition fallback.
+            return f"Volume `{error.name}` could not be created."
+
+        # Render build/create/engine command failures with the shared template.
