@@ -83,3 +83,9 @@ class CliContext:
 
         # Bind the single presenter to the same console and vocabulary.
         self.errors = errors if errors is not None else ErrorPresenter(selected_vocabulary, console = self.presentation.err)
+
+    # Expose the SDK output sink for commands that scope progress.
+    @property
+    def output(self) -> OutputSink:
+        # Return the presentation-owned sink.
+        return self.presentation.output
