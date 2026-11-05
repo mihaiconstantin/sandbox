@@ -349,3 +349,22 @@ class ErrorPresenter:
 
         # Use the generic command/abort failure class.
         return 1
+
+    # Render the error to stderr and terminate with its exit class.
+    def present(self, error: SandboxError) -> NoReturn:
+        # Sanitize the final message to keep outputs ANSI-free and single-line.
+        message: str = sanitize_value(self.render(error))
+
+        # Write the plain presenter frame through the injected stderr console.
+        if self.console is not None:
+            # Write raw text after the transient status has been suspended.
+            self.console.file.write(f"Error: {message}\n")
+            self.console.file.flush()
+
+        # Otherwise use Click's stderr for direct command tests.
+        else:
+            # Write the plain presenter frame to stderr.
+            click.echo(f"Error: {message}", err = True)
+
+        # Terminate with the documented exit class.
+        raise SystemExit(self.exit_code(error))
