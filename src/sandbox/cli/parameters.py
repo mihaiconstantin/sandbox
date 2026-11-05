@@ -56,3 +56,9 @@ def project_argument(ctx: click.Context, parameter: click.Parameter, value: str)
 def catalogue_argument(ctx: click.Context, parameter: click.Parameter, value: str) -> str:
     # Apply the catalogue identifier rule.
     return _identifier(ctx, parameter, value, "catalogue")
+
+
+# Validate one secret alias supplied on the command line.
+def secret_argument(ctx: click.Context, parameter: click.Parameter, value: str) -> str:
+    # Apply the secret identifier rule.
+    return _identifier(ctx, parameter, value, "secret")
