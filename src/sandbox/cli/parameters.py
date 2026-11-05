@@ -62,3 +62,19 @@ def catalogue_argument(ctx: click.Context, parameter: click.Parameter, value: st
 def secret_argument(ctx: click.Context, parameter: click.Parameter, value: str) -> str:
     # Apply the secret identifier rule.
     return _identifier(ctx, parameter, value, "secret")
+
+
+# Validate one physical volume name supplied on the command line.
+def volume_argument(ctx: click.Context, parameter: click.Parameter, value: str) -> str:
+    # Validate through the shared physical-name rule.
+    try:
+        # Apply the Docker-compatible volume rule.
+        validate_volume_name(value)
+
+    # Convert an invalid name into a Click parameter error.
+    except ConfigurationError as error:
+        # Throw with the usage exit class.
+        raise click.BadParameter(error.message) from None
+
+    # Return the validated value.
+    return value
