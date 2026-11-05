@@ -130,3 +130,7 @@ def configure_help(command: click.Command) -> None:
         Run `{click.style("sb", fg = "blue", bold = True)} {click.style("guide", fg = "green", bold = True)}` for getting started.
         """
     )
+
+
+# Define the public API of the `sandbox.cli.presentation.help` module.
+__all__: list[str] = ["SandboxContext", "StyledHelpFormatter", "apply_styled_context", "configure_help"]
