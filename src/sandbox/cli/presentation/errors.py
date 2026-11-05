@@ -51,3 +51,25 @@ def backend_nouns(error_backend: str | None, vocabulary: RuntimeVocabulary) -> t
 
     # Fall back to neutral nouns for an unknown backend label.
     return error_backend, "box", "boxes"
+
+
+# Render one command failure using the compatibility command template.
+def command_failure_message(failure: CommandFailure) -> str:
+    # Keep the bounded diagnostic when one exists.
+    detail: str = f": {failure.diagnostic}" if failure.diagnostic else ""
+
+    # Report a timeout without inventing a command status.
+    if failure.timed_out:
+        # Return the timeout message.
+        return f"The {failure.operation} operation timed out."
+
+    # Report the exact argv when the adapter recorded one.
+    if failure.command:
+        # Join the argv into a display command.
+        command: str = " ".join(failure.command)
+
+        # Return the compatibility engine-failure text.
+        return f"`{command}` failed with exit code {failure.exit_code}{detail}."
+
+    # Otherwise name the operation without a command.
+    return f"The {failure.operation} operation failed{detail}."
