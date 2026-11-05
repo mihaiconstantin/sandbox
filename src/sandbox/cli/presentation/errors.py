@@ -121,3 +121,30 @@ def prerequisite_message(error: PrerequisiteError) -> str:
         return f"Docker Compose is installed but unusable{suffix}."
 
     # Render Buildx prerequisites.
+    if tool in ("buildx", "docker buildx"):
+        # Report a missing plugin only when a build is needed.
+        if error.kind is PrerequisiteKind.MISSING:
+            # Return the build-only install hint.
+            return "Docker Buildx is required to build this recipe but the `buildx` plugin was not found. Install Buildx >= 0.17.0."
+
+        # Report a version floor failure.
+        if error.kind is PrerequisiteKind.VERSION:
+            # Use the documented floor when facts omit it.
+            required = requirement or "0.17.0"
+            return f"Docker Buildx {found or 'unknown'} is too old; version {required.removeprefix('>=').strip()} or newer is required."
+
+        # Report an unusable Buildx installation.
+        suffix = f": {diagnostic}" if diagnostic else ""
+        return f"Docker Buildx is installed but unusable{suffix}."
+
+    # Render Git prerequisites for catalogue installation.
+    if tool == "git":
+        # Report a missing executable.
+        if error.kind is PrerequisiteKind.MISSING:
+            # Return the install hint.
+            return "`git` is required to install `git` catalogue sources but was not found. Install git and ensure it is on PATH."
+
+        # Keep an explicit hint or diagnostic for other git failures.
+        return error.hint or error.diagnostic or f"`git` is {error.kind.value}."
+
+    # Render a future microsandbox prerequisite.
