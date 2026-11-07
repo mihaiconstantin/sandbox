@@ -71,6 +71,36 @@ def status(ctx: click.Context, project: str, print_path: bool) -> None:
 
     # Read the display facts with explicit fallbacks for unavailable fields.
     container_id: str = sanitize_value(box.backend.id if box.backend is not None else "unknown")
+    container_name: str = sanitize_value(box.backend.name if box.backend is not None else "unknown")
+    status_text: str = sanitize_value(box.status_text if box.status_text is not None else "unknown")
+    image: str = sanitize_value(box.image if box.image is not None else "unknown")
+    working_directory: str = sanitize_value(box.working_directory if box.working_directory is not None else "unknown")
+
+    # Read the resource label from composition vocabulary.
+    label: str = cli_context(ctx).vocabulary.label
+
+    # Display the box identity and configuration fields.
+    click.secho(f"Project          {sanitize_value(box.name)}", bold = True, color = ctx.color)
+    click.echo(f"{label} ID      {container_id[:12]}")
+    click.echo(f"{label} name    {container_name}")
+    click.echo(f"Status            {status_text}")
+    click.echo(f"Image             {image}")
+    click.echo(f"Working directory {working_directory}")
+
+    # Prepare the mount categories when the observation reports mounts.
+    mounts: tuple[Mount, ...] | None = box.mounts
+    secret_mounts: tuple[Mount, ...] = () if mounts is None else tuple(mount for mount in mounts if mount.target.startswith(f"{SECRET_ROOT}/"))
+    other_mounts: tuple[Mount, ...] = () if mounts is None else tuple(mount for mount in mounts if not mount.target.startswith(f"{SECRET_ROOT}/"))
+    volumes: tuple[Mount, ...] = tuple(mount for mount in other_mounts if mount.kind == "volume")
+    project_binds: tuple[Mount, ...] = tuple(mount for mount in other_mounts if mount.kind == "bind")
+    secrets: tuple[str, ...] = tuple(sorted(mount.target[len(SECRET_ROOT) + 1:] for mount in secret_mounts))
+
+    # Display the named volumes.
+    click.secho("\nVolumes", bold = True, color = ctx.color)
+    _render_mounts(volumes, mounts_available = mounts is not None)
+
+    # Display the host bind mounts.
+    click.secho("\nBind mounts", bold = True, color = ctx.color)
 
 
 # Render one mount category with its compatibility markers.
