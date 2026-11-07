@@ -32,3 +32,7 @@ def completions(context: click.Context, shell: str) -> None:
     if status != 0:
         # Explain the missing shell implementation.
         raise click.ClickException(f"The installed Click version does not support {shell} completion.")
+
+
+# Define the public API of the `sandbox.cli.commands.completions` module.
+__all__: list[str] = ["completions"]
