@@ -35,3 +35,7 @@ def stop(ctx: click.Context, project: str) -> None:
     else:
         # Report the preserved skip result on stdout.
         click.secho(f"Skipped stopping the box for project `{project}` because it is already stopped.", fg = "yellow", color = ctx.color)
+
+
+# Define the public API of the `sandbox.cli.commands.stop` module.
+__all__: list[str] = ["stop"]
