@@ -40,3 +40,14 @@ def _is_running(box: BoxObservation) -> bool:
 
     # Fall back to the neutral observed state.
     return box.state is BoxState.RUNNING
+
+
+# Report whether a box has exited for completion filtering.
+def _has_exited(box: BoxObservation) -> bool:
+    # Prefer the adapter display status when it is reported.
+    if box.status_text is not None:
+        # Match the exited label.
+        return box.status_text == "exited"
+
+    # Fall back to the neutral stopped state.
+    return box.state is BoxState.STOPPED
