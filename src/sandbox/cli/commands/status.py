@@ -39,3 +39,17 @@ def _render_mounts(mounts: tuple[Mount, ...], *, mounts_available: bool) -> None
     else:
         # Display the empty marker.
         click.echo("  None")
+
+
+# Render one network attachment.
+def _render_network(network: Network) -> None:
+    # Read the sanitized name.
+    name: str = sanitize_value(network.name)
+
+    # If the network has an assigned address.
+    if network.ip_address:
+        # Display the name and address.
+        click.echo(f"  {name} -> {sanitize_value(network.ip_address)}")
+    else:
+        # Display the name alone.
+        click.echo(f"  {name}")
