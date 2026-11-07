@@ -51,3 +51,9 @@ def _has_exited(box: BoxObservation) -> bool:
 
     # Fall back to the neutral stopped state.
     return box.state is BoxState.STOPPED
+
+
+# Complete the projects of running boxes.
+def complete_running_projects(ctx: click.Context, _parameter: click.Parameter, incomplete: str) -> list[str]:
+    # Complete running projects.
+    return _complete_projects(ctx, incomplete, _is_running)
