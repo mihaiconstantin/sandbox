@@ -63,3 +63,9 @@ def complete_running_projects(ctx: click.Context, _parameter: click.Parameter, i
 def complete_exited_projects(ctx: click.Context, _parameter: click.Parameter, incomplete: str) -> list[str]:
     # Complete exited projects.
     return _complete_projects(ctx, incomplete, _has_exited)
+
+
+# Complete the projects of every managed box.
+def complete_projects(ctx: click.Context, _parameter: click.Parameter, incomplete: str) -> list[str]:
+    # Complete every managed project.
+    return _complete_projects(ctx, incomplete, lambda _box: True)
