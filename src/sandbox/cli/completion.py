@@ -29,3 +29,14 @@ def _complete_projects(ctx: click.Context, incomplete: str, predicate: Callable[
 
     # Keep the projects whose boxes match the predicate and typed prefix.
     return [box.name for box in boxes if predicate(box) and box.name.startswith(incomplete)]
+
+
+# Report whether a box is running for completion filtering.
+def _is_running(box: BoxObservation) -> bool:
+    # Prefer the adapter display status when it is reported.
+    if box.status_text is not None:
+        # Match the running label.
+        return box.status_text == "running"
+
+    # Fall back to the neutral observed state.
+    return box.state is BoxState.RUNNING
