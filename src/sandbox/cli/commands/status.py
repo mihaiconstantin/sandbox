@@ -101,6 +101,35 @@ def status(ctx: click.Context, project: str, print_path: bool) -> None:
 
     # Display the host bind mounts.
     click.secho("\nBind mounts", bold = True, color = ctx.color)
+    _render_mounts(project_binds, mounts_available = mounts is not None)
+
+    # Display the attached secrets.
+    click.secho("\nSecrets", bold = True, color = ctx.color)
+    if secrets:
+        # Display each secret and its container path.
+        for secret in secrets:
+            # Render one sanitized secret alias and guest path.
+            click.echo(f"  {sanitize_value(secret)} -> {SECRET_ROOT}/{sanitize_value(secret)}")
+    elif mounts is None:
+        # Display the unavailable marker.
+        click.echo("  ?")
+    else:
+        # Display the empty marker.
+        click.echo("  None")
+
+    # Display the attached networks.
+    click.secho("\nNetworks", bold = True, color = ctx.color)
+    if box.networks:
+        # Display each network and its optional address.
+        for network in box.networks:
+            # Render the network through the shared sanitizer.
+            _render_network(network)
+    elif box.networks is None:
+        # Display the unavailable marker.
+        click.echo("  ?")
+    else:
+        # Display the empty marker.
+        click.echo("  None")
 
 
 # Render one mount category with its compatibility markers.
