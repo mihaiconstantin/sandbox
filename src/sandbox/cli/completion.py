@@ -69,3 +69,11 @@ def complete_exited_projects(ctx: click.Context, _parameter: click.Parameter, in
 def complete_projects(ctx: click.Context, _parameter: click.Parameter, incomplete: str) -> list[str]:
     # Complete every managed project.
     return _complete_projects(ctx, incomplete, lambda _box: True)
+
+
+# Define the public API of the `sandbox.cli.completion` module.
+__all__: list[str] = [
+    "complete_exited_projects",
+    "complete_projects",
+    "complete_running_projects",
+]
