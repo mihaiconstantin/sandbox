@@ -24,3 +24,7 @@ class AliasGroup(click.Group):
 @click.group(name = "create", cls = AliasGroup)
 def create_group() -> None:
     """Create a `sandbox` resource."""
+
+
+# Define the public API of the `sandbox.cli.commands.create` module.
+__all__: list[str] = ["AliasGroup", "create_group"]
