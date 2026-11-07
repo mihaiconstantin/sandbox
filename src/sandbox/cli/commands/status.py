@@ -164,3 +164,7 @@ def _render_network(network: Network) -> None:
     else:
         # Display the name alone.
         click.echo(f"  {name}")
+
+
+# Define the public API of the `sandbox.cli.commands.status` module.
+__all__: list[str] = ["status"]
