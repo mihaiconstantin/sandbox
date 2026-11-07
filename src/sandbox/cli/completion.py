@@ -57,3 +57,9 @@ def _has_exited(box: BoxObservation) -> bool:
 def complete_running_projects(ctx: click.Context, _parameter: click.Parameter, incomplete: str) -> list[str]:
     # Complete running projects.
     return _complete_projects(ctx, incomplete, _is_running)
+
+
+# Complete the projects of exited boxes.
+def complete_exited_projects(ctx: click.Context, _parameter: click.Parameter, incomplete: str) -> list[str]:
+    # Complete exited projects.
+    return _complete_projects(ctx, incomplete, _has_exited)
