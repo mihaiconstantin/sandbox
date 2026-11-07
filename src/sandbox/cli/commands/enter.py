@@ -41,3 +41,7 @@ def enter(ctx: click.Context, project: str, shell: str, login: bool) -> None:
     if status != 0:
         # Terminate with the normalized shell status.
         raise SystemExit(status if status > 0 else 1)
+
+
+# Define the public API of the `sandbox.cli.commands.enter` module.
+__all__: list[str] = ["enter"]
