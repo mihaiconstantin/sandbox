@@ -18,3 +18,9 @@ class AliasGroup(click.Group):
 
         # Return the canonical command.
         return super().get_command(ctx, canonical)
+
+
+# Create the resource command group.
+@click.group(name = "create", cls = AliasGroup)
+def create_group() -> None:
+    """Create a `sandbox` resource."""
