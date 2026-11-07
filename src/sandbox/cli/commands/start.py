@@ -35,3 +35,7 @@ def start(ctx: click.Context, project: str) -> None:
     else:
         # Report the preserved skip result on stdout.
         click.secho(f"Skipped starting the box for project `{project}` because it is already running.", fg = "yellow", color = ctx.color)
+
+
+# Define the public API of the `sandbox.cli.commands.start` module.
+__all__: list[str] = ["start"]
