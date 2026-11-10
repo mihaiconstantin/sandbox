@@ -87,3 +87,40 @@ def create_catalogue(ctx: click.Context, name: str, source: str, home: Path, for
 
     # User feedback.
     click.secho(f"Successfully installed catalogue `{name}` at `{installed_dir}`.", fg = "green", bold = True, color = ctx.color)
+
+
+# Create the catalogue command registered under the `edit` group.
+@click.command(name = "catalogue")
+@click.argument(
+    "name",
+    type = str,
+    callback = catalogue_argument,
+    help = "The name of the registered catalogue to edit.",
+)
+@home_option()
+@click.pass_context
+def edit_catalogue(ctx: click.Context, name: str, home: Path) -> None:
+    """Edit a registered catalogue in your editor.
+
+    The catalogue directory is opened with `$VISUAL` or `$EDITOR`. The editor
+    must block until it is closed so the catalogue can be validated afterwards.
+    """
+
+    # Resolve the client for the selected home.
+    client: SandboxClient = client_for(ctx, home)
+
+    # Resolve the registered catalogue to its managed directory.
+    catalogue_dir: Path = _locate(client, name)
+
+    # User feedback.
+    click.secho(f"Editing catalogue `{name}` at `{catalogue_dir}`.", italic = True, color = ctx.color)
+    click.secho("Reinstalling this catalogue with `--force` replaces local changes.", fg = "yellow", italic = True, color = ctx.color)
+
+    # Open the catalogue directory in the configured editor.
+    click.edit(filename = catalogue_dir)
+
+    # Validate the edited catalogue with the same rules used during installation.
+    client.catalogues.validate(name)
+
+    # User feedback.
+    click.secho(f"Catalogue `{name}` is valid.", fg = "green", bold = True, color = ctx.color)
