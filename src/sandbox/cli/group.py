@@ -56,3 +56,12 @@ class SandboxGroup(click.Group):
         finally:
             # Stop any active status line without replacing an earlier failure.
             cli_context(ctx).presentation.close()
+
+
+# Root CLI group for the application commands.
+@click.group(cls = SandboxGroup)
+@click.version_option(package_name = "sandbox", message = "%(version)s")
+def cli() -> None:
+    """
+    `sandbox` (`sb`) is a tool for managing isolated development environments.
+    """
