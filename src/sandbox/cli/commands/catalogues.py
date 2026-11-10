@@ -155,3 +155,33 @@ def catalogues(ctx: click.Context, home: Path) -> None:
 
     # Display the catalogues as a plain table.
     TableRenderer().render(headers, rows, color = ctx.color)
+
+
+# Create the recipes command registered under the `list` group.
+@click.command(name = "recipes")
+@click.option(
+    "-c", "--catalogue",
+    type = str,
+    required = True,
+    callback = catalogue_argument,
+    help = "The registered catalogue whose recipes to list.",
+)
+@home_option()
+@click.pass_context
+def recipes(ctx: click.Context, catalogue: str, home: Path) -> None:
+    """List the recipes declared by a registered `sandbox` catalogue."""
+
+    # Load the recipe declarations through the SDK.
+    listings: tuple[RecipeListing, ...] = client_for(ctx, home).catalogues.recipes(catalogue)
+
+    # Define the compatibility table columns.
+    headers: tuple[str, ...] = ("NAME", "DEFAULT")
+
+    # Prepare rows in name order, marking the declared default recipe.
+    rows: list[tuple[str, ...]] = [
+        (listing.name, "yes" if listing.is_default else "")
+        for listing in listings
+    ]
+
+    # Display the recipes as a plain table.
+    TableRenderer().render(headers, rows, color = ctx.color)
