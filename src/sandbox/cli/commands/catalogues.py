@@ -288,3 +288,7 @@ def remove_catalogue(ctx: click.Context, name: str, home: Path, yes: bool) -> No
 
     # User feedback.
     click.secho(f"Successfully removed catalogue `{plan.registration.name}`.", fg = "green", bold = True, color = ctx.color)
+
+
+# Define the public API of the `sandbox.cli.commands.catalogues` module.
+__all__: list[str] = ["catalogues", "create_catalogue", "edit_catalogue", "recipes", "remove_catalogue"]
