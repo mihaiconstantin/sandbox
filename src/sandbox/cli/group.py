@@ -22,3 +22,15 @@ from sandbox.cli.presentation.help import apply_styled_context, configure_help
 
 # Import the public error root.
 from sandbox.errors import SandboxError
+
+
+# Present one public error through the single injected presenter.
+def present_error(ctx: click.Context, error: SandboxError) -> NoReturn:
+    # Read the per-invocation context once.
+    context: CliContext = cli_context(ctx)
+
+    # Suspend transient status before writing the durable error line.
+    context.presentation.close()
+
+    # Present through the invoked context's presenter.
+    context.errors.present(error)
