@@ -185,3 +185,53 @@ def recipes(ctx: click.Context, catalogue: str, home: Path) -> None:
 
     # Display the recipes as a plain table.
     TableRenderer().render(headers, rows, color = ctx.color)
+
+
+# Create the catalogue command registered under the `remove` group.
+@click.command(name = "catalogue")
+@click.argument(
+    "name",
+    type = str,
+    callback = catalogue_argument,
+    help = "The name of the registered catalogue to remove.",
+)
+@home_option()
+@click.option(
+    "-y", "--yes",
+    is_flag = True,
+    default = False,
+    help = "Skip the removal confirmation prompt.",
+)
+@click.pass_context
+def remove_catalogue(ctx: click.Context, name: str, home: Path, yes: bool) -> None:
+    """Remove a registered catalogue, its registration, and its secret bindings."""
+
+    # Resolve the client for the selected home.
+    client: SandboxClient = client_for(ctx, home)
+
+    # Plan the removal without changing anything.
+    plan: CatalogueRemovalPlan | None = client.catalogues.plan_removal(name)
+
+    # If the catalogue is not registered.
+    if plan is None:
+        # Report the skip on stdout.
+        click.secho(f"Skipped removing catalogue `{name}` because it is not registered.", fg = "yellow", color = ctx.color)
+
+        # Return.
+        return
+
+    # Display the catalogue scheduled for removal.
+    click.secho(f"\nRemoving catalogue `{plan.registration.name}`...", fg = "yellow", italic = True, color = ctx.color)
+
+    # Display the catalogue metadata.
+    click.secho("\nCatalogue", bold = True, color = ctx.color)
+    click.echo(f"  Name       {plan.registration.name}")
+    click.echo(f"  Type       {plan.registration.type}")
+
+    # Create the directory suffix.
+    directory_suffix: str = "" if plan.registration.path.exists() else " (missing)"
+
+    # Display the catalogue directory.
+    click.echo(f"  Directory  {plan.registration.path}{directory_suffix}")
+
+    # Display the catalogue-scoped secret bindings.
