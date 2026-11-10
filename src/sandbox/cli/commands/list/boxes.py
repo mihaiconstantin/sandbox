@@ -44,3 +44,7 @@ def boxes(ctx: click.Context) -> None:
 
     # Display the boxes as a plain table.
     TableRenderer().render(headers, rows, color = ctx.color)
+
+
+# Define the public API of the `sandbox.cli.commands.list.boxes` module.
+__all__: list[str] = ["boxes"]
