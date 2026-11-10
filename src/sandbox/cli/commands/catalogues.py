@@ -264,3 +264,27 @@ def remove_catalogue(ctx: click.Context, name: str, home: Path, yes: bool) -> No
         click.echo("  already missing")
 
     # Separate the plan from the warning.
+    click.echo()
+
+    # If the catalogue directory exists.
+    if plan.registration.path.exists():
+        # Warn that the catalogue files will be deleted.
+        click.secho("The catalogue directory and any local modifications will be permanently deleted.", fg = "red", bold = True, color = ctx.color)
+    # Otherwise.
+    else:
+        # Warn that the catalogue directory is already missing.
+        click.secho("The catalogue directory is already missing.", fg = "yellow", color = ctx.color)
+
+    # Warn that the registration and its secret bindings will be removed.
+    click.secho("The catalogue registration and its catalogue-scoped secret bindings will be removed.", fg = "red", bold = True, color = ctx.color)
+
+    # If no explicit confirmation was provided via the `--yes` flag.
+    if not yes:
+        # Ask the user to confirm the removal.
+        click.confirm("\nAre you sure you want to remove this catalogue?", default = False, abort = True)
+
+    # Remove the planned catalogue through the SDK.
+    client.catalogues.remove(plan)
+
+    # User feedback.
+    click.secho(f"Successfully removed catalogue `{plan.registration.name}`.", fg = "green", bold = True, color = ctx.color)
