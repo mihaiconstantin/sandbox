@@ -124,3 +124,34 @@ def edit_catalogue(ctx: click.Context, name: str, home: Path) -> None:
 
     # User feedback.
     click.secho(f"Catalogue `{name}` is valid.", fg = "green", bold = True, color = ctx.color)
+
+
+# Create the catalogue command registered under the `list` group.
+@click.command(name = "catalogues")
+@home_option()
+@click.pass_context
+def catalogues(ctx: click.Context, home: Path) -> None:
+    """List all registered `sandbox` catalogues."""
+
+    # Load the catalogue registrations through the SDK.
+    registrations: tuple[CatalogueRegistration, ...] = client_for(ctx, home).catalogues.list()
+
+    # If no catalogues are registered.
+    if not registrations:
+        # Report the empty state on stdout.
+        click.secho("No catalogues registered.", fg = "yellow", color = ctx.color)
+
+        # Return.
+        return
+
+    # Define the compatibility table columns.
+    headers: tuple[str, ...] = ("NAME", "TYPE", "PATH")
+
+    # Prepare the table rows in registration order.
+    rows: list[tuple[str, ...]] = [
+        (registration.name, registration.type, str(registration.path))
+        for registration in registrations
+    ]
+
+    # Display the catalogues as a plain table.
+    TableRenderer().render(headers, rows, color = ctx.color)
