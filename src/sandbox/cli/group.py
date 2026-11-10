@@ -102,3 +102,36 @@ cli.add_command(remove_group)
 
 # Apply the deterministic help context to the group and every registered command.
 apply_styled_context(cli)
+
+
+# Run the CLI with the single presenter as the outer guard.
+def main(
+    context: CliContext | ClientFactory | None = None,
+    *,
+    console: Any | None = None,
+    args: Sequence[str] | None = None,
+) -> None:
+    # Disable traceback for expected failures.
+    sys.tracebacklimit = 0
+
+    # Resolve an explicit presentation context, a factory, or production defaults.
+    selected: CliContext
+    if isinstance(context, CliContext):
+        # Use the caller-supplied context unchanged.
+        selected = context
+    elif context is not None:
+        # Wrap a composition-supplied factory with presentation defaults.
+        selected = CliContext.create(client_factory = context, console = console)
+    else:
+        # Build the inert default context without a factory.
+        selected = CliContext.create(console = console)
+
+    # Run the normal Click entry point and present any public error escaping invoke.
+    try:
+        # Delegate normal Click error handling with the injected context.
+        cli.main(args = args, obj = selected)
+
+    # Present an expected public failure that bypassed Click dispatch.
+    except SandboxError as error:
+        # Render on stderr and exit with the documented class.
+        selected.errors.present(error)
