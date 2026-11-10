@@ -46,3 +46,7 @@ def volumes(ctx: click.Context) -> None:
 
     # Display the volumes as a plain table.
     TableRenderer().render(headers, rows, color = ctx.color)
+
+
+# Define the public API of the `sandbox.cli.commands.list.volumes` module.
+__all__: list[str] = ["volumes"]
