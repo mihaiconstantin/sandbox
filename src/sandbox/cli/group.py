@@ -75,3 +75,9 @@ configure_help(cli)
 @click.group(name = "edit")
 def edit_group() -> None:
     """Edit a `sandbox` resource."""
+
+
+# Create the integration-owned `remove` command group shell.
+@click.group(name = "remove")
+def remove_group() -> None:
+    """Remove a `sandbox` resource."""
