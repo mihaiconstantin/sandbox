@@ -135,3 +135,13 @@ def main(
     except SandboxError as error:
         # Render on stderr and exit with the documented class.
         selected.errors.present(error)
+
+
+# If the script is run directly.
+if __name__ == "__main__":
+    # Run the CLI with the single error presenter.
+    main()
+
+
+# Define the public API of the `sandbox.cli.group` module.
+__all__: list[str] = ["SandboxGroup", "cli", "create_group", "edit_group", "main", "present_error", "remove_group"]
