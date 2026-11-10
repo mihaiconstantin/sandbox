@@ -34,3 +34,25 @@ def present_error(ctx: click.Context, error: SandboxError) -> NoReturn:
 
     # Present through the invoked context's presenter.
     context.errors.present(error)
+
+
+# Route the public error family through the single presenter from Click invoke.
+class SandboxGroup(click.Group):
+    # Catch public failures from the group and every subcommand.
+    def invoke(self, ctx: click.Context) -> object:
+        # Run normal Click dispatch and finalize transient presentation.
+        try:
+            # Run the normal command path.
+            try:
+                # Delegate the invocation.
+                return super().invoke(ctx)
+
+            # Present expected public failures in one place.
+            except SandboxError as error:
+                # Render on stderr and exit with the documented class.
+                present_error(ctx, error)
+
+        # Finalize transient status and child decoding for this invocation.
+        finally:
+            # Stop any active status line without replacing an earlier failure.
+            cli_context(ctx).presentation.close()
