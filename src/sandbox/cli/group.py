@@ -65,3 +65,7 @@ def cli() -> None:
     """
     `sandbox` (`sb`) is a tool for managing isolated development environments.
     """
+
+
+# Configure the styled help text and epilog.
+configure_help(cli)
