@@ -235,3 +235,32 @@ def remove_catalogue(ctx: click.Context, name: str, home: Path, yes: bool) -> No
     click.echo(f"  Directory  {plan.registration.path}{directory_suffix}")
 
     # Display the catalogue-scoped secret bindings.
+    click.secho("\nSecret bindings", bold = True, color = ctx.color)
+
+    # If the catalogue has secret bindings.
+    if plan.registration.bindings:
+        # Declare the binding.
+        binding: CatalogueBinding
+
+        # For each binding.
+        for binding in plan.registration.bindings:
+            # Display only the binding alias and host path.
+            click.echo(f"  {binding.alias} -> {binding.path}")
+    # Otherwise.
+    else:
+        # Display none.
+        click.echo("  None")
+
+    # Display the catalogue files to be deleted.
+    click.secho("\nFiles", bold = True, color = ctx.color)
+
+    # If the catalogue directory exists.
+    if plan.registration.path.exists():
+        # Display that the catalogue files will be deleted.
+        click.echo("  will be deleted")
+    # Otherwise.
+    else:
+        # Display that the catalogue files are already missing.
+        click.echo("  already missing")
+
+    # Separate the plan from the warning.
