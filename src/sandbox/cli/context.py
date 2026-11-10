@@ -1,0 +1,166 @@
+# Imports.
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Protocol, runtime_checkable
+
+import click
+
+# Import the public SDK client and output contract.
+from sandbox.ports.output import SILENT, OutputSink
+from sandbox.sdk import SandboxClient
+
+# Import the public error root.
+from sandbox.errors.base import SandboxError
+
+# Import the CLI presentation values.
+from sandbox.cli.presentation.console import CliPresentation
+from sandbox.cli.presentation.errors import ErrorPresenter
+from sandbox.cli.presentation.vocabulary import DOCKER_VOCABULARY, RuntimeVocabulary
+
+
+# Represent the composition-supplied factory that builds one client per home.
+@runtime_checkable
+class ClientFactory(Protocol):
+    # Build a client bound to one configuration home and presentation sink.
+    def for_home(self, home: Path, *, output: OutputSink = SILENT) -> SandboxClient: ...
+
+
+# Bind the client factory, presentation, and error presenter for one invocation.
+@dataclass(init = False)
+class CliContext:
+    # Hold the optional composition-supplied client factory.
+    client_factory: ClientFactory | None = None
+
+    # Hold an explicitly injected stderr console, if any.
+    console: Any | None = None
+
+    # Hold the runtime vocabulary used for labels and backend nouns.
+    vocabulary: RuntimeVocabulary = DOCKER_VOCABULARY
+
+    # Hold the per-invocation presentation and its output sink.
+    presentation: CliPresentation = field(init = False)
+
+    # Hold the single error presenter.
+    errors: ErrorPresenter = field(init = False)
+
+    # Accept the composition factory plus direct test injections.
+    def __init__(
+        self,
+        presentation: CliPresentation | None = None,
+        errors: ErrorPresenter | None = None,
+        *,
+        client_factory: ClientFactory | None = None,
+        console: Any | None = None,
+        vocabulary: RuntimeVocabulary | None = None,
+    ) -> None:
+        # Retain the composition-supplied factory after protocol validation.
+        if client_factory is not None and not isinstance(client_factory, ClientFactory):
+            # Throw a programming error for an unusable injection.
+            raise TypeError("client_factory must implement ClientFactory.")
+
+        # Retain the resolved factory.
+        self.client_factory = client_factory
+
+        # Prefer the explicit console, then the supplied presentation.
+        selected_console: Any | None = console if console is not None else (presentation.err if presentation is not None else None)
+
+        # Resolve the vocabulary from explicit input, errors, or presentation.
+        selected_vocabulary: RuntimeVocabulary = (
+            vocabulary
+            or (errors.vocabulary if errors is not None else None)
+            or (presentation.vocabulary if presentation is not None else None)
+            or DOCKER_VOCABULARY
+        )
+
+        # Retain the resolved vocabulary and console.
+        self.console = selected_console
+        self.vocabulary = selected_vocabulary
+
+        # Construct the presentation when one was not injected.
+        self.presentation = presentation if presentation is not None else CliPresentation.attach(vocabulary = selected_vocabulary, console = selected_console)
+
+        # Bind the single presenter to the same console and vocabulary.
+        self.errors = errors if errors is not None else ErrorPresenter(selected_vocabulary, console = self.presentation.err)
+
+    # Expose the SDK output sink for commands that scope progress.
+    @property
+    def output(self) -> OutputSink:
+        # Return the presentation-owned sink.
+        return self.presentation.output
+
+    # Build a context with production defaults and an optional factory.
+    @classmethod
+    def create(
+        cls,
+        client_factory: ClientFactory | None = None,
+        *,
+        presentation: CliPresentation | None = None,
+        vocabulary: RuntimeVocabulary | None = None,
+        console: Any | None = None,
+    ) -> CliContext:
+        # Reuse an explicitly supplied presentation when one was injected.
+        if presentation is not None:
+            # Build the context around the supplied presentation and vocabulary.
+            context: CliContext = cls(
+                presentation = presentation,
+                client_factory = client_factory,
+                vocabulary = vocabulary or presentation.vocabulary,
+            )
+
+            # Retain the exact presentation supplied by the caller.
+            context.presentation = presentation
+            context.errors = ErrorPresenter(context.vocabulary, console = presentation.err)
+            return context
+
+        # Otherwise construct a fresh presentation with the requested vocabulary.
+        return cls(client_factory = client_factory, console = console, vocabulary = vocabulary or DOCKER_VOCABULARY)
+
+
+# Compute the default `sandbox` configuration home.
+def default_home() -> Path:
+    # Return the documented default home without reading or resolving it.
+    return Path.home() / ".sandbox"
+
+
+# Normalize a raw Click object into the CLI context.
+def cli_context(ctx: click.Context) -> CliContext:
+    # Read the root object injected by composition or a test.
+    root: click.Context = ctx.find_root()
+    obj: object | None = root.obj
+
+    # Use the explicit CLI context when one was injected.
+    if isinstance(obj, CliContext):
+        # Return the injected context.
+        return obj
+
+    # Accept a bare per-home factory for direct command tests.
+    if obj is not None and isinstance(obj, ClientFactory):
+        # Wrap the factory with presentation defaults and cache it on the root.
+        context: CliContext = CliContext.create(client_factory = obj)
+        root.obj = context
+        return context
+
+    # Otherwise provide one lazy default context without a factory.
+    context = CliContext.create()
+    root.obj = context
+    return context
+
+
+# Resolve the SDK client for one command or completion callback.
+def client_for(ctx: click.Context, home: Path | None = None) -> SandboxClient:
+    # Read the normalized CLI context.
+    context: CliContext = cli_context(ctx)
+
+    # Require a composition-supplied factory before an SDK operation.
+    if context.client_factory is None:
+        # Throw a CLI-local public failure with a clean presenter message.
+        raise SandboxError("No `sandbox` client factory is configured.")
+
+    # Build the client for the selected or default home with the presentation sink.
+    return context.client_factory.for_home(default_home() if home is None else home, output = context.presentation.output)
+
+
+# Define the public API of the `sandbox.cli.context` module.
+__all__: list[str] = ["CliContext", "ClientFactory", "cli_context", "client_for", "default_home"]
