@@ -81,3 +81,66 @@ def remove_empty_generated(workspace: Path) -> None:
     except OSError:
         # Leave the workspace for the user to inspect.
         return
+
+
+# Create the box command registered under the `create` group.
+@click.command(name = "box")
+@click.argument(
+    "project",
+    type = str,
+    callback = project_argument,
+    help = "The name of the project to create a box for.",
+)
+@click.option(
+    "-d", "--project-dir",
+    type = click.Path(exists = True, file_okay = False, dir_okay = True, path_type = Path),
+    default = None,
+    show_default = "a new empty temporary directory",
+    help = "The existing project directory to mount inside the box.",
+)
+@click.option(
+    "-c", "--catalogue",
+    type = str,
+    required = True,
+    callback = catalogue_argument,
+    help = "The catalogue containing the development recipe.",
+)
+@click.option(
+    "-r", "--recipe",
+    type = str,
+    help = "The development recipe to provision. Defaults to the default recipe of the selected catalogue.",
+)
+@home_option(exists = True)
+@click.option(
+    "--build",
+    is_flag = True,
+    default = False,
+    help = "Build the image even when it already exists.",
+)
+@click.pass_context
+def create_box(
+    ctx: click.Context,
+    project: str,
+    project_dir: Path | None,
+    catalogue: str,
+    recipe: str | None,
+    home: Path,
+    build: bool,
+) -> None:
+    """Create and start a box for a project."""
+
+    # Resolve the inert client for the selected home before any workspace mutation.
+    client: SandboxClient = client_for(ctx, home)
+
+    # Track whether this invocation owns the project directory.
+    generated: bool = project_dir is None
+
+    # Create the default workspace only after Click has validated every option.
+    workspace: Path = Path(tempfile.mkdtemp(prefix = "sb-box-")) if project_dir is None else project_dir
+
+    # Track whether creation reached the success result.
+    succeeded: bool = False
+
+    # Declare the effective recipe reported by the SDK.
+    effective_recipe: str
+
