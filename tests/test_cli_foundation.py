@@ -848,6 +848,7 @@ def test_project_completion_filters_every_command() -> None:
         ("sandbox stop ", {"demo"}),
         ("sandbox start ", {"stopped"}),
         ("sandbox status ", {"demo", "stopped", "fresh"}),
+        ("sandbox remove box ", {"demo", "stopped", "fresh"}),
     )
 
     # Check every command's completion filter.
