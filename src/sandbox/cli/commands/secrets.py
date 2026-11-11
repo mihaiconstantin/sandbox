@@ -83,3 +83,37 @@ def secrets(ctx: click.Context, home: Path) -> None:
     click.echo()
     click.secho("Mount paths are only relevant to boxes whose recipe declares the secret.", italic = True, color = ctx.color)
     click.secho("Run `sb status <project>` to inspect a box's actual mounts.", italic = True, color = ctx.color)
+
+
+# Create the secret command registered under the `remove` group.
+@click.command(name = "secret")
+@click.argument(
+    "secret",
+    type = str,
+    callback = secret_argument,
+)
+@click.option(
+    "-c", "--catalogue",
+    type = str,
+    required = True,
+    callback = catalogue_argument,
+    help = "The catalogue containing the secret.",
+)
+@home_option(exists = True)
+@click.pass_context
+def remove_secret(ctx: click.Context, secret: str, catalogue: str, home: Path) -> None:
+    """Remove a catalogue-scoped secret binding. `SECRET` represents the secret alias."""
+
+    # Remove only the binding and leave the host file untouched.
+    removed: bool = client_for(ctx, home).secrets.remove(catalogue, secret)
+
+    # If the binding does not exist.
+    if not removed:
+        # Report the skip on stdout.
+        click.secho(f"No secret `{secret}` is configured in catalogue `{catalogue}`.", fg = "yellow", color = ctx.color)
+
+        # Return.
+        return
+
+    # User feedback.
+    click.secho(f"Removed secret `{secret}` from catalogue `{catalogue}`.", fg = "green", bold = True, color = ctx.color)
