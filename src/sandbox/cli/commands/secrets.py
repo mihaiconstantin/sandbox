@@ -117,3 +117,7 @@ def remove_secret(ctx: click.Context, secret: str, catalogue: str, home: Path) -
 
     # User feedback.
     click.secho(f"Removed secret `{secret}` from catalogue `{catalogue}`.", fg = "green", bold = True, color = ctx.color)
+
+
+# Define the public API of the `sandbox.cli.commands.secrets` module.
+__all__: list[str] = ["create_secret", "remove_secret", "secrets"]
