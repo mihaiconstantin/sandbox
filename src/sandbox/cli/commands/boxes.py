@@ -219,3 +219,4 @@ def create_box(
             remove_empty_generated(workspace)
 
     # User feedback.
+    click.secho(f"Successfully created a box with recipe `{effective_recipe}` for the project `{project}`.", fg = "green", bold = True, color = ctx.color)
