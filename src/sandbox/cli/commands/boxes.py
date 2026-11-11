@@ -270,3 +270,33 @@ def remove_box(ctx: click.Context, project: str, yes: bool) -> None:
     click.secho("\nNetworks", bold = True, color = ctx.color)
 
     # Declare the network.
+    network: RuntimeRef
+
+    # For each network.
+    for network in plan.networks:
+        # Display the network name.
+        click.echo(f"  {network.name}")
+
+    # If no networks exist.
+    if not plan.networks:
+        # Display none.
+        click.echo("  None")
+
+    # Display the resources that will be preserved.
+    click.secho("\nPreserved", bold = True, color = ctx.color)
+    click.echo("  images")
+    click.echo("  volumes")
+    click.echo("  host project directories")
+
+    # If no explicit confirmation was provided via the `--yes` flag.
+    if not yes:
+        # Ask the user to confirm the removal.
+        click.confirm("\nRemove these resources?", default = False, abort = True)
+
+    # Scope transient progress to the SDK removal.
+    with cli_context(ctx).presentation.output:
+        # Apply the removal policy and postcondition.
+        client.boxes.remove(project)
+
+    # User feedback.
+    click.secho(f"Successfully removed resources for project `{project}`.", fg = "green", bold = True, color = ctx.color)
