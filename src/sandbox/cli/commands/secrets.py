@@ -47,3 +47,39 @@ def create_secret(ctx: click.Context, secret: str, file: str, catalogue: str, ho
 
     # Explain the runtime location without reading or exporting the secret.
     click.secho(f"Mounted read-only at `{secret_target(secret)}`.", italic = True, color = ctx.color)
+
+
+# Create the secret command registered under the `list` group.
+@click.command(name = "secrets")
+@home_option(exists = True)
+@click.pass_context
+def secrets(ctx: click.Context, home: Path) -> None:
+    """List all configured secret bindings."""
+
+    # Load the bindings through the SDK.
+    bindings = client_for(ctx, home).secrets.list()
+
+    # If no bindings exist.
+    if not bindings:
+        # Report the empty state on stdout.
+        click.secho("No secrets configured.", fg = "yellow", color = ctx.color)
+
+        # Return.
+        return
+
+    # Define the compatibility table columns.
+    headers: tuple[str, ...] = ("CATALOGUE", "SECRET", "HOST PATH", "BOX PATH")
+
+    # Prepare the table rows with paths and aliases only.
+    rows: list[tuple[str, ...]] = [
+        (binding.catalogue, binding.alias, str(binding.host_path), secret_target(binding.alias))
+        for binding in bindings
+    ]
+
+    # Display the bindings as a plain table.
+    TableRenderer().render(headers, rows, color = ctx.color)
+
+    # Clarify when the displayed mount paths are relevant.
+    click.echo()
+    click.secho("Mount paths are only relevant to boxes whose recipe declares the secret.", italic = True, color = ctx.color)
+    click.secho("Run `sb status <project>` to inspect a box's actual mounts.", italic = True, color = ctx.color)
