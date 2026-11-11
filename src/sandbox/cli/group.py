@@ -85,6 +85,33 @@ def remove_group() -> None:
     """Remove a `sandbox` resource."""
 
 
+
+# Register the catalogue and secret resource commands.
+create_group.add_command(create_catalogue)
+create_group.add_command(create_secret)
+edit_group.add_command(edit_catalogue)
+remove_group.add_command(remove_catalogue)
+remove_group.add_command(remove_secret)
+
+
+# Register the SDK-backed read and lifecycle commands.
+cli.add_command(completions)
+cli.add_command(enter)
+cli.add_command(list_resources)
+cli.add_command(start)
+cli.add_command(status)
+cli.add_command(stop)
+
+# Register the resource-group registration points for later slices.
+cli.add_command(create_group)
+cli.add_command(edit_group)
+cli.add_command(remove_group)
+
+
+# Apply the deterministic help context to the group and every registered command.
+apply_styled_context(cli)
+
+
 # Run the CLI with the single presenter as the outer guard.
 def main(
     context: CliContext | ClientFactory | None = None,
