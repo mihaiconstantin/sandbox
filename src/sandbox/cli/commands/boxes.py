@@ -220,3 +220,53 @@ def create_box(
 
     # User feedback.
     click.secho(f"Successfully created a box with recipe `{effective_recipe}` for the project `{project}`.", fg = "green", bold = True, color = ctx.color)
+
+
+# Remove a box and its owned runtime resources.
+@click.command(name = "box")
+@click.argument(
+    "project",
+    type = str,
+    callback = project_argument,
+    shell_complete = complete_projects,
+    help = "The name of the project whose box to remove.",
+)
+@click.option(
+    "-y", "--yes",
+    is_flag = True,
+    default = False,
+    help = "Skip the removal confirmation prompt.",
+)
+@click.pass_context
+def remove_box(ctx: click.Context, project: str, yes: bool) -> None:
+    """Remove a box and its resources."""
+
+    # Resolve the home-bound client once for this command.
+    client: SandboxClient = client_for(ctx)
+
+    # Preview the resources planned for removal without mutating them.
+    plan: RemovalPlan = client.boxes.plan_removal(project)
+
+    # Display the project being removed.
+    click.secho(f"\nRemoving resources for project `{project}`...", fg = "yellow", italic = True, color = ctx.color)
+
+    # Display the containers scheduled for removal.
+    click.secho("\nContainers", bold = True, color = ctx.color)
+
+    # Declare the container.
+    container: RuntimeRef
+
+    # For each container.
+    for container in plan.containers:
+        # Display the container name.
+        click.echo(f"  {container.name}")
+
+    # If no containers exist.
+    if not plan.containers:
+        # Display none.
+        click.echo("  None")
+
+    # Display the networks scheduled for removal.
+    click.secho("\nNetworks", bold = True, color = ctx.color)
+
+    # Declare the network.
