@@ -115,3 +115,14 @@ def remove_volume(ctx: click.Context, name: str, yes: bool) -> None:
     click.secho("\nAll data stored in this volume will be permanently deleted.", fg = "red", bold = True, color = ctx.color)
 
     # If no explicit confirmation was provided via the `--yes` flag.
+    if not yes:
+        # Ask the user to confirm the removal.
+        click.confirm("\nAre you sure you want to remove this volume?", default = False, abort = True)
+
+    # Scope transient progress to the SDK removal.
+    with cli_context(ctx).presentation.output:
+        # Apply the runtime removal policy and postcondition.
+        client.volumes.remove(name)
+
+    # Report the success result on stdout.
+    click.secho(f"Successfully removed the `docker` volume `{name}`.", fg = "green", bold = True, color = ctx.color)
