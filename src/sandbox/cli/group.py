@@ -71,6 +71,10 @@ def cli() -> None:
     """
 
 
+# Configure the styled help text and epilog.
+configure_help(cli)
+
+
 # Create the integration-owned `edit` command group shell.
 @click.group(name = "edit")
 def edit_group() -> None:
