@@ -66,3 +66,18 @@ def secret_command_hint(error: MissingSecret, home: Path) -> str:
 
     # Return the complete hint.
     return command_hint
+
+
+# Remove a generated workspace only when it is still empty.
+def remove_empty_generated(workspace: Path) -> None:
+    # Ignore a missing or non-empty workspace without masking the operation result.
+    try:
+        # Remove the directory only when it has no entries.
+        if not any(workspace.iterdir()):
+            # Remove the empty generated directory.
+            workspace.rmdir()
+
+    # Ignore cleanup filesystem failures.
+    except OSError:
+        # Leave the workspace for the user to inspect.
+        return
