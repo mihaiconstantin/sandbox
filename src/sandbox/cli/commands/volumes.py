@@ -89,3 +89,29 @@ def remove_volume(ctx: click.Context, name: str, yes: bool) -> None:
     click.secho("\nReferencing containers", bold = True, color = ctx.color)
 
     # If the reference set cannot be established.
+    if volume_info.in_use_by is None:
+        # Display the unknown reference count.
+        click.echo("  ?")
+
+        # Refuse removal rather than guessing.
+        raise VolumeReferencesUnavailable(name)
+
+    # If no containers reference the volume.
+    if not volume_info.in_use_by:
+        # Display none.
+        click.echo("  None")
+
+    # For each container referencing the volume.
+    for container in volume_info.in_use_by:
+        # Display the container name.
+        click.echo(f"  {container.name}")
+
+    # If the volume is still referenced by containers.
+    if volume_info.in_use_by:
+        # Refuse removal.
+        raise VolumeInUse(name)
+
+    # Warn that the volume's data will be permanently deleted.
+    click.secho("\nAll data stored in this volume will be permanently deleted.", fg = "red", bold = True, color = ctx.color)
+
+    # If no explicit confirmation was provided via the `--yes` flag.
