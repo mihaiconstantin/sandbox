@@ -17,6 +17,7 @@ from sandbox.cli.commands.secrets import create_secret, remove_secret
 from sandbox.cli.commands.start import start
 from sandbox.cli.commands.status import status
 from sandbox.cli.commands.stop import stop
+from sandbox.cli.commands.volumes import create_volume, remove_volume
 
 # Import the CLI context and presentation.
 from sandbox.cli.context import CliContext, ClientFactory, cli_context
@@ -93,6 +94,9 @@ edit_group.add_command(edit_catalogue)
 remove_group.add_command(remove_catalogue)
 remove_group.add_command(remove_secret)
 
+# Register the volume resource commands.
+create_group.add_command(create_volume)
+remove_group.add_command(remove_volume)
 
 # Register the SDK-backed read and lifecycle commands.
 cli.add_command(completions)
