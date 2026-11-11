@@ -49,3 +49,20 @@ def prompt_secret_file() -> Path:
 
         # Return the resolved file path without reading its contents.
         return path.resolve()
+
+
+# Compose the actionable command that binds a missing secret.
+def secret_command_hint(error: MissingSecret, home: Path) -> str:
+    # Resolve the selected home so the hint matches the binding location.
+    selected_home: Path = home.expanduser().resolve()
+
+    # Compose the command that binds the missing secret in its catalogue.
+    command_hint: str = f"sb create secret {error.alias} --file <path> --catalogue {error.catalogue}"
+
+    # If the selected home differs from the default home.
+    if selected_home != default_home().expanduser().resolve():
+        # Append the selected home so the binding is saved where this command reads it.
+        command_hint += f" --home {selected_home}"
+
+    # Return the complete hint.
+    return command_hint
