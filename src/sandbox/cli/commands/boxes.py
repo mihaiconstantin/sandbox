@@ -21,3 +21,9 @@ from sandbox.errors.secrets import MissingSecret, SecretError
 
 # Import the public SDK request.
 from sandbox.sdk import CreateBoxRequest, CreateBoxResult, SandboxClient
+
+
+# Check whether the command has an interactive terminal.
+def is_interactive() -> bool:
+    # Return whether standard input is a terminal.
+    return sys.stdin.isatty()
