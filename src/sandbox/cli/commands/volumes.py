@@ -126,3 +126,7 @@ def remove_volume(ctx: click.Context, name: str, yes: bool) -> None:
 
     # Report the success result on stdout.
     click.secho(f"Successfully removed the `docker` volume `{name}`.", fg = "green", bold = True, color = ctx.color)
+
+
+# Define the public API of the `sandbox.cli.commands.volumes` module.
+__all__: list[str] = ["create_volume", "remove_volume"]
