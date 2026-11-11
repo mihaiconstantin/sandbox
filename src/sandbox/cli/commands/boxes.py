@@ -27,3 +27,25 @@ from sandbox.sdk import CreateBoxRequest, CreateBoxResult, SandboxClient
 def is_interactive() -> bool:
     # Return whether standard input is a terminal.
     return sys.stdin.isatty()
+
+
+# Prompt for a readable secret file.
+def prompt_secret_file() -> Path:
+    # Repeat until a valid file is provided.
+    while True:
+        # Ask for the secret file path.
+        value: str = click.prompt("Path to secret file", type = str)
+
+        # Expand the user directory.
+        path: Path = Path(value).expanduser()
+
+        # If the file is not readable.
+        if not path.is_file() or not os.access(path, os.R_OK):
+            # User feedback.
+            click.secho(f"Secret file `{path}` does not exist or is not readable.", fg = "red")
+
+            # Ask again.
+            continue
+
+        # Return the resolved file path without reading its contents.
+        return path.resolve()
