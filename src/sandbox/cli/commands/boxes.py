@@ -144,3 +144,78 @@ def create_box(
     # Declare the effective recipe reported by the SDK.
     effective_recipe: str
 
+    try:
+        # Scope transient progress to the create operation.
+        with cli_context(ctx).presentation.output:
+            # Repeat until the box is created.
+            while True:
+                # Attempt to create the box.
+                try:
+                    # Create the box and retain the effective recipe.
+                    result: CreateBoxResult = client.boxes.create(
+                        CreateBoxRequest(
+                            project = project,
+                            project_dir = workspace,
+                            catalogue = catalogue,
+                            recipe = recipe,
+                            rebuild = build,
+                        )
+                    )
+
+                # If a required secret is missing.
+                except MissingSecret as error:
+                    # If the command is not interactive.
+                    if not is_interactive():
+                        # Throw the actionable non-interactive hint through the presenter.
+                        raise SecretError(
+                            f"Secret `{error.alias}` is not configured. "
+                            f"Recipe `{error.recipe}` requires it. "
+                            f"Run `{secret_command_hint(error, home)}`."
+                        ) from None
+
+                    # Name the catalogue that requires the secret.
+                    catalogue_scope: str = f" in catalogue `{error.catalogue}`"
+
+                    # User feedback.
+                    click.secho(
+                        f"Secret `{error.alias}`{catalogue_scope} is required by recipe `{error.recipe}`.",
+                        fg = "yellow",
+                        italic = True,
+                        color = ctx.color,
+                    )
+
+                    # Explain where the secret will be mounted.
+                    click.secho(
+                        f"It will be mounted read-only at `{secret_target(error.alias)}`.",
+                        fg = "yellow",
+                        italic = True,
+                        color = ctx.color,
+                    )
+
+                    # Ask for the secret file.
+                    secret_file: Path = prompt_secret_file()
+
+                    # Save the binding through the SDK without reading the contents.
+                    client.secrets.bind(error.catalogue, error.alias, secret_file)
+
+                    # User feedback.
+                    click.secho(f"Saved secret `{error.alias}` in catalogue `{error.catalogue}`.", fg = "green", color = ctx.color)
+
+                # Otherwise, stop retrying.
+                else:
+                    # Retain the effective recipe.
+                    effective_recipe = result.recipe
+
+                    # Mark the operation successful before retaining its workspace.
+                    succeeded = True
+
+                    # Stop once creation succeeds.
+                    break
+
+    finally:
+        # Remove a generated workspace only after a failed operation and only when still empty.
+        if generated and not succeeded:
+            # Clean the empty generated directory.
+            remove_empty_generated(workspace)
+
+    # User feedback.
