@@ -300,3 +300,7 @@ def remove_box(ctx: click.Context, project: str, yes: bool) -> None:
 
     # User feedback.
     click.secho(f"Successfully removed resources for project `{project}`.", fg = "green", bold = True, color = ctx.color)
+
+
+# Define the public API of the `sandbox.cli.commands.boxes` module.
+__all__: list[str] = ["create_box", "remove_box"]
