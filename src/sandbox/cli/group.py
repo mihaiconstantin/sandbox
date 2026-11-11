@@ -8,10 +8,12 @@ from typing import Any, NoReturn
 import click
 
 # Import the SDK-backed commands.
+from sandbox.cli.commands.catalogues import create_catalogue, edit_catalogue, remove_catalogue
 from sandbox.cli.commands.completions import completions
 from sandbox.cli.commands.create import create_group
 from sandbox.cli.commands.enter import enter
 from sandbox.cli.commands.list import list_resources
+from sandbox.cli.commands.secrets import create_secret, remove_secret
 from sandbox.cli.commands.start import start
 from sandbox.cli.commands.status import status
 from sandbox.cli.commands.stop import stop
@@ -84,6 +86,12 @@ def remove_group() -> None:
 
 
 
+# Register the catalogue and secret resource commands.
+create_group.add_command(create_catalogue)
+create_group.add_command(create_secret)
+edit_group.add_command(edit_catalogue)
+remove_group.add_command(remove_catalogue)
+remove_group.add_command(remove_secret)
 
 
 # Register the SDK-backed read and lifecycle commands.
