@@ -37,3 +37,7 @@ def build_docker_integrations(runner: CommandRunner | None = None) -> DockerInte
         builder = DockerBuilder(docker),
         runtime = ComposeRuntime(docker),
     )
+
+
+# Define the public API of the `sandbox.composition.integrations` module.
+__all__: list[str] = ["DockerIntegrations", "build_docker_integrations"]
