@@ -1,0 +1,85 @@
+# The workflow name.
+name: Deploy Documentation
+
+# The workflow triggers.
+on:
+    # On push to the release branch.
+    push:
+        branches: [main]
+        paths:
+            - "docs/**"
+            - ".github/workflows/docs.yml"
+
+    # On manual dispatch.
+    workflow_dispatch:
+
+# The workflow permissions.
+permissions:
+    contents: read
+    pages: write
+    id-token: write
+
+# Allow only one concurrent deployment.
+concurrency:
+    group: pages
+    cancel-in-progress: false
+
+# The workflow jobs.
+jobs:
+    # The build job.
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            # Checkout the repository with the full history for `lastUpdated`.
+            - name: Checkout the repository
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            # Setup `pnpm`.
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 10
+
+            # Setup `Node.js`.
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: pnpm
+                  cache-dependency-path: docs/pnpm-lock.yaml
+
+            # Setup GitHub Pages.
+            - name: Setup GitHub Pages
+              uses: actions/configure-pages@v4
+
+            # Install the documentation dependencies.
+            - name: Install documentation dependencies
+              working-directory: ./docs
+              run: pnpm install --frozen-lockfile
+
+            # Build the documentation.
+            - name: Build the documentation
+              working-directory: ./docs
+              run: pnpm docs:build
+
+            # Upload the built documentation as an artifact.
+            - name: Upload build artifact
+              uses: actions/upload-pages-artifact@v3
+              with:
+                  path: docs/.vitepress/dist
+
+    # The deployment job.
+    deploy:
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        needs: build
+        runs-on: ubuntu-latest
+
+        # The deployment steps.
+        steps:
+            - name: Deploy to GitHub Pages
+              id: deployment
+              uses: actions/deploy-pages@v4
