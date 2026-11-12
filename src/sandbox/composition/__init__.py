@@ -5,3 +5,6 @@ The concrete adapter selection, client factory, vocabulary, and CLI entry point 
 :mod:`sandbox.composition.vocabulary`, and :mod:`sandbox.composition.main`. Importing this
 package deliberately loads none of them.
 """
+
+# Define the public API of the composition package initializer.
+__all__: list[str] = []
