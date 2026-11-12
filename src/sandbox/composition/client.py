@@ -57,3 +57,9 @@ class SandboxClientFactory:
         self._output: OutputSink = output
         self._integrations: ClientAdapters | None = integrations
         self._runner: CommandRunner | None = runner
+
+    # Read the advisory sink used by clients that do not override it.
+    @property
+    def output(self) -> OutputSink:
+        # Return the injected sink.
+        return self._output
