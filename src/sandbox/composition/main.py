@@ -27,3 +27,17 @@ def build_context() -> CliContext:
         client_factory = factory,
         vocabulary = DOCKER_VOCABULARY,
     )
+
+
+# Run the production CLI with composition-owned presentation and client wiring.
+def main(argv: Sequence[str] | None = None) -> None:
+    # Build the inert context once for this invocation.
+    context: CliContext = build_context()
+
+    # Preserve the plain entry-point call when no explicit argv is supplied.
+    if argv is None:
+        # Delegate to the single CLI entry point.
+        cli_main(context)
+    else:
+        # Delegate with an explicit argv for tests and embedding.
+        cli_main(context, args = argv)
