@@ -1,0 +1,92 @@
+/* Imports. */
+@import url('https://fonts.googleapis.com/css2?family=Comic+Neue:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap');
+
+/* Tailwind layers, without Preflight so VitePress styles remain intact. */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+
+/* Trigger dark mode via the `dark` class on the `html` element. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+
+/* Tailwind theme variables. */
+@theme {
+    /* The `sandbox` palette, derived from the logo. */
+    --color-sandbox-50: #fdf9ef;
+    --color-sandbox-100: #faf0d7;
+    --color-sandbox-200: #f3dfaa;
+    --color-sandbox-300: #eacb7d;
+    --color-sandbox-400: #e1af67;
+    --color-sandbox-500: #cf9445;
+    --color-sandbox-550: #b37a2a;
+    --color-sandbox-600: #9a651f;
+    --color-sandbox-700: #7a4f18;
+    --color-sandbox-800: #53350f;
+    --color-sandbox-900: #2e1e08;
+    --color-sandbox-950: #170f04;
+
+    /* The wordmark font. */
+    --font-sandbox: "Comic Neue", sans-serif;
+}
+
+
+/* Stretch the home page so the footer sits at the bottom. */
+#VPContent {
+    display: flex;
+    flex-direction: column;
+}
+
+.VPHome {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    margin-bottom: 0 !important;
+}
+
+.VPFeatures {
+    flex-grow: 1;
+}
+
+
+/* The navigation title and logo. */
+.VPNavBarTitle .VPImage {
+    border-radius: 0.3rem;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+.VPNavBarTitle span {
+    font-family: var(--font-sandbox);
+    font-size: 1.1rem;
+    letter-spacing: 0.2px;
+    background-image: linear-gradient(
+        to right,
+        var(--color-sandbox-500) 15px,
+        var(--vp-c-text-1) 35px
+    );
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+}
+
+html.dark .VPNavBarTitle span {
+    background-image: linear-gradient(
+        to right,
+        var(--color-sandbox-400) 15px,
+        var(--vp-c-text-1) 35px
+    );
+}
+
+
+/* The brand colors in light mode. */
+html:not(.dark) {
+    --vp-c-brand-1: var(--color-sandbox-600);
+    --vp-c-brand-2: var(--color-sandbox-550);
+}
+
+
+/* The brand colors in dark mode. */
+html.dark {
+    --vp-c-brand-1: var(--color-sandbox-400);
+    --vp-c-brand-2: var(--color-sandbox-500);
+}
