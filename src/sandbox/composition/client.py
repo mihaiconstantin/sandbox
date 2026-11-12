@@ -29,3 +29,31 @@ class ClientAdapters(Protocol):
     # Hold the runtime.
     @property
     def runtime(self) -> Runtime: ...
+
+
+# Build one home-scoped SDK client per requested configuration home.
+class SandboxClientFactory:
+    # Bind the factory to its adapters and advisory output sink.
+    def __init__(
+        self,
+        *,
+        output: OutputSink = SILENT,
+        integrations: ClientAdapters | None = None,
+        runner: CommandRunner | None = None,
+    ) -> None:
+        # Require a usable output sink.
+        if not isinstance(output, OutputSink):
+            # Throw a programming error for Python API misuse.
+            raise TypeError("output must implement the OutputSink port.")
+
+        # Validate an explicitly supplied adapter bundle.
+        if integrations is not None:
+            # Require both neutral ports together.
+            if not isinstance(getattr(integrations, "builder", None), Builder) or not isinstance(getattr(integrations, "runtime", None), Runtime):
+                # Throw a programming error for an incomplete bundle.
+                raise ValueError("integrations must supply both a builder and a runtime.")
+
+        # Retain the injected values without constructing an adapter.
+        self._output: OutputSink = output
+        self._integrations: ClientAdapters | None = integrations
+        self._runner: CommandRunner | None = runner
