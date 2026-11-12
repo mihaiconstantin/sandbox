@@ -63,3 +63,16 @@ class SandboxClientFactory:
     def output(self) -> OutputSink:
         # Return the injected sink.
         return self._output
+
+    # Read the adapters, building the production Docker set on first use.
+    @property
+    def integrations(self) -> ClientAdapters:
+        # Build the Docker adapters lazily so help, version, and completion stay inert.
+        adapters: ClientAdapters | None = self._integrations
+        if adapters is None:
+            # Construct the shared Docker gateway and its two adapters.
+            adapters = build_docker_integrations(self._runner)
+            self._integrations = adapters
+
+        # Return the retained or freshly built adapters.
+        return adapters
