@@ -130,3 +130,7 @@ def guide() -> None:
         # Otherwise.
         else:
             click.echo(click.formatting.wrap_text(line, preserve_paragraphs = True))
+
+
+# Define the public API of the `sandbox.cli.commands.guide` module.
+__all__: list[str] = ["GUIDE_HEADINGS", "GUIDE_TEXT", "guide"]
