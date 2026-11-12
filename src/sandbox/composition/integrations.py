@@ -24,3 +24,16 @@ class DockerIntegrations:
 
     # Hold the Compose runtime.
     runtime: ComposeRuntime
+
+
+# Build the production Docker adapters around one shared Docker CLI.
+def build_docker_integrations(runner: CommandRunner | None = None) -> DockerIntegrations:
+    # Construct one gateway over the supplied or production process runner.
+    docker: DockerCli = DockerCli(SubprocessRunner() if runner is None else runner)
+
+    # Build the distinct builder and runtime over the same gateway.
+    return DockerIntegrations(
+        docker = docker,
+        builder = DockerBuilder(docker),
+        runtime = ComposeRuntime(docker),
+    )
