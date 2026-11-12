@@ -8,10 +8,12 @@ from typing import Any, NoReturn
 import click
 
 # Import the SDK-backed commands.
+from sandbox.cli.commands.boxes import create_box, remove_box
 from sandbox.cli.commands.catalogues import create_catalogue, edit_catalogue, remove_catalogue
 from sandbox.cli.commands.completions import completions
 from sandbox.cli.commands.create import create_group
 from sandbox.cli.commands.enter import enter
+from sandbox.cli.commands.guide import guide
 from sandbox.cli.commands.list import list_resources
 from sandbox.cli.commands.secrets import create_secret, remove_secret
 from sandbox.cli.commands.start import start
@@ -86,6 +88,9 @@ def remove_group() -> None:
     """Remove a `sandbox` resource."""
 
 
+# Register the box resource command.
+create_group.add_command(create_box)
+remove_group.add_command(remove_box)
 
 # Register the catalogue and secret resource commands.
 create_group.add_command(create_catalogue)
@@ -101,6 +106,7 @@ remove_group.add_command(remove_volume)
 # Register the SDK-backed read and lifecycle commands.
 cli.add_command(completions)
 cli.add_command(enter)
+cli.add_command(guide)
 cli.add_command(list_resources)
 cli.add_command(start)
 cli.add_command(status)
