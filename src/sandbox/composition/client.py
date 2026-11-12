@@ -17,3 +17,11 @@ from sandbox.composition.integrations import build_docker_integrations
 
 # Import the public SDK client.
 from sandbox.sdk import SandboxClient
+
+
+# Represent the two neutral ports a client factory needs.
+@runtime_checkable
+class ClientAdapters(Protocol):
+    # Hold the image builder.
+    @property
+    def builder(self) -> Builder: ...
