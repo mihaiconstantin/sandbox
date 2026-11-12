@@ -76,3 +76,24 @@ class SandboxClientFactory:
 
         # Return the retained or freshly built adapters.
         return adapters
+
+    # Build a client bound to one configuration home and output sink.
+    def for_home(self, home: Path, *, output: OutputSink = SILENT) -> SandboxClient:
+        # Prefer a per-client override and fall back to the injected default.
+        sink: OutputSink = self._output if output is SILENT else output
+
+        # Require a usable sink before constructing the client.
+        if not isinstance(sink, OutputSink):
+            # Throw a programming error for Python API misuse.
+            raise TypeError("output must implement the OutputSink port.")
+
+        # Read the adapters once so every client shares the same wiring.
+        adapters: ClientAdapters = self.integrations
+
+        # Build the inert home-scoped client.
+        return SandboxClient(
+            home = home,
+            runtime = adapters.runtime,
+            builder = adapters.builder,
+            output = sink,
+        )
