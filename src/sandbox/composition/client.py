@@ -97,3 +97,7 @@ class SandboxClientFactory:
             builder = adapters.builder,
             output = sink,
         )
+
+
+# Define the public API of the `sandbox.composition.client` module.
+__all__: list[str] = ["ClientAdapters", "SandboxClientFactory"]
