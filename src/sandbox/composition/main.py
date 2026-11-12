@@ -41,3 +41,13 @@ def main(argv: Sequence[str] | None = None) -> None:
     else:
         # Delegate with an explicit argv for tests and embedding.
         cli_main(context, args = argv)
+
+
+# If the script is run directly.
+if __name__ == "__main__":
+    # Run the production CLI.
+    main()
+
+
+# Define the public API of the `sandbox.composition.main` module.
+__all__: list[str] = ["build_context", "main"]
