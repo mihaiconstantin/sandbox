@@ -15,4 +15,8 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- N/A for the initial unreleased version.
+
 ### Fixed
+
+- N/A for the initial unreleased version.
