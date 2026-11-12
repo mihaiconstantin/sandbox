@@ -13,6 +13,7 @@ from sandbox.cli.commands.catalogues import create_catalogue, edit_catalogue, re
 from sandbox.cli.commands.completions import completions
 from sandbox.cli.commands.create import create_group
 from sandbox.cli.commands.enter import enter
+from sandbox.cli.commands.guide import guide
 from sandbox.cli.commands.list import list_resources
 from sandbox.cli.commands.secrets import create_secret, remove_secret
 from sandbox.cli.commands.start import start
@@ -71,10 +72,6 @@ def cli() -> None:
     """
 
 
-# Configure the styled help text and epilog.
-configure_help(cli)
-
-
 # Create the integration-owned `edit` command group shell.
 @click.group(name = "edit")
 def edit_group() -> None:
@@ -85,39 +82,6 @@ def edit_group() -> None:
 @click.group(name = "remove")
 def remove_group() -> None:
     """Remove a `sandbox` resource."""
-
-
-# Register the box resource command.
-create_group.add_command(create_box)
-remove_group.add_command(remove_box)
-
-# Register the catalogue and secret resource commands.
-create_group.add_command(create_catalogue)
-create_group.add_command(create_secret)
-edit_group.add_command(edit_catalogue)
-remove_group.add_command(remove_catalogue)
-remove_group.add_command(remove_secret)
-
-# Register the volume resource commands.
-create_group.add_command(create_volume)
-remove_group.add_command(remove_volume)
-
-# Register the SDK-backed read and lifecycle commands.
-cli.add_command(completions)
-cli.add_command(enter)
-cli.add_command(list_resources)
-cli.add_command(start)
-cli.add_command(status)
-cli.add_command(stop)
-
-# Register the resource-group registration points for later slices.
-cli.add_command(create_group)
-cli.add_command(edit_group)
-cli.add_command(remove_group)
-
-
-# Apply the deterministic help context to the group and every registered command.
-apply_styled_context(cli)
 
 
 # Run the CLI with the single presenter as the outer guard.
