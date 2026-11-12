@@ -112,3 +112,21 @@ GUIDE_TEXT = inspect.cleandoc(f"""
     Run `{click.style("sb", bold = True, fg = "blue")} <{click.style("command", bold = True, fg = "green")}> --help` for command-specific {click.style("options", italic = True)} and usage.
     """
 ).strip()
+
+
+# Command to print the `sandbox` guide.
+@click.command(name = "guide")
+def guide() -> None:
+    """Print a guide for getting started with `sandbox`."""
+
+    # Declare the guide line.
+    line: str
+
+    # Print each guide line.
+    for line in GUIDE_TEXT.splitlines():
+        # If the line is a section heading.
+        if line in GUIDE_HEADINGS:
+            click.echo(click.style(line, bold = True, underline = True))
+        # Otherwise.
+        else:
+            click.echo(click.formatting.wrap_text(line, preserve_paragraphs = True))
