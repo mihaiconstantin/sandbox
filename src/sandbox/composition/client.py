@@ -25,3 +25,7 @@ class ClientAdapters(Protocol):
     # Hold the image builder.
     @property
     def builder(self) -> Builder: ...
+
+    # Hold the runtime.
+    @property
+    def runtime(self) -> Runtime: ...
