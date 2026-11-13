@@ -6,7 +6,7 @@ import { defineConfig } from "vitepress";
 export default defineConfig({
     // The site metadata.
     title: "sandbox",
-    description: "Isolated development environments for local projects.",
+    description: "Isolated development boxes for local projects.",
     lang: "en-US",
 
     // The URL and build behavior.
