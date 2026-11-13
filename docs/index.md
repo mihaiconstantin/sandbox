@@ -17,7 +17,8 @@ features:
   - title: CLI and SDK
     icon: ⚙️
     details: >
-        Create, enter, and tear down boxes from the terminal with <code>sb</code>,
+        Create, enter, and tear down boxes from the terminal with
+        <code class="text-sandbox-500 font-bold">sb</code>,
         or manage them in code using the Python SDK.
 
 footer: false
