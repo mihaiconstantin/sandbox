@@ -12,19 +12,19 @@
     >
         <!-- The fading top rule. -->
         <div
-            class="absolute top-0 right-[25%] left-[25%] h-[1px] bg-gradient-to-r from-transparent via-[#cecccb] to-transparent dark:via-[#282b2e]"
+            class="absolute top-0 right-[25%] left-[25%] h-px bg-linear-to-r from-transparent via-[#cecccb] to-transparent dark:via-[#282b2e]"
         ></div>
 
         <!-- The author line. -->
         <div>
             Made with
             <span
-                class="heart inline-block cursor-default text-[1.15rem] text-[#c41b1b] transition-all duration-500 active:rotate-[360deg] hover:rotate-[360deg] dark:text-[#c56c6c]"
+                class="heart inline-block cursor-default text-[1.15rem] text-[#c41b1b] transition-all duration-500 active:rotate-360 hover:rotate-360 dark:text-[#c56c6c]"
                 >&#9829;</span
             >
             by
             <a
-                class="!text-[#3451b2] !no-underline dark:!text-[#a8b1ff]"
+                class="text-[#3451b2] no-underline dark:text-[#a8b1ff]"
                 href="https://mihaiconstantin.com"
                 target="_blank"
             >
@@ -33,7 +33,7 @@
         </div>
 
         <!-- The software license line. -->
-        <div class="license-mit !no-underline">
+        <div class="license-mit no-underline">
             <a href="https://github.com/mihaiconstantin/sandbox" target="_blank">
                 Software
             </a>
@@ -45,7 +45,7 @@
 
         <!-- The website content license line. -->
         <div
-            class="license-cc !no-underline"
+            class="license-cc no-underline"
             xmlns:cc="https://creativecommons.org/ns#"
             xmlns:dct="https://purl.org/dc/terms/"
         >
