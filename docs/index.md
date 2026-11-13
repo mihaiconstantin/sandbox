@@ -2,12 +2,23 @@
 layout: home
 
 features:
-    - title: Project-scoped boxes
-      details: Each box is a Docker environment associated with a project directory, with access to explicitly mounted resources.
-    - title: Reusable recipes
-      details: Catalogues package Dockerfiles and compose files that can be shared, extended, and versioned independently.
-    - title: Explicit resources
-      details: Volumes are shared only when declared, and secrets are bound to host paths by you.
+  - title: Project-Scoped Boxes
+    icon: 📦
+    details: >
+        Mount a host project directory into an isolated box with access only to
+        resources and secrets you explicitly declare.
+
+  - title: Catalogues and Recipes
+    icon: 🔖
+    details: >
+        Specify how each box is built using recipes based on Docker and
+        Compose files. Package them into shareable catalogues.
+
+  - title: CLI and SDK
+    icon: ⚙️
+    details: >
+        Create, enter, and tear down boxes from the terminal with <code>sb</code>,
+        or manage them in code using the Python SDK.
 
 footer: false
 ---
