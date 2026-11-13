@@ -37,15 +37,16 @@
                     <div
                         class="mb-3 w-full border-0 text-3xl leading-10 font-light min-[460px]:max-[768px]:w-[400px] min-[768px]:max-[960px]:w-[500px] min-[960px]:text-5xl min-[960px]:leading-14"
                     >
-                        Isolated Development Environments
+                        Isolated Boxes for Local Projects
                     </div>
 
                     <!-- The tagline. -->
                     <div
                         class="w-full border-0 text-lg leading-8 font-light text-[var(--vp-c-text-2)] min-[460px]:max-[768px]:w-[400px] min-[768px]:max-[960px]:w-[500px] min-[960px]:text-2xl min-[960px]:leading-9"
                     >
-                        Create and manage Docker-backed development boxes from
-                        reusable, customizable recipes.
+                        Mount a host directory into a box built from reusable
+                        Docker recipes to run tools, scripts, and AI agents off
+                        your operating system.
                     </div>
 
                     <!-- The action button. -->
