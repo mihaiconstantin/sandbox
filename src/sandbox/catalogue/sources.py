@@ -3,8 +3,6 @@ import os
 import shutil
 import signal
 import subprocess
-from importlib import resources
-from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Protocol
 
@@ -54,39 +52,6 @@ class CatalogueSource(Protocol):
 
     # Copy the source, staging it before the final catalogue destination.
     def materialize(self, staging: Path, destination: Path) -> None: ...
-
-
-# Represent the catalogue bundled with `sandbox`.
-class BundledSource:
-    # Record the bundled origin.
-    origin: str = registry.BUNDLED_CATALOGUE_TYPE
-
-    # Locate the bundled catalogue.
-    def __init__(self) -> None:
-        # Locate the bundled catalogue inside the installed package.
-        source: Traversable = resources.files("sandbox").joinpath(*registry.DEFAULT_CATALOGUE_PATH.split("/"))
-
-        # If the package catalogue is missing, use the repository layout.
-        if not source.is_dir():
-            source = Path(__file__).resolve().parents[3] / registry.DEFAULT_CATALOGUE_PATH
-
-        # If the bundled catalogue does not exist.
-        if not source.is_dir():
-            # Throw.
-            raise CatalogueInstallError(f"Bundled catalogue `{registry.DEFAULT_CATALOGUE_NAME}` was not found.")
-
-        # Retain the located catalogue.
-        self._source: Traversable = source
-
-    # Copy the bundled catalogue into the staging directory.
-    def materialize(self, staging: Path, destination: Path) -> None:
-        # Copy the bundled catalogue from its package or repository location.
-        with resources.as_file(self._source) as source_dir:
-            # Reject a source that overlaps the final catalogue destination.
-            _require_disjoint(source_dir, destination)
-
-            # Copy the bundled catalogue.
-            shutil.copytree(source_dir, staging)
 
 
 # Represent a catalogue copied from a local directory.
@@ -220,11 +185,6 @@ class GitSource:
 
 # Build the catalogue source for a CLI value.
 def source_for(value: str) -> CatalogueSource:
-    # If the value selects the bundled catalogue.
-    if value == registry.BUNDLED_CATALOGUE_TYPE:
-        # Return the bundled source.
-        return BundledSource()
-
     # If the value looks like a `git` repository.
     if "://" in value or value.startswith("git@"):
         # Return the `git` source.
