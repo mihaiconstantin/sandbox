@@ -101,18 +101,6 @@ class LoadCatalogueTests(unittest.TestCase):
         self.assertEqual(resolve_compose_file(directory, "base", catalogue.recipes["base"]), directory / "compose.yaml")
         self.assertEqual(resolve_compose_file(directory, "r", catalogue.recipes["r"]), directory / "r" / "compose.yaml")
 
-    # Verify the bundled catalogue declares `base` as its default recipe.
-    def test_bundled_catalogue_declares_the_base_default(self) -> None:
-        # Locate the bundled catalogue in the repository.
-        directory: Path = (Path(__file__).resolve().parents[1] / "catalogues" / "default").resolve()
-
-        # Load the bundled manifest.
-        catalogue: Catalogue = load_catalogue(directory)
-
-        # Require the schema version and default recipe.
-        self.assertEqual(catalogue.schema_version, 1)
-        self.assertEqual(catalogue.default_recipe, "base")
-
     # Verify a manifest loads a declared default recipe.
     def test_manifest_loads_a_default_recipe(self) -> None:
         # Declare a schema version 1 manifest with a default recipe.

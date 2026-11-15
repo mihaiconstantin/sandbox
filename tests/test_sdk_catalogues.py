@@ -10,7 +10,7 @@ from sandbox.errors.catalogues import RegistryError
 from sandbox.errors.configuration import ConfigurationError
 
 # Import the public SDK.
-from sandbox.sdk import BUNDLED_CATALOGUE_SOURCE, RecipeListing
+from sandbox.sdk import RecipeListing
 
 # Import the test fixtures.
 from sdk_fixtures import bind_secret, make_client, write_catalogue
@@ -76,7 +76,22 @@ def test_install_returns_the_installed_path(tmp_path: Path) -> None:
     assert installed.is_dir()
     assert [registration.name for registration in client.catalogues.list()] == ["local"]
     assert client.catalogues.installation("local").registered is True
-    assert BUNDLED_CATALOGUE_SOURCE == "bundled"
+
+
+# Verify the SDK requires an explicit source for every installation.
+def test_install_requires_a_source(tmp_path: Path) -> None:
+    # Prepare a client with no configuration.
+    home: Path = tmp_path / "home"
+    home.mkdir()
+    client = make_client(home)
+
+    # Require Python to reject a missing source before any installation.
+    with pytest.raises(TypeError):
+        # Omit the source intentionally to exercise the required parameter.
+        client.catalogues.install("local")  # pyright: ignore[reportCallIssue]
+
+    # Require no configuration file to be created by the rejected call.
+    assert not (home / "catalogues.toml").exists()
 
 
 # Verify plan removal carries bindings and removes files, registration, and bindings.
@@ -142,7 +157,7 @@ def test_invalid_catalogue_identifiers_are_rejected(tmp_path: Path) -> None:
 
     # Require the same rule for installation.
     with pytest.raises(ConfigurationError):
-        client.catalogues.install("Default", "bundled")
+        client.catalogues.install("Default", str(tmp_path / "source"))
 
     # Require no configuration file to be created by rejected input.
     assert not (home / "catalogues.toml").exists()

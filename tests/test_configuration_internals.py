@@ -71,8 +71,8 @@ def test_store_construction_defers_home_expansion(tmp_path: Path, monkeypatch: p
 @pytest.mark.parametrize(
     "document",
     [
-        '[catalogues.default]\ntype = "bundled"\npath = "catalogues/default"\nextra = "x"\n',
-        '[catalogues.default]\ntype = "bundled"\npath = "catalogues/default"\nversion = "1"\n',
+        '[catalogues.default]\ntype = "local"\npath = "catalogues/default"\nextra = "x"\n',
+        '[catalogues.default]\ntype = "local"\npath = "catalogues/default"\nversion = "1"\n',
     ],
 )
 def test_registration_reads_reject_extra_fields(tmp_path: Path, document: str) -> None:
@@ -111,7 +111,7 @@ def test_registration_reads_reject_noncanonical_paths(tmp_path: Path, registered
     home: Path = tmp_path / "sandbox"
     registry_file: Path = write_registry(
         home,
-        f'[catalogues.default]\ntype = "bundled"\npath = "{registered_path}"\n',
+        f'[catalogues.default]\ntype = "local"\npath = "{registered_path}"\n',
     )
     make_catalogue_directory(home)
     store: ConfigurationStore = ConfigurationStore(home)
@@ -136,7 +136,7 @@ def test_registration_reads_accept_an_absolute_canonical_path(tmp_path: Path) ->
     directory: Path = make_catalogue_directory(home)
     write_registry(
         home,
-        f'[catalogues.default]\ntype = "bundled"\npath = "{directory}"\n',
+        f'[catalogues.default]\ntype = "local"\npath = "{directory}"\n',
     )
     store: ConfigurationStore = ConfigurationStore(home)
 
@@ -254,7 +254,7 @@ def test_non_utf8_manifest_is_a_configuration_error(tmp_path: Path) -> None:
 def test_secret_file_failures_are_typed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     # Prepare a registered catalogue with an unreadable host file.
     home: Path = tmp_path / "sandbox"
-    write_registry(home, '[catalogues.default]\ntype = "bundled"\npath = "catalogues/default"\n')
+    write_registry(home, '[catalogues.default]\ntype = "local"\npath = "catalogues/default"\n')
     make_catalogue_directory(home)
     secret_file: Path = home / "keys" / "token"
     secret_file.parent.mkdir()

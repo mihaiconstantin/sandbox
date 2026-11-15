@@ -129,8 +129,8 @@ def test_root_facade_exports_the_documented_surface() -> None:
         assert not hasattr(sandbox, retired), retired
 
 
-# Verify the typing marker and bundled catalogue inputs ship in the wheel.
-def test_wheel_inputs_include_typing_marker_and_catalogues() -> None:
+# Verify the typing marker ships in the wheel.
+def test_wheel_inputs_include_typing_marker() -> None:
     # Require the typing marker in the package source.
     marker: Path = ROOT / "src" / "sandbox" / "py.typed"
     assert marker.is_file()
@@ -138,7 +138,6 @@ def test_wheel_inputs_include_typing_marker_and_catalogues() -> None:
     # Read the wheel build inputs.
     wheel: dict[str, Any] = project_metadata()["tool"]["hatch"]["build"]["targets"]["wheel"]
 
-    # Require the source layout and catalogue force-include.
+    # Require the source layout and no catalogue asset inclusion.
     assert wheel["sources"] == ["src"]
-    assert wheel["force-include"] == {"catalogues": "sandbox/catalogues"}
-    assert (ROOT / "catalogues" / "default" / "catalogue.toml").is_file()
+    assert "force-include" not in wheel

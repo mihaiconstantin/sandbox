@@ -4,8 +4,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
-# Locate the bundled catalogue used as repository content.
-CATALOGUE_DIRECTORY: Path = Path(__file__).resolve().parents[1] / "catalogues" / "default"
+# Import the minimal catalogue source builder.
+from catalogue_fixtures import write_catalogue_source
 
 # Report whether the `git` executable is available.
 GIT_AVAILABLE: bool = shutil.which("git") is not None
@@ -22,11 +22,10 @@ GIT_ENVIRONMENT: dict[str, str] = {
 }
 
 
-# Create an offline `git` repository containing the bundled catalogue.
+# Create an offline `git` repository containing a minimal catalogue.
 def make_git_repository(root: Path) -> Path:
-    # Copy the bundled catalogue into the repository.
-    repository: Path = root / "repository"
-    shutil.copytree(CATALOGUE_DIRECTORY, repository)
+    # Build the minimal catalogue source as the repository content.
+    repository: Path = write_catalogue_source(root / "repository")
 
     # Initialize the repository and commit the catalogue without signing or line-ending conversion.
     commands: tuple[list[str], ...] = (

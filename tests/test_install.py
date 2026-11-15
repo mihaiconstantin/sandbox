@@ -1,6 +1,5 @@
 # Imports.
 import os
-import shutil
 import signal
 import subprocess
 import sys
@@ -15,6 +14,7 @@ from unittest import mock
 import tomlkit
 
 # Import fixtures.
+from catalogue_fixtures import SOURCE_NAME, write_catalogue_source
 from git_fixtures import GIT_AVAILABLE, GIT_ENVIRONMENT, make_git_repository
 
 # Import helpers.
@@ -32,115 +32,80 @@ from sandbox.errors.configuration import ConfigurationError
 from sandbox.errors.prerequisites import PrerequisiteError, PrerequisiteKind
 
 
-# Verify bundled catalogue installation validates before publishing.
+# Create an isolated sandbox and local source for installation tests.
+def make_install_sandbox(test: unittest.TestCase) -> tuple[Path, Path, Path]:
+    # Create a temporary directory and register its cleanup on the test.
+    temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
+    test.addCleanup(temporary.cleanup)
+
+    # Derive the test root, installation home, and local source.
+    root: Path = Path(temporary.name)
+    home: Path = root / "sandbox"
+    source: Path = write_catalogue_source(root / "source")
+    return root, home, source
+
+
+# Verify catalogue installation validates, publishes atomically, and rolls back on failure.
 class InstallCatalogueTests(unittest.TestCase):
-    # Verify the bundled catalogue is installed, loadable, and registered.
-    def test_installs_and_validates_the_bundled_catalogue(self) -> None:
-        # Create an isolated sandbox directory.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        home: Path = Path(temporary.name) / "sandbox"
-
-        # Install the bundled catalogue.
-        installed: Path = catalogue_helper.install_catalogue(home, "default", "bundled")
-
-        # Require the manifest and no legacy volume file.
-        self.assertEqual(installed, home.resolve() / "catalogues" / "default")
-        self.assertTrue((installed / "catalogue.toml").is_file())
-        self.assertFalse((installed / "volumes.toml").exists())
-
-        # Require the installed manifest to load with the bundled name.
-        self.assertEqual(load_catalogue(installed).name, "default")
-
-        # Require the registry to resolve the installed catalogue.
-        self.assertEqual(ConfigurationStore(home).resolve("default"), installed)
-
-    # Verify the bundled catalogue installs under a custom name with a rewritten manifest.
-    def test_installs_the_bundled_catalogue_under_a_custom_name(self) -> None:
-        # Create an isolated sandbox directory.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        home: Path = Path(temporary.name) / "sandbox"
-
-        # Install the bundled catalogue under a custom name.
-        installed: Path = catalogue_helper.install_catalogue(home, "alpha", "bundled")
-
-        # Require the requested destination and a rewritten manifest name.
-        self.assertEqual(installed, home.resolve() / "catalogues" / "alpha")
-        self.assertEqual(load_catalogue(installed).name, "alpha")
-
-        # Require the registry to register and resolve the custom name.
-        registration: Any = load_registry(home / "catalogues.toml")["catalogues"]["alpha"]
-        self.assertEqual(dict(registration), {"type": "bundled", "path": "catalogues/alpha"})
-        self.assertEqual(ConfigurationStore(home).resolve("alpha"), installed)
-
     # Verify reinstalling a custom name requires force.
     def test_reinstalls_a_custom_name_only_with_force(self) -> None:
-        # Create an isolated sandbox directory.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        home: Path = Path(temporary.name) / "sandbox"
+        # Create an isolated sandbox and local source.
+        root, home, source = make_install_sandbox(self)
 
-        # Install the bundled catalogue under a custom name.
-        installed: Path = catalogue_helper.install_catalogue(home, "alpha", "bundled")
+        # Install the local catalogue under a custom name.
+        installed: Path = catalogue_helper.install_catalogue(home, "alpha", str(source))
 
         # Require an existing installation to reject replacement without force.
         with self.assertRaises(CatalogueInstallError):
-            catalogue_helper.install_catalogue(home, "alpha", "bundled")
+            catalogue_helper.install_catalogue(home, "alpha", str(source))
 
         # Require a forced reinstall to replace the existing catalogue.
-        replaced: Path = catalogue_helper.install_catalogue(home, "alpha", "bundled", force = True)
+        replaced: Path = catalogue_helper.install_catalogue(home, "alpha", str(source), force = True)
         self.assertEqual(replaced, installed)
         self.assertEqual(load_catalogue(replaced).name, "alpha")
         self.assertEqual(ConfigurationStore(home).resolve("alpha"), replaced)
 
     # Verify a forced reinstall replaces the previous catalogue files.
     def test_force_reinstall_removes_stale_files(self) -> None:
-        # Create an isolated sandbox directory.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        home: Path = Path(temporary.name) / "sandbox"
+        # Create an isolated sandbox and local source.
+        root, home, source = make_install_sandbox(self)
 
-        # Install the bundled catalogue under a custom name with a stale file.
-        installed: Path = catalogue_helper.install_catalogue(home, "alpha", "bundled")
+        # Install the local catalogue under a custom name with a stale file.
+        installed: Path = catalogue_helper.install_catalogue(home, "alpha", str(source))
         stale_file: Path = installed / "stale.txt"
         stale_file.write_text("stale", encoding = "utf-8")
 
         # Require a refused reinstall to leave the stale file untouched.
         with self.assertRaises(CatalogueInstallError):
-            catalogue_helper.install_catalogue(home, "alpha", "bundled")
+            catalogue_helper.install_catalogue(home, "alpha", str(source))
         self.assertTrue(stale_file.exists())
 
         # Require a forced reinstall to remove the stale file.
-        catalogue_helper.install_catalogue(home, "alpha", "bundled", force = True)
+        catalogue_helper.install_catalogue(home, "alpha", str(source), force = True)
         self.assertFalse(stale_file.exists())
         self.assertEqual(load_catalogue(installed).name, "alpha")
 
     # Verify a forced reinstall preserves the existing registry mode.
     def test_force_reinstall_preserves_the_registry_mode(self) -> None:
-        # Create an isolated sandbox directory.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        home: Path = Path(temporary.name) / "sandbox"
+        # Create an isolated sandbox and local source.
+        root, home, source = make_install_sandbox(self)
 
-        # Install the bundled catalogue and restrict the registry permissions.
-        catalogue_helper.install_catalogue(home, "team", "bundled")
+        # Install the local catalogue and restrict the registry permissions.
+        catalogue_helper.install_catalogue(home, "team", str(source))
         registry_file: Path = home.resolve() / "catalogues.toml"
         registry_file.chmod(0o600)
 
         # Require a forced reinstall to preserve the registry permissions.
-        catalogue_helper.install_catalogue(home, "team", "bundled", force = True)
+        catalogue_helper.install_catalogue(home, "team", str(source), force = True)
         self.assertEqual(registry_file.stat().st_mode & 0o777, 0o600)
 
     # Verify a failed forced reinstall preserves the previous catalogue and registry.
     def test_failed_forced_reinstall_preserves_the_previous_catalogue_and_registry(self) -> None:
-        # Create an isolated sandbox directory.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        home: Path = Path(temporary.name) / "sandbox"
+        # Create an isolated sandbox and local source.
+        root, home, source = make_install_sandbox(self)
 
-        # Install the bundled catalogue under a custom name.
-        installed: Path = catalogue_helper.install_catalogue(home, "alpha", "bundled")
+        # Install the local catalogue under a custom name.
+        installed: Path = catalogue_helper.install_catalogue(home, "alpha", str(source))
 
         # Mark the previous catalogue to distinguish a rollback from a fresh copy.
         marker_file: Path = installed / "marker.txt"
@@ -172,7 +137,7 @@ class InstallCatalogueTests(unittest.TestCase):
         # Require the forced reinstall to fail while publishing the registry.
         with mock.patch("sandbox.catalogue.install.os.replace", side_effect = fail_registry_publish):
             with self.assertRaises(CatalogueInstallError):
-                catalogue_helper.install_catalogue(home, "alpha", "bundled", force = True)
+                catalogue_helper.install_catalogue(home, "alpha", str(source), force = True)
 
         # Require the catalogue directory to be replaced before the registry is published.
         self.assertLess(destinations.index(installed), destinations.index(registry_file))
@@ -192,13 +157,11 @@ class InstallCatalogueTests(unittest.TestCase):
 
     # Verify a forced reinstall restores the previous catalogue when installing the staged copy fails.
     def test_forced_reinstall_failure_while_installing_the_staged_catalogue_restores_the_previous_catalogue(self) -> None:
-        # Create an isolated sandbox directory.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        home: Path = Path(temporary.name) / "sandbox"
+        # Create an isolated sandbox and local source.
+        root, home, source = make_install_sandbox(self)
 
-        # Install the bundled catalogue under a custom name.
-        installed: Path = catalogue_helper.install_catalogue(home, "alpha", "bundled")
+        # Install the local catalogue under a custom name.
+        installed: Path = catalogue_helper.install_catalogue(home, "alpha", str(source))
 
         # Mark the previous catalogue to distinguish a rollback from a fresh copy.
         marker_file: Path = installed / "marker.txt"
@@ -224,7 +187,7 @@ class InstallCatalogueTests(unittest.TestCase):
         # Require the forced reinstall to fail between the backup and the staged installation.
         with mock.patch("sandbox.catalogue.install.os.replace", side_effect = fail_staged_install):
             with self.assertRaises(CatalogueInstallError):
-                catalogue_helper.install_catalogue(home, "alpha", "bundled", force = True)
+                catalogue_helper.install_catalogue(home, "alpha", str(source), force = True)
 
         # Require the marker of the previous catalogue to be restored with its original content.
         self.assertEqual(marker_file.read_text(encoding = "utf-8"), "original catalogue")
@@ -241,10 +204,8 @@ class InstallCatalogueTests(unittest.TestCase):
 
     # Verify a failed fresh install leaves no catalogue directory and no registry file.
     def test_failed_fresh_install_publishes_no_catalogue_and_no_registry(self) -> None:
-        # Create an isolated sandbox directory.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        home: Path = Path(temporary.name) / "sandbox"
+        # Create an isolated sandbox and local source.
+        root, home, source = make_install_sandbox(self)
 
         # Capture the real replacement function before patching it.
         real_replace: Callable[[Path, Path], None] = os.replace
@@ -262,7 +223,7 @@ class InstallCatalogueTests(unittest.TestCase):
         # Require the fresh install to fail while publishing the registry.
         with mock.patch("sandbox.catalogue.install.os.replace", side_effect = fail_registry_publish):
             with self.assertRaises(CatalogueInstallError):
-                catalogue_helper.install_catalogue(home, "alpha", "bundled")
+                catalogue_helper.install_catalogue(home, "alpha", str(source))
 
         # Require no catalogue directory and no registry file to remain.
         self.assertFalse((home / "catalogues" / "alpha").exists())
@@ -273,13 +234,11 @@ class InstallCatalogueTests(unittest.TestCase):
 
     # Verify a custom installation preserves the manifest comments and sections.
     def test_custom_name_install_preserves_manifest_comments_and_sections(self) -> None:
-        # Create an isolated sandbox directory.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        home: Path = Path(temporary.name) / "sandbox"
+        # Create an isolated sandbox and local source.
+        root, home, source = make_install_sandbox(self)
 
-        # Install the bundled catalogue under a custom name.
-        installed: Path = catalogue_helper.install_catalogue(home, "alpha", "bundled")
+        # Install the local catalogue under a custom name.
+        installed: Path = catalogue_helper.install_catalogue(home, "alpha", str(source))
         manifest_text: str = (installed / "catalogue.toml").read_text(encoding = "utf-8")
 
         # Require the name to be rewritten and the original comments to survive.
@@ -291,137 +250,85 @@ class InstallCatalogueTests(unittest.TestCase):
         self.assertIn("[volumes.omp]", manifest_text)
         self.assertIn("[recipes.r]", manifest_text)
 
-        # Require no default catalogue to be created.
-        self.assertFalse((home / "catalogues" / "default").exists())
-
-    # Verify a default installation copies the bundled manifest unchanged.
-    def test_default_install_keeps_the_bundled_manifest_byte_identical(self) -> None:
-        # Create an isolated sandbox directory.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        home: Path = Path(temporary.name) / "sandbox"
-
-        # Install the bundled catalogue under its default name.
-        installed: Path = catalogue_helper.install_catalogue(home, "default", "bundled")
-
-        # Require the installed manifest to match the bundled source bytes.
-        source_manifest: Path = Path(__file__).resolve().parents[1] / "catalogues" / "default" / "catalogue.toml"
-        self.assertEqual((installed / "catalogue.toml").read_bytes(), source_manifest.read_bytes())
-
     # Verify a custom installation preserves other registry entries.
     def test_custom_installation_preserves_other_registry_entries(self) -> None:
-        # Create an isolated sandbox directory with another registration.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        home: Path = Path(temporary.name) / "sandbox"
+        # Create an isolated sandbox and local source with another registration.
+        root, home, source = make_install_sandbox(self)
         home.mkdir(parents = True)
         (home / "catalogues.toml").write_text(
             '# Registered development `sandbox` catalogues.\n\n[catalogues.other]\ntype = "local"\npath = "catalogues/other"\n',
             encoding = "utf-8",
         )
 
-        # Install the bundled catalogue under a custom name.
-        catalogue_helper.install_catalogue(home, "alpha", "bundled")
+        # Install the local catalogue under a custom name.
+        catalogue_helper.install_catalogue(home, "alpha", str(source))
 
         # Require the unrelated registration to survive.
         registry_document: tomlkit.TOMLDocument = load_registry(home / "catalogues.toml")
         self.assertEqual(dict(registry_document["catalogues"]["other"]), {"type": "local", "path": "catalogues/other"})
-        self.assertEqual(dict(registry_document["catalogues"]["alpha"]), {"type": "bundled", "path": "catalogues/alpha"})
+        self.assertEqual(dict(registry_document["catalogues"]["alpha"]), {"type": "local", "path": "catalogues/alpha"})
 
     # Verify an invalid catalogue name is rejected before installation.
     def test_rejects_an_invalid_catalogue_name(self) -> None:
-        # Create an isolated sandbox directory.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        home: Path = Path(temporary.name) / "sandbox"
+        # Create an isolated sandbox and local source.
+        root, home, source = make_install_sandbox(self)
 
         # Require an invalid name to be rejected.
         with self.assertRaises(ConfigurationError):
-            catalogue_helper.install_catalogue(home, "Invalid Name", "bundled")
+            catalogue_helper.install_catalogue(home, "Invalid Name", str(source))
 
         # Require no catalogue directory or registry.
         self.assertFalse((home / "catalogues").exists())
         self.assertFalse((home / "catalogues.toml").exists())
 
-    # Verify a malformed bundled manifest is reported as an installation error.
-    def test_reports_a_malformed_bundled_manifest_when_rewriting_the_name(self) -> None:
-        # Create a temporary source tree with a malformed bundled manifest.
+    # Verify a malformed manifest is reported as an installation error.
+    def test_reports_a_malformed_manifest_when_rewriting_the_name(self) -> None:
+        # Create an isolated sandbox and a local source with a malformed manifest.
         temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
-        source_root: Path = Path(temporary.name) / "source"
-        source_catalogue: Path = source_root / "catalogues" / "default"
-        source_catalogue.mkdir(parents = True)
+        root: Path = Path(temporary.name)
+        home: Path = root / "invalid"
+        source: Path = root / "source"
+        source.mkdir()
 
         # Require malformed TOML to be reported as an installation error.
-        (source_catalogue / "catalogue.toml").write_text("[catalogue\n", encoding = "utf-8")
-        with mock.patch("sandbox.catalogue.sources.resources.files", return_value = source_root), self.assertRaises(CatalogueInstallError):
-            catalogue_helper.install_catalogue(Path(temporary.name) / "invalid", "alpha", "bundled")
+        (source / "catalogue.toml").write_text("[catalogue\n", encoding = "utf-8")
+        with self.assertRaises(CatalogueInstallError):
+            catalogue_helper.install_catalogue(home, "alpha", str(source))
 
         # Require a missing catalogue table to be reported as an installation error.
-        (source_catalogue / "catalogue.toml").write_text('[recipes.base]\ncompose = "compose.yaml"\n', encoding = "utf-8")
-        with mock.patch("sandbox.catalogue.sources.resources.files", return_value = source_root), self.assertRaises(CatalogueInstallError):
-            catalogue_helper.install_catalogue(Path(temporary.name) / "missing", "alpha", "bundled")
+        (source / "catalogue.toml").write_text('[recipes.base]\ncompose = "compose.yaml"\n', encoding = "utf-8")
+        (source / "compose.yaml").write_text("services: {}\n", encoding = "utf-8")
+        with self.assertRaises(CatalogueInstallError):
+            catalogue_helper.install_catalogue(root / "missing", "alpha", str(source))
 
         # Require no published catalogue or registry.
-        self.assertFalse((Path(temporary.name) / "invalid" / "catalogues" / "alpha").exists())
-        self.assertFalse((Path(temporary.name) / "invalid" / "catalogues.toml").exists())
-
-    # Verify a bundled source that overlaps the final destination is never replaced.
-    def test_rejects_a_bundled_source_that_overlaps_the_destination(self) -> None:
-        # Create a repository-like source tree whose bundled catalogue is the destination.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        source_root: Path = Path(temporary.name) / "repo"
-        source_catalogue: Path = source_root / "catalogues" / "default"
-        shutil.copytree(Path(__file__).resolve().parents[1] / "catalogues" / "default", source_catalogue)
-        manifest_before: bytes = (source_catalogue / "catalogue.toml").read_bytes()
-
-        # Require the overlapping bundled source to be rejected despite force.
-        with mock.patch("sandbox.catalogue.sources.resources.files", return_value = source_root):
-            with self.assertRaises(CatalogueInstallError) as raised:
-                catalogue_helper.install_catalogue(source_root, "default", "bundled", force = True)
-        self.assertIn("overlaps the catalogue destination", str(raised.exception))
-
-        # Require the repository source and its absence of registration to survive.
-        self.assertEqual((source_catalogue / "catalogue.toml").read_bytes(), manifest_before)
-        self.assertFalse((source_root / "catalogues.toml").exists())
+        self.assertFalse((home / "catalogues" / "alpha").exists())
+        self.assertFalse((home / "catalogues.toml").exists())
+        self.assertFalse((root / "missing" / "catalogues" / "alpha").exists())
+        self.assertFalse((root / "missing" / "catalogues.toml").exists())
 
     # Verify an invalid staged catalogue is never published.
     def test_invalid_staged_catalogue_is_not_published(self) -> None:
-        # Create an isolated sandbox directory.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        home: Path = Path(temporary.name) / "sandbox"
+        # Create an isolated sandbox and local source.
+        root, home, source = make_install_sandbox(self)
 
         # Require validation failures to abort publication.
         with mock.patch.object(catalogue_helper.manifest, "load_catalogue", side_effect = ConfigurationError("", "Invalid catalogue.")):
             with self.assertRaises(ConfigurationError):
-                catalogue_helper.install_catalogue(home, "default", "bundled")
+                catalogue_helper.install_catalogue(home, "team", str(source))
 
         # Require no published catalogue or registry.
-        self.assertFalse((home / "catalogues" / "default").exists())
+        self.assertFalse((home / "catalogues" / "team").exists())
         self.assertFalse((home / "catalogues.toml").exists())
 
 
 # Verify local catalogue installation copies, rewrites, and registers its source.
 class LocalCatalogueInstallTests(unittest.TestCase):
-    # Copy the bundled catalogue into a temporary local directory.
-    def make_source(self, root: Path) -> Path:
-        # Copy the bundled catalogue to use as a valid local source.
-        source: Path = root / "source"
-        shutil.copytree(Path(__file__).resolve().parents[1] / "catalogues" / "default", source)
-
-        # Return the local source directory.
-        return source
-
     # Install a local catalogue, rewrite its manifest, and register its origin.
     def test_installs_a_local_catalogue_and_rewrites_the_manifest(self) -> None:
         # Prepare an isolated sandbox and local source.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        root: Path = Path(temporary.name)
-        home: Path = root / "sandbox"
-        source: Path = self.make_source(root)
+        root, home, source = make_install_sandbox(self)
 
         # Install the local catalogue under a different name.
         installed: Path = catalogue_helper.install_catalogue(home, "team", str(source))
@@ -431,7 +338,7 @@ class LocalCatalogueInstallTests(unittest.TestCase):
         self.assertEqual(load_catalogue(installed).name, "team")
 
         # Require the source to remain unchanged.
-        self.assertEqual(load_catalogue(source).name, "default")
+        self.assertEqual(load_catalogue(source).name, SOURCE_NAME)
 
         # Require the local origin, normalized path, and successful resolution.
         registration: Any = load_registry(home / "catalogues.toml")["catalogues"]["team"]
@@ -441,11 +348,7 @@ class LocalCatalogueInstallTests(unittest.TestCase):
     # Preserve symlinks when copying a local catalogue.
     def test_local_install_preserves_symlinks(self) -> None:
         # Prepare a local source with a symbolic link.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        root: Path = Path(temporary.name)
-        home: Path = root / "sandbox"
-        source: Path = self.make_source(root)
+        root, home, source = make_install_sandbox(self)
         (source / "linked.toml").symlink_to("catalogue.toml")
 
         # Install the local catalogue.
@@ -458,21 +361,17 @@ class LocalCatalogueInstallTests(unittest.TestCase):
     # Preserve the manifest bytes when the source name already matches.
     def test_local_install_preserves_matching_manifest_bytes(self) -> None:
         # Prepare an isolated sandbox and local source.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        root: Path = Path(temporary.name)
-        home: Path = root / "sandbox"
-        source: Path = self.make_source(root)
+        root, home, source = make_install_sandbox(self)
 
         # Install the local catalogue under its existing name.
-        installed: Path = catalogue_helper.install_catalogue(home, "default", str(source))
+        installed: Path = catalogue_helper.install_catalogue(home, SOURCE_NAME, str(source))
 
         # Require the manifest to remain byte-identical.
         self.assertEqual((installed / "catalogue.toml").read_bytes(), (source / "catalogue.toml").read_bytes())
 
         # Require the local origin to be recorded.
-        registration: Any = load_registry(home / "catalogues.toml")["catalogues"]["default"]
-        self.assertEqual(dict(registration), {"type": "local", "path": "catalogues/default"})
+        registration: Any = load_registry(home / "catalogues.toml")["catalogues"][SOURCE_NAME]
+        self.assertEqual(dict(registration), {"type": "local", "path": f"catalogues/{SOURCE_NAME}"})
 
     # Reject empty, missing, and non-directory local sources before touching the sandbox.
     def test_rejects_invalid_local_sources(self) -> None:
@@ -526,7 +425,7 @@ class LocalCatalogueInstallTests(unittest.TestCase):
         root: Path = Path(temporary.name)
         home: Path = root / "sandbox"
         source: Path = home / "catalogues" / "team"
-        shutil.copytree(Path(__file__).resolve().parents[1] / "catalogues" / "default", source)
+        write_catalogue_source(source, "team")
 
         # Require the self-copy to be rejected despite force.
         with self.assertRaises(CatalogueInstallError) as raised:
@@ -546,7 +445,7 @@ class LocalCatalogueInstallTests(unittest.TestCase):
         root: Path = Path(temporary.name)
         home: Path = root / "sandbox"
         source: Path = home / "catalogues" / "team" / "inner"
-        shutil.copytree(Path(__file__).resolve().parents[1] / "catalogues" / "default", source)
+        write_catalogue_source(source, "team")
 
         # Require the nested source to be rejected despite force.
         with self.assertRaises(CatalogueInstallError) as raised:
@@ -578,61 +477,10 @@ class LocalCatalogueInstallTests(unittest.TestCase):
         self.assertFalse((home / "catalogues.toml").exists())
         self.assertFalse((source / "team").exists())
 
-    # Replace a bundled catalogue with a local source when forced.
-    def test_force_replaces_a_bundled_catalogue_with_a_local_origin(self) -> None:
-        # Prepare an isolated sandbox and local source.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        root: Path = Path(temporary.name)
-        home: Path = root / "sandbox"
-        source: Path = self.make_source(root)
-        (source / "marker.txt").write_text("local catalogue", encoding = "utf-8")
-
-        # Install the bundled catalogue under a custom name with a stale file.
-        installed: Path = catalogue_helper.install_catalogue(home, "team", "bundled")
-        stale_file: Path = installed / "stale.txt"
-        stale_file.write_text("stale", encoding = "utf-8")
-
-        # Replace the bundled catalogue from the local source.
-        replaced: Path = catalogue_helper.install_catalogue(home, "team", str(source), force = True)
-
-        # Require the local content and origin to replace the bundled installation.
-        self.assertEqual(replaced, installed)
-        self.assertFalse(stale_file.exists())
-        self.assertTrue((replaced / "marker.txt").is_file())
-        self.assertEqual(load_catalogue(replaced).name, "team")
-        registration: Any = load_registry(home / "catalogues.toml")["catalogues"]["team"]
-        self.assertEqual(dict(registration), {"type": "local", "path": "catalogues/team"})
-
-    # Replace a local catalogue with the bundled source when forced.
-    def test_force_replaces_a_local_catalogue_with_the_bundled_origin(self) -> None:
-        # Prepare an isolated sandbox and local source with a marker.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        root: Path = Path(temporary.name)
-        home: Path = root / "sandbox"
-        source: Path = self.make_source(root)
-        (source / "marker.txt").write_text("local catalogue", encoding = "utf-8")
-
-        # Install the local catalogue.
-        installed: Path = catalogue_helper.install_catalogue(home, "team", str(source))
-        self.assertTrue((installed / "marker.txt").is_file())
-
-        # Replace the local catalogue with the bundled source.
-        replaced: Path = catalogue_helper.install_catalogue(home, "team", "bundled", force = True)
-
-        # Require the bundled content and origin to replace the local installation.
-        self.assertEqual(replaced, installed)
-        self.assertFalse((replaced / "marker.txt").exists())
-        registration: Any = load_registry(home / "catalogues.toml")["catalogues"]["team"]
-        self.assertEqual(dict(registration), {"type": "bundled", "path": "catalogues/team"})
-
     # Refuse an existing registration without force even when its directory is missing.
     def test_refuses_an_existing_registration_without_force(self) -> None:
-        # Prepare a sandbox with a canonical registration but no directory.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        home: Path = Path(temporary.name) / "sandbox"
+        # Prepare a sandbox with a canonical registration and a local source.
+        root, home, source = make_install_sandbox(self)
         home.mkdir()
         registry_file: Path = home / "catalogues.toml"
         original: str = '[catalogues.team]\ntype = "local"\npath = "catalogues/team"\n'
@@ -640,17 +488,15 @@ class LocalCatalogueInstallTests(unittest.TestCase):
 
         # Require the existing registration to be refused.
         with self.assertRaises(CatalogueInstallError):
-            catalogue_helper.install_catalogue(home, "team", "bundled")
+            catalogue_helper.install_catalogue(home, "team", str(source))
 
         # Require the registry to remain unchanged.
         self.assertEqual(registry_file.read_text(encoding = "utf-8"), original)
 
     # Refuse a noncanonical registration even when forced.
     def test_force_refuses_a_noncanonical_registration(self) -> None:
-        # Prepare a sandbox with a noncanonical registration.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        home: Path = Path(temporary.name) / "sandbox"
+        # Prepare a sandbox with a noncanonical registration and a local source.
+        root, home, source = make_install_sandbox(self)
         home.mkdir()
         registry_file: Path = home / "catalogues.toml"
         original: str = '[catalogues.team]\ntype = "local"\npath = "elsewhere/team"\n'
@@ -658,7 +504,7 @@ class LocalCatalogueInstallTests(unittest.TestCase):
 
         # Require the noncanonical registration to be refused despite force.
         with self.assertRaises(RegistryError):
-            catalogue_helper.install_catalogue(home, "team", "bundled", force = True)
+            catalogue_helper.install_catalogue(home, "team", str(source), force = True)
 
         # Require no catalogue and no registry change.
         self.assertFalse((home / "catalogues" / "team").exists())
@@ -685,14 +531,13 @@ class GitSourceValidationTests(unittest.TestCase):
 # Verify source values are classified by origin.
 @unittest.skipUnless(GIT_AVAILABLE, "`git` is not available.")
 class CatalogueSourceClassificationTests(unittest.TestCase):
-    # Classify bundled, local, and `git`-like values.
+    # Classify local and `git`-like values.
     def test_classifies_supported_source_values(self) -> None:
-        # Require the bundled source.
-        self.assertIsInstance(source_helper.source_for("bundled"), source_helper.BundledSource)
-
         # Require a local directory source.
         repository_root: Path = Path(__file__).resolve().parents[1]
-        self.assertIsInstance(source_helper.source_for(str(repository_root)), source_helper.LocalSource)
+        local: source_helper.CatalogueSource = source_helper.source_for(str(repository_root))
+        self.assertIsInstance(local, source_helper.LocalSource)
+        self.assertEqual(local.origin, "local")
 
         # Cover every supported `git` URL form.
         git_sources: tuple[str, ...] = (
@@ -786,7 +631,7 @@ class GitCatalogueInstallTests(unittest.TestCase):
         self.assertEqual(load_catalogue(installed).name, "team")
 
         # Require the source repository to remain unchanged.
-        self.assertEqual(load_catalogue(repository).name, "default")
+        self.assertEqual(load_catalogue(repository).name, SOURCE_NAME)
         self.assertTrue((repository / ".git").is_dir())
 
         # Require the `git` origin, normalized path, and successful resolution.
@@ -804,14 +649,14 @@ class GitCatalogueInstallTests(unittest.TestCase):
         repository: Path = make_git_repository(root)
 
         # Install the `git` catalogue under its existing name.
-        installed: Path = catalogue_helper.install_catalogue(home, "default", repository.as_uri())
+        installed: Path = catalogue_helper.install_catalogue(home, SOURCE_NAME, repository.as_uri())
 
         # Require the manifest to remain byte-identical.
         self.assertEqual((installed / "catalogue.toml").read_bytes(), (repository / "catalogue.toml").read_bytes())
 
         # Require the `git` origin to be recorded.
-        registration: Any = load_registry(home / "catalogues.toml")["catalogues"]["default"]
-        self.assertEqual(dict(registration), {"type": "git", "path": "catalogues/default"})
+        registration: Any = load_registry(home / "catalogues.toml")["catalogues"][SOURCE_NAME]
+        self.assertEqual(dict(registration), {"type": "git", "path": f"catalogues/{SOURCE_NAME}"})
 
     # Report a clone failure without publishing a catalogue.
     def test_clone_failure_without_a_previous_installation(self) -> None:
@@ -839,12 +684,9 @@ class GitCatalogueInstallTests(unittest.TestCase):
 
     # Preserve the previous installation when a forced replacement clone fails.
     def test_clone_failure_during_forced_replacement_preserves_the_previous_state(self) -> None:
-        # Create an isolated sandbox and install the bundled catalogue.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        root: Path = Path(temporary.name)
-        home: Path = root / "sandbox"
-        installed: Path = catalogue_helper.install_catalogue(home, "team", "bundled")
+        # Create an isolated sandbox and install a local catalogue.
+        root, home, source = make_install_sandbox(self)
+        installed: Path = catalogue_helper.install_catalogue(home, "team", str(source))
         marker_file: Path = installed / "marker.txt"
         marker_file.write_text("original catalogue", encoding = "utf-8")
         registry_file: Path = home.resolve() / "catalogues.toml"
@@ -1045,51 +887,26 @@ time.sleep(60)
             time.sleep(0.05)
         return False
 
-    # Replace a bundled catalogue with a `git` source when forced.
-    def test_force_replaces_a_bundled_catalogue_with_git(self) -> None:
-        # Create an isolated sandbox and offline repository.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        root: Path = Path(temporary.name)
-        home: Path = root / "sandbox"
+    # Replace a local catalogue with a `git` source when forced.
+    def test_force_replaces_a_local_catalogue_with_git(self) -> None:
+        # Create an isolated sandbox, offline repository, and local source.
+        root, home, source = make_install_sandbox(self)
         repository: Path = make_git_repository(root)
 
-        # Install the bundled catalogue with a stale file.
-        installed: Path = catalogue_helper.install_catalogue(home, "team", "bundled")
+        # Install the local catalogue with a stale file.
+        installed: Path = catalogue_helper.install_catalogue(home, "team", str(source))
         stale_file: Path = installed / "stale.txt"
         stale_file.write_text("stale", encoding = "utf-8")
 
-        # Replace the bundled catalogue with the `git` source.
+        # Replace the local catalogue with the `git` source.
         replaced: Path = catalogue_helper.install_catalogue(home, "team", repository.as_uri(), force = True)
 
-        # Require the `git` content and origin to replace the bundled installation.
+        # Require the `git` content and origin to replace the local installation.
         self.assertEqual(replaced, installed)
         self.assertFalse(stale_file.exists())
         self.assertTrue((replaced / ".git").is_dir())
         registration: Any = load_registry(home / "catalogues.toml")["catalogues"]["team"]
         self.assertEqual(dict(registration), {"type": "git", "path": "catalogues/team"})
-
-    # Replace a `git` catalogue with the bundled source when forced.
-    def test_force_replaces_a_git_catalogue_with_bundled(self) -> None:
-        # Create an isolated sandbox and offline repository.
-        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        root: Path = Path(temporary.name)
-        home: Path = root / "sandbox"
-        repository: Path = make_git_repository(root)
-
-        # Install the `git` catalogue.
-        installed: Path = catalogue_helper.install_catalogue(home, "team", repository.as_uri())
-        self.assertTrue((installed / ".git").is_dir())
-
-        # Replace the `git` catalogue with the bundled source.
-        replaced: Path = catalogue_helper.install_catalogue(home, "team", "bundled", force = True)
-
-        # Require the bundled content and origin to replace the `git` installation.
-        self.assertEqual(replaced, installed)
-        self.assertFalse((replaced / ".git").exists())
-        registration: Any = load_registry(home / "catalogues.toml")["catalogues"]["team"]
-        self.assertEqual(dict(registration), {"type": "bundled", "path": "catalogues/team"})
 
 # Allow the focused tests to run without a third-party test framework.
 if __name__ == "__main__":

@@ -117,7 +117,7 @@ def write_catalogue(
     if register:
         registry: Path = home / "catalogues.toml"
         registry.write_text(
-            f'[catalogues.{name}]\ntype = "bundled"\npath = "catalogues/{name}"\n',
+            f'[catalogues.{name}]\ntype = "local"\npath = "catalogues/{name}"\n',
             encoding = "utf-8",
         )
 

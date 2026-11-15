@@ -7,7 +7,6 @@ from sdk_fixtures import FunctionClientFactory
 
 import io
 import os
-import shutil
 import tomllib
 from pathlib import Path
 from textwrap import dedent
@@ -32,6 +31,7 @@ from sandbox.testing.builder import FakeBuilder
 from sandbox.testing.runtime import FakeRuntime
 
 # Import test fixtures.
+from catalogue_fixtures import write_catalogue_source
 from git_fixtures import GIT_AVAILABLE, GIT_ENVIRONMENT, make_git_repository
 
 # Define the Docker-compatible vocabulary used by composition in production.
@@ -42,10 +42,6 @@ DOCKER_VOCABULARY: RuntimeVocabulary = RuntimeVocabulary(
     noun = "container",
     plural = "containers",
 )
-
-# Locate the bundled catalogue used as local and `git` source content.
-BUNDLED_CATALOGUE: Path = Path(__file__).resolve().parents[1] / "catalogues" / "default"
-
 
 # Build a pipe-safe presentation for command tests.
 def make_presentation(*, tty: bool = False) -> tuple[CliPresentation, io.StringIO]:
@@ -119,7 +115,7 @@ def make_catalogue(home: Path, name: str = "default", *, recipes: tuple[str, ...
 
     # Register the catalogue at its canonical managed path.
     (home / "catalogues.toml").write_text(
-        f'[catalogues.{name}]\ntype = "bundled"\npath = "catalogues/{name}"\n',
+        f'[catalogues.{name}]\ntype = "local"\npath = "catalogues/{name}"\n',
         encoding = "utf-8",
     )
 
@@ -133,36 +129,44 @@ def read_toml(path: Path) -> dict[str, Any]:
     return tomllib.loads(path.read_text(encoding = "utf-8"))
 
 
-# Verify bundled and local sources install through the SDK with current messages.
-def test_create_catalogue_installs_bundled_and_local_sources(tmp_path: Path) -> None:
-    # Prepare an absent home so installation creates it.
+# Verify a local source installs through the SDK with current messages.
+def test_create_catalogue_installs_a_local_source(tmp_path: Path) -> None:
+    # Prepare an absent home and a local source.
     home: Path = tmp_path / "home"
     context, calls, buffer = make_context()
+    source: Path = write_catalogue_source(tmp_path / "source")
+    before: str = (source / "catalogue.toml").read_text(encoding = "utf-8")
 
-    # Install the bundled catalogue under a custom name.
-    bundled: Result = invoke(["create", "catalogue", "team", "--home", str(home)], context)
-    assert bundled.exit_code == 0, bundled.stderr
-    assert bundled.stderr == ""
+    # Install the local source under a custom name.
+    result: Result = invoke(["create", "catalogue", "team", "--source", str(source), "--home", str(home)], context)
+    assert result.exit_code == 0, result.stderr
+    assert result.stderr == ""
     assert buffer.getvalue() == ""
     installed: Path = home.resolve() / "catalogues" / "team"
     assert (installed / "catalogue.toml").is_file()
-    assert "Installing catalogue `team`...\n" in bundled.stdout
-    assert f"Successfully installed catalogue `team` at `{installed}`.\n" in bundled.stdout
-    assert read_toml(home / "catalogues.toml")["catalogues"]["team"] == {"type": "bundled", "path": "catalogues/team"}
+    assert "Installing catalogue `team`...\n" in result.stdout
+    assert f"Successfully installed catalogue `team` at `{installed}`.\n" in result.stdout
+    assert read_toml(home / "catalogues.toml")["catalogues"]["team"] == {"type": "local", "path": "catalogues/team"}
 
-    # Install a local source under a second name and preserve the source.
-    source: Path = tmp_path / "source"
-    shutil.copytree(BUNDLED_CATALOGUE, source)
-    before: str = (source / "catalogue.toml").read_text(encoding = "utf-8")
-    local: Result = invoke(["create", "catalogue", "local", "--source", str(source), "--home", str(home)], context)
-    assert local.exit_code == 0, local.stderr
-    assert (home.resolve() / "catalogues" / "local" / "catalogue.toml").is_file()
+    # Require the source to remain unchanged.
     assert (source / "catalogue.toml").read_text(encoding = "utf-8") == before
-    assert "Successfully installed catalogue `local`" in local.stdout
-    assert read_toml(home / "catalogues.toml")["catalogues"]["local"] == {"type": "local", "path": "catalogues/local"}
 
-    # Require both operations to bind the selected home and presentation sink.
-    assert calls == [(home, calls[0][1]), (home, calls[1][1])]
+    # Require the operation to bind the selected home and presentation sink.
+    assert calls == [(home, context.presentation.output)]
+
+
+# Verify catalogue creation requires an explicit source.
+def test_create_catalogue_requires_a_source(tmp_path: Path) -> None:
+    # Invoke the command without `--source`.
+    home: Path = tmp_path / "home"
+    context, calls, _buffer = make_context()
+    result: Result = invoke(["create", "catalogue", "team", "--home", str(home)], context)
+
+    # Require a Click usage error before any client or configuration is created.
+    assert result.exit_code == 2
+    assert "Missing option '--source'" in result.stderr
+    assert calls == []
+    assert not home.exists()
 
 
 # Verify a `git` source installs and registers its origin.
@@ -190,7 +194,8 @@ def test_create_catalogue_force_confirmation_and_yes(tmp_path: Path) -> None:
     # Install the catalogue first and add a stale marker.
     home: Path = tmp_path / "home"
     context, _calls, _buffer = make_context()
-    first: Result = invoke(["create", "catalogue", "team", "--home", str(home)], context)
+    source: Path = write_catalogue_source(tmp_path / "source")
+    first: Result = invoke(["create", "catalogue", "team", "--source", str(source), "--home", str(home)], context)
     assert first.exit_code == 0, first.stderr
     installed: Path = home.resolve() / "catalogues" / "team"
     marker: Path = installed / "marker.txt"
@@ -198,7 +203,7 @@ def test_create_catalogue_force_confirmation_and_yes(tmp_path: Path) -> None:
     registry_before: str = (home / "catalogues.toml").read_text(encoding = "utf-8")
 
     # Decline the forced replacement.
-    declined: Result = invoke(["create", "catalogue", "team", "--force", "--home", str(home)], context, input = "n\n")
+    declined: Result = invoke(["create", "catalogue", "team", "--source", str(source), "--force", "--home", str(home)], context, input = "n\n")
     assert declined.exit_code == 1
     assert "Existing catalogue files and local modifications will be replaced.\n" in declined.stdout
     assert "Are you sure you want to replace the existing catalogue?" in declined.stdout
@@ -207,7 +212,7 @@ def test_create_catalogue_force_confirmation_and_yes(tmp_path: Path) -> None:
     assert (home / "catalogues.toml").read_text(encoding = "utf-8") == registry_before
 
     # Replace without confirmation when `--yes` is explicit.
-    replaced: Result = invoke(["create", "catalogue", "team", "--force", "--yes", "--home", str(home)], context)
+    replaced: Result = invoke(["create", "catalogue", "team", "--source", str(source), "--force", "--yes", "--home", str(home)], context)
     assert replaced.exit_code == 0, replaced.stderr
     assert "Are you sure you want to replace the existing catalogue?" not in replaced.stdout
     assert "Existing catalogue files and local modifications will be replaced." not in replaced.stdout
@@ -219,10 +224,11 @@ def test_create_catalogue_requires_force_to_replace(tmp_path: Path) -> None:
     # Install the catalogue first.
     home: Path = tmp_path / "home"
     context, _calls, _buffer = make_context()
-    assert invoke(["create", "catalogue", "team", "--home", str(home)], context).exit_code == 0
+    source: Path = write_catalogue_source(tmp_path / "source")
+    assert invoke(["create", "catalogue", "team", "--source", str(source), "--home", str(home)], context).exit_code == 0
 
     # Request replacement without `--force`.
-    result: Result = invoke(["create", "catalogue", "team", "--yes", "--home", str(home)], context)
+    result: Result = invoke(["create", "catalogue", "team", "--source", str(source), "--yes", "--home", str(home)], context)
 
     # Require the installer refusal without a prompt.
     assert result.exit_code == 1
@@ -239,7 +245,7 @@ def test_create_catalogue_validation_and_manifest_failure(tmp_path: Path) -> Non
     presentation, _buffer = make_presentation()
     context = CliContext(presentation = presentation, errors = ErrorPresenter(DOCKER_VOCABULARY), client_factory = FunctionClientFactory(fail))
     for name in ("Bad", "../team"):
-        result: Result = invoke(["create", "catalogue", name, "--home", str(tmp_path / "home")], context)
+        result: Result = invoke(["create", "catalogue", name, "--source", str(tmp_path / "source"), "--home", str(tmp_path / "home")], context)
         assert result.exit_code == 2
         assert "Invalid value for 'NAME'" in result.stderr
         assert "Must start with a lowercase letter or digit" in result.stderr
@@ -327,7 +333,7 @@ def test_list_catalogues_table_and_empty_state(tmp_path: Path) -> None:
     home.mkdir()
     (home / "catalogues.toml").write_text(
         '[catalogues.zeta]\ntype = "local"\npath = "catalogues/zeta"\n\n'
-        '[catalogues.alpha]\ntype = "bundled"\npath = "catalogues/alpha"\n',
+        '[catalogues.alpha]\ntype = "git"\npath = "catalogues/alpha"\n',
         encoding = "utf-8",
     )
     context, _calls, buffer = make_context()
@@ -339,7 +345,7 @@ def test_list_catalogues_table_and_empty_state(tmp_path: Path) -> None:
     assert buffer.getvalue() == ""
     lines: list[str] = result.stdout.rstrip("\n").splitlines()
     assert lines[0].split() == ["NAME", "TYPE", "PATH"]
-    assert [line.split()[:2] for line in lines[1:]] == [["alpha", "bundled"], ["zeta", "local"]]
+    assert [line.split()[:2] for line in lines[1:]] == [["alpha", "git"], ["zeta", "local"]]
     assert str(home / "catalogues" / "alpha") in lines[1]
 
     # Report the empty state without requiring a home directory.
@@ -467,7 +473,7 @@ def test_remove_catalogue_plan_confirmation_and_removal(tmp_path: Path) -> None:
     assert "Removing catalogue `team`..." in result.stdout
     assert "Catalogue\n" in result.stdout
     assert "  Name       team\n" in result.stdout
-    assert "  Type       bundled\n" in result.stdout
+    assert "  Type       local\n" in result.stdout
     assert "  api_key -> " in result.stdout
     assert "  will be deleted\n" in result.stdout
     assert "The catalogue directory and any local modifications will be permanently deleted.\n" in result.stdout
