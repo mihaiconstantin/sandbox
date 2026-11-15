@@ -101,7 +101,6 @@ from sandbox.ports import (
 
 # Import the public SDK operations and values.
 from sandbox.sdk import (
-    BUNDLED_CATALOGUE_SOURCE,
     BoxOperations,
     CatalogueInstallState,
     CatalogueOperations,
@@ -116,7 +115,6 @@ from sandbox.sdk import (
 # Export the documented public surface.
 __all__: list[str] = [
     # SDK operations and values.
-    "BUNDLED_CATALOGUE_SOURCE",
     "BoxOperations",
     "CatalogueInstallState",
     "CatalogueOperations",
