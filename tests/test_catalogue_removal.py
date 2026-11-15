@@ -133,14 +133,6 @@ class PlanCatalogueRemovalTests(CatalogueRemovalTestCase):
             (CatalogueBinding("api_key", (home / "keys" / "api_key").resolve()),),
         )
 
-    # Plan a bundled catalogue with a canonical path.
-    def test_plans_a_bundled_catalogue(self) -> None:
-        # Prepare a bundled catalogue registration.
-        home: Path = self.make_sandbox('[catalogues.team]\ntype = "bundled"\npath = "catalogues/team"\n')
-
-        # Require the bundled catalogue to produce a plan.
-        self.assertIsNotNone(plan_catalogue_removal(home, "team"))
-
     # Return no plan for an unregistered catalogue.
     def test_returns_none_for_an_unregistered_catalogue(self) -> None:
         # Prepare a registry with a different catalogue.
@@ -192,7 +184,7 @@ class RemoveCatalogueTests(CatalogueRemovalTestCase):
             "# Preserve this comment.\n"
             "[custom]\nvalue = 1\n\n"
             '[catalogues.team]\ntype = "local"\npath = "catalogues/team"\n\n'
-            '[catalogues.other]\ntype = "bundled"\npath = "catalogues/other"\n\n'
+            '[catalogues.other]\ntype = "local"\npath = "catalogues/other"\n\n'
             '[secrets.team.api_key]\nfile = "keys/api_key"\n\n'
             '[secrets.other.github]\nfile = "keys/github"\n'
         )
@@ -312,7 +304,7 @@ class RemoveCatalogueTests(CatalogueRemovalTestCase):
         # Prepare a plan that records a different origin.
         plan: CatalogueRemovalPlan = CatalogueRemovalPlan(
             home = home,
-            registration = CatalogueRegistration("team", "bundled", home / "catalogues" / "team"),
+            registration = CatalogueRegistration("team", "git", home / "catalogues" / "team"),
         )
 
         # Require the registration mismatch to be refused before any change.

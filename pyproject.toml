@@ -109,10 +109,6 @@ exclude = [
 [tool.hatch.build.targets.wheel]
 sources = ["src"]
 
-# Additionally, include the catalogues in the package wheel.
-[tool.hatch.build.targets.wheel.force-include]
-"catalogues" = "sandbox/catalogues"
-
 [dependency-groups]
 dev = [
     "basedpyright>=1.40.2",

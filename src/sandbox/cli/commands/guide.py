@@ -35,24 +35,18 @@ GUIDE_TEXT = inspect.cleandoc(f"""
 
     Getting Started
 
-      {click.style("# Create a catalogue with the built-in recipes.", fg = "bright_black", italic = True)}
-      {click.style("sb", bold = True, fg = "blue")} {click.style("create", bold = True, fg = "green")} catalogue default
+      {click.style("# Create a catalogue named `my-catalogue` from a local catalogue directory.", fg = "bright_black", italic = True)}
+      {click.style("sb", bold = True, fg = "blue")} {click.style("create", bold = True, fg = "green")} catalogue my-catalogue --source ./catalogue
 
       {click.style("# Create a box for the project `my-project` in the directory `~/Repositories/my-project` using the default recipe of the catalogue.", fg = "bright_black", italic = True)}
       {click.style("sb", bold = True, fg = "blue")} {click.style("create", bold = True, fg = "green")} box my-project \\
           --project-dir ~/Repositories/my-project \\
-          --catalogue default
+          --catalogue my-catalogue
 
       {click.style("# Enter the box for the project `my-project`.", fg = "bright_black", italic = True)}
       {click.style("sb", bold = True, fg = "blue")} {click.style("enter", bold = True, fg = "green")} my-project
 
     Managing Catalogues
-
-      {click.style("# Create a catalogue named `my-catalogue` from the bundled recipes.", fg = "bright_black", italic = True)}
-      {click.style("sb", bold = True, fg = "blue")} {click.style("create", bold = True, fg = "green")} catalogue my-catalogue --source bundled
-
-      {click.style("# Create a catalogue named `team` from a local catalogue directory.", fg = "bright_black", italic = True)}
-      {click.style("sb", bold = True, fg = "blue")} {click.style("create", bold = True, fg = "green")} catalogue team --source ./catalogue
 
       {click.style("# Create a catalogue named `team` from a `git` repository.", fg = "bright_black", italic = True)}
       {click.style("sb", bold = True, fg = "blue")} {click.style("create", bold = True, fg = "green")} catalogue team --source https://example.com/catalogue.git
@@ -99,13 +93,13 @@ GUIDE_TEXT = inspect.cleandoc(f"""
       {click.style("# Set the secret `example-secret` to the file `~/.keys/example-secret`.", fg = "bright_black", italic = True)}
       {click.style("sb", bold = True, fg = "blue")} {click.style("create", bold = True, fg = "green")} secret example-secret \\
           --file ~/.keys/example-secret \\
-          --catalogue default
+          --catalogue team
 
       {click.style("# List all available secrets.", fg = "bright_black", italic = True)}
       {click.style("sb", bold = True, fg = "blue")} {click.style("list", bold = True, fg = "green")} secrets
 
       {click.style("# Remove the secret `example-secret`.", fg = "bright_black", italic = True)}
-      {click.style("sb", bold = True, fg = "blue")} {click.style("remove", bold = True, fg = "green")} secret example-secret --catalogue default
+      {click.style("sb", bold = True, fg = "blue")} {click.style("remove", bold = True, fg = "green")} secret example-secret --catalogue team
 
     More Information
 

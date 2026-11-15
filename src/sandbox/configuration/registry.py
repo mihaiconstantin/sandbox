@@ -10,10 +10,7 @@ from tomlkit.items import Table
 # Import configuration document, path, and value helpers.
 from sandbox.configuration import documents, paths
 from sandbox.configuration.paths import (
-    BUNDLED_CATALOGUE_TYPE,
     CATALOGUE_ROOT,
-    DEFAULT_CATALOGUE_NAME,
-    DEFAULT_CATALOGUE_PATH,
     GIT_CATALOGUE_TYPE,
     LOCAL_CATALOGUE_TYPE,
     catalogue_path,
@@ -305,10 +302,7 @@ def remove_registry_entry(registry: tomlkit.TOMLDocument, section: str, key: str
 
 # Export the registry constants and path helpers used by configuration callers.
 __all__: list[str] = [
-    "BUNDLED_CATALOGUE_TYPE",
     "CATALOGUE_ROOT",
-    "DEFAULT_CATALOGUE_NAME",
-    "DEFAULT_CATALOGUE_PATH",
     "GIT_CATALOGUE_TYPE",
     "LOCAL_CATALOGUE_TYPE",
     "REGISTRATION_FIELDS",

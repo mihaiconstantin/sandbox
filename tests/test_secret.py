@@ -30,7 +30,7 @@ class SecretBindingTests(unittest.TestCase):
 
         # Prepare the sandbox directory and registry.
         home: Path = Path(temporary.name)
-        (home / "catalogues.toml").write_text('[catalogues.default]\ntype = "bundled"\npath = "catalogues/default"\n', encoding = "utf-8")
+        (home / "catalogues.toml").write_text('[catalogues.default]\ntype = "local"\npath = "catalogues/default"\n', encoding = "utf-8")
 
         # Prepare a secret file outside the catalogue tree.
         secret_file: Path = home / "keys" / "example-secret"
@@ -57,7 +57,7 @@ class SecretBindingTests(unittest.TestCase):
 
         # Require the catalogue registry to remain intact.
         configuration: dict[str, Any] = tomllib.loads((home / "catalogues.toml").read_text(encoding = "utf-8"))
-        self.assertEqual(configuration["catalogues"]["default"]["type"], "bundled")
+        self.assertEqual(configuration["catalogues"]["default"]["type"], "local")
         self.assertEqual(configuration["secrets"]["default"]["example-secret"]["file"], str(secret_file.resolve()))
 
         # Remove the binding and require it to disappear.
@@ -161,7 +161,7 @@ class SecretBindingTests(unittest.TestCase):
     def test_rejects_malformed_secret_sections(self) -> None:
         # Cover a scalar section and a scalar catalogue entry.
         configurations: tuple[str, ...] = (
-            'secrets = 5\n[catalogues.default]\ntype = "bundled"\npath = "catalogues/default"\n',
+            'secrets = 5\n[catalogues.default]\ntype = "local"\npath = "catalogues/default"\n',
             '[secrets]\ndefault = "invalid"\n',
         )
         for configuration in configurations:
@@ -270,7 +270,7 @@ class SecretBindingTests(unittest.TestCase):
         registry_file.write_text(
             "# Preserve this comment.\n"
             "[custom]\nvalue = 1\n\n"
-            '[catalogues.default]\ntype = "bundled"\npath = "catalogues/default"\n\n'
+            '[catalogues.default]\ntype = "local"\npath = "catalogues/default"\n\n'
             '[secrets.other.github]\nfile = "keys/github"\n',
             encoding = "utf-8",
         )

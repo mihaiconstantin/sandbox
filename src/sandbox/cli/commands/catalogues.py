@@ -13,9 +13,9 @@ from sandbox.cli.presentation.table import TableRenderer
 # Import the public registry values.
 from sandbox.domain import CatalogueBinding, CatalogueRegistration, CatalogueRemovalPlan
 
-# Import the SDK source discriminator, public result values, and registry error.
+# Import the SDK public result values and the registry error.
 from sandbox.errors.catalogues import RegistryError
-from sandbox.sdk import BUNDLED_CATALOGUE_SOURCE, CatalogueInstallState, RecipeListing, SandboxClient
+from sandbox.sdk import CatalogueInstallState, RecipeListing, SandboxClient
 
 # Locate a registered catalogue and add the discovery hint to its absence.
 def _locate(client: SandboxClient, name: str) -> Path:
@@ -38,12 +38,10 @@ def _locate(client: SandboxClient, name: str) -> Path:
     help = "The name of the catalogue to create.",
 )
 @click.option(
-    "--source",
+    "-s", "--source",
     type = str,
-    required = False,
-    default = BUNDLED_CATALOGUE_SOURCE,
-    show_default = True,
-    help = "The catalogue source can be \"bundled\", a local directory, or a `git` URL.",
+    required = True,
+    help = "The local directory or `git` URL of the catalogue.",
 )
 @home_option()
 @click.option(

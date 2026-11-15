@@ -10,8 +10,7 @@ from sandbox.catalogue.catalogue import Catalogue
 from sandbox.catalogue.install import CatalogueInstaller
 from sandbox.catalogue.resolve import ResolvedCatalogueRecipe, resolve_recipe, select_recipe
 
-# Import the internal configuration facade and the bundled source discriminator.
-from sandbox.configuration.registry import BUNDLED_CATALOGUE_TYPE
+# Import the internal configuration facade.
 from sandbox.configuration.store import ConfigurationStore
 
 # Import the registry-facing values.
@@ -27,10 +26,6 @@ from sandbox.validation.identifiers import validate_identifier
 
 # Import the SDK result values.
 from sandbox.sdk.results import CatalogueInstallState, RecipeListing
-
-
-# Define the source value that selects the bundled catalogue.
-BUNDLED_CATALOGUE_SOURCE: str = BUNDLED_CATALOGUE_TYPE
 
 
 # Expose catalogue discovery, installation, validation, and removal.
@@ -63,7 +58,7 @@ class CatalogueOperations:
         return CatalogueInstallState(registered = registered, directory_present = directory_present)
 
     # Install a catalogue and return its installed path.
-    def install(self, name: str, source: str = BUNDLED_CATALOGUE_SOURCE, *, force: bool = False) -> Path:
+    def install(self, name: str, source: str, *, force: bool = False) -> Path:
         # Validate the catalogue name before installing it.
         validate_identifier(name, "catalogue")
 
@@ -237,4 +232,4 @@ class CatalogueOperations:
 
 
 # Define the public API of the `sandbox.sdk.catalogues` module.
-__all__: list[str] = ["BUNDLED_CATALOGUE_SOURCE", "CatalogueOperations"]
+__all__: list[str] = ["CatalogueOperations"]

@@ -40,7 +40,7 @@ class ResolveCatalogueTests(RegistrySandboxTestCase):
     # Require a registered relative path to resolve against the sandbox directory.
     def test_resolves_a_registered_catalogue_directory(self) -> None:
         # Create a sandbox with a registered default catalogue.
-        home: Path = self.make_sandbox('[catalogues.default]\ntype = "bundled"\npath = "catalogues/default"\n')
+        home: Path = self.make_sandbox('[catalogues.default]\ntype = "local"\npath = "catalogues/default"\n')
 
         # Create the registered catalogue directory.
         catalogue_dir: Path = home / "catalogues" / "default"
@@ -62,7 +62,7 @@ class ResolveCatalogueTests(RegistrySandboxTestCase):
     # Reject names that are absent from the registry.
     def test_unregistered_catalogue_is_rejected(self) -> None:
         # Create a sandbox registering only another catalogue.
-        home: Path = self.make_sandbox('[catalogues.other]\ntype = "bundled"\npath = "catalogues/other"\n')
+        home: Path = self.make_sandbox('[catalogues.other]\ntype = "local"\npath = "catalogues/other"\n')
 
         # Require an unregistered name to be rejected.
         with self.assertRaises(RegistryError):
@@ -71,7 +71,7 @@ class ResolveCatalogueTests(RegistrySandboxTestCase):
     # Reject a registered path that is not a string.
     def test_invalid_registered_path_value_is_rejected(self) -> None:
         # Create a sandbox with a non-string registration path.
-        home: Path = self.make_sandbox('[catalogues.broken]\ntype = "bundled"\npath = 5\n')
+        home: Path = self.make_sandbox('[catalogues.broken]\ntype = "local"\npath = 5\n')
 
         # Require a non-string path to be rejected.
         with self.assertRaises(RegistryError):
@@ -80,7 +80,7 @@ class ResolveCatalogueTests(RegistrySandboxTestCase):
     # Require a registered path to point at a directory.
     def test_registered_path_must_reference_a_directory(self) -> None:
         # Create a sandbox whose registration targets a file.
-        home: Path = self.make_sandbox('[catalogues.broken]\ntype = "bundled"\npath = "catalogues.toml"\n')
+        home: Path = self.make_sandbox('[catalogues.broken]\ntype = "local"\npath = "catalogues.toml"\n')
 
         # Require a file target to be rejected as a directory.
         with self.assertRaises(RegistryError):
@@ -98,7 +98,7 @@ class ResolveCatalogueTests(RegistrySandboxTestCase):
     # Reject a registration without a path.
     def test_missing_registered_path_is_rejected(self) -> None:
         # Create a sandbox with a registration lacking a path.
-        home: Path = self.make_sandbox('[catalogues.broken]\ntype = "bundled"\n')
+        home: Path = self.make_sandbox('[catalogues.broken]\ntype = "local"\n')
 
         # Require a registration without a path to be rejected.
         with self.assertRaises(RegistryError):
@@ -107,7 +107,7 @@ class ResolveCatalogueTests(RegistrySandboxTestCase):
     # Reject a registration whose directory does not exist.
     def test_missing_catalogue_directory_is_rejected(self) -> None:
         # Create a sandbox with a missing catalogue directory.
-        home: Path = self.make_sandbox('[catalogues.broken]\ntype = "bundled"\npath = "catalogues/missing"\n')
+        home: Path = self.make_sandbox('[catalogues.broken]\ntype = "local"\npath = "catalogues/missing"\n')
 
         # Require a registration outside the directory tree to be rejected.
         with self.assertRaises(RegistryError):
@@ -142,13 +142,13 @@ class ListCataloguesTests(RegistrySandboxTestCase):
         # Declare the registrations out of name order.
         home: Path = self.make_sandbox(
             '[catalogues.zeta]\ntype = "local"\npath = "catalogues/zeta"\n\n'
-            '[catalogues.alpha]\ntype = "bundled"\npath = "catalogues/alpha"\n'
+            '[catalogues.alpha]\ntype = "git"\npath = "catalogues/alpha"\n'
         )
 
         # Require the registrations sorted by name with resolved locations.
         registrations: list[CatalogueRegistration] = list(ConfigurationStore(home).registrations())
         self.assertEqual([registration.name for registration in registrations], ["alpha", "zeta"])
-        self.assertEqual(registrations[0].type, "bundled")
+        self.assertEqual(registrations[0].type, "git")
         self.assertEqual(registrations[0].path, home / "catalogues" / "alpha")
         self.assertEqual(registrations[1].type, "local")
         self.assertEqual(registrations[1].path, home / "catalogues" / "zeta")
@@ -172,10 +172,10 @@ class ListCataloguesTests(RegistrySandboxTestCase):
             "catalogues = 5\n",
             '[catalogues]\nbroken = "catalogues/default"\n',
             '[catalogues.broken]\npath = "catalogues/default"\n',
-            '[catalogues.broken]\ntype = "bundled"\n',
+            '[catalogues.broken]\ntype = "local"\n',
             '[catalogues.broken]\ntype = 5\npath = "catalogues/default"\n',
-            '[catalogues.broken]\ntype = "bundled"\npath = 5\n',
-            '[catalogues."Broken Name"]\ntype = "bundled"\npath = "catalogues/default"\n',
+            '[catalogues.broken]\ntype = "local"\npath = 5\n',
+            '[catalogues."Broken Name"]\ntype = "local"\npath = "catalogues/default"\n',
             "[catalogues.default\n",
         )
         for registry in registries:
@@ -196,7 +196,7 @@ class RemoveCatalogueRegistrationTests(RegistrySandboxTestCase):
         home: Path = self.make_sandbox(
             "# Preserve this comment.\n"
             "[custom]\nvalue = 1\n\n"
-            '[catalogues.alpha]\ntype = "bundled"\npath = "catalogues/alpha"\n\n'
+            '[catalogues.alpha]\ntype = "local"\npath = "catalogues/alpha"\n\n'
             '[catalogues.zeta]\ntype = "local"\npath = "catalogues/zeta"\n'
         )
         registry_file: Path = home / "catalogues.toml"
@@ -216,7 +216,7 @@ class RemoveCatalogueRegistrationTests(RegistrySandboxTestCase):
     # Remove the empty catalogue section after the last registration.
     def test_removes_the_empty_catalogue_section(self) -> None:
         # Prepare a registry with one catalogue.
-        home: Path = self.make_sandbox('[catalogues.alpha]\ntype = "bundled"\npath = "catalogues/alpha"\n')
+        home: Path = self.make_sandbox('[catalogues.alpha]\ntype = "local"\npath = "catalogues/alpha"\n')
         registry_file: Path = home / "catalogues.toml"
         registry: tomlkit.TOMLDocument = tomlkit.parse(registry_file.read_text(encoding = "utf-8"))
 
@@ -229,7 +229,7 @@ class RemoveCatalogueRegistrationTests(RegistrySandboxTestCase):
     # Leave the registry unchanged when the catalogue is absent.
     def test_missing_catalogue_is_a_no_op(self) -> None:
         # Prepare a registry with one catalogue.
-        home: Path = self.make_sandbox('[catalogues.alpha]\ntype = "bundled"\npath = "catalogues/alpha"\n')
+        home: Path = self.make_sandbox('[catalogues.alpha]\ntype = "local"\npath = "catalogues/alpha"\n')
         registry_file: Path = home / "catalogues.toml"
         registry: tomlkit.TOMLDocument = tomlkit.parse(registry_file.read_text(encoding = "utf-8"))
 
@@ -263,72 +263,21 @@ class PrepareRegistryTestCase(unittest.TestCase):
         return Path(temporary.name) / "catalogues.toml"
 
 
-# Verify default catalogue registration preparation.
-class PrepareDefaultCatalogueRegistryTests(PrepareRegistryTestCase):
-    # Add the default registration without removing existing entries.
-    def test_registers_default_without_removing_other_entries(self) -> None:
-        # Prepare a registry with an existing catalogue.
-        registry_file: Path = self.make_registry()
-        registry_file.write_text('[catalogues.other]\ntype = "bundled"\npath = "catalogues/other"\n', encoding = "utf-8")
-
-        # Require the default registration alongside the unchanged existing entry.
-        text: str = ConfigurationStore(registry_file.parent).prepare_registration("default", "bundled", False)
-        configuration: tomlkit.TOMLDocument = tomlkit.parse(text)
-        self.assertIn("other", configuration["catalogues"])
-        self.assertEqual(dict(configuration["catalogues"]["default"]), {"type": "bundled", "path": "catalogues/default"})
-        self.assertEqual(dict(configuration["catalogues"]["other"]), {"type": "bundled", "path": "catalogues/other"})
-
-    # Leave an already correct default registration unchanged and unique.
-    def test_existing_default_registration_is_idempotent(self) -> None:
-        # Prepare a registry that already contains the expected registration.
-        registry_file: Path = self.make_registry()
-        original: str = '[catalogues.default]\ntype = "bundled"\npath = "catalogues/default"\n'
-        registry_file.write_text(original, encoding = "utf-8")
-
-        # Prepare the registry without writing the returned text.
-        text: str = ConfigurationStore(registry_file.parent).prepare_registration("default", "bundled", False)
-
-        # Require the existing registration to match the original file.
-        configuration: tomlkit.TOMLDocument = tomlkit.parse(text)
-        original_configuration: tomlkit.TOMLDocument = tomlkit.parse(registry_file.read_text(encoding = "utf-8"))
-        self.assertEqual(configuration["catalogues"]["default"], original_configuration["catalogues"]["default"])
-
-        # Require the default registration to appear exactly once.
-        self.assertEqual(list(configuration["catalogues"]), ["default"])
-
-    # Reject a default registration that points somewhere else.
-    def test_conflicting_default_registration_is_rejected(self) -> None:
-        # Prepare a registry with a conflicting default registration.
-        registry_file: Path = self.make_registry()
-        registry_file.write_text('[catalogues.default]\ntype = "bundled"\npath = "somewhere/else"\n', encoding = "utf-8")
-
-        # Require a conflicting registration to be rejected.
-        with self.assertRaises(RegistryError):
-            ConfigurationStore(registry_file.parent).prepare_registration("default", "bundled", False)
-
-    # Reject scalar and incomplete default registrations.
-    def test_malformed_default_registration_is_rejected(self) -> None:
+# Verify malformed catalogue registration preparation is rejected.
+class PrepareMalformedCatalogueRegistryTests(PrepareRegistryTestCase):
+    # Reject scalar and incomplete registrations.
+    def test_malformed_registration_is_rejected(self) -> None:
         # Cover a scalar registration and one without a path.
-        registries: tuple[str, ...] = ('[catalogues]\ndefault = "catalogues/default"\n', '[catalogues.default]\ntype = "bundled"\n')
+        registries: tuple[str, ...] = ('[catalogues]\ndefault = "catalogues/default"\n', '[catalogues.default]\ntype = "local"\n')
         for registry in registries:
             with self.subTest(registry = registry):
                 # Prepare a registry with the malformed registration.
                 registry_file: Path = self.make_registry()
                 registry_file.write_text(registry, encoding = "utf-8")
 
-                # Require a scalar or incomplete default registration to be rejected.
+                # Require a scalar or incomplete registration to be rejected.
                 with self.assertRaises(RegistryError):
-                    ConfigurationStore(registry_file.parent).prepare_registration("default", "bundled", False)
-
-    # Reject a non-mapping `catalogues` section.
-    def test_invalid_catalogues_section_is_rejected(self) -> None:
-        # Prepare a registry with a scalar catalogue section.
-        registry_file: Path = self.make_registry()
-        registry_file.write_text("catalogues = 5\n", encoding = "utf-8")
-
-        # Require a non-mapping catalogue section to be rejected.
-        with self.assertRaises(RegistryError):
-            ConfigurationStore(registry_file.parent).prepare_registration("default", "bundled", False)
+                    ConfigurationStore(registry_file.parent).prepare_registration("default", "local", False)
 
     # Reject malformed TOML.
     def test_invalid_toml_is_rejected(self) -> None:
@@ -338,7 +287,7 @@ class PrepareDefaultCatalogueRegistryTests(PrepareRegistryTestCase):
 
         # Require malformed TOML to be reported as a registry error.
         with self.assertRaises(RegistryError):
-            ConfigurationStore(registry_file.parent).prepare_registration("default", "bundled", False)
+            ConfigurationStore(registry_file.parent).prepare_registration("default", "local", False)
 
 
 # Verify generic catalogue registration preparation.
@@ -348,30 +297,30 @@ class PrepareCatalogueRegistryTests(PrepareRegistryTestCase):
         # Prepare a registry path without a file.
         registry_file: Path = self.make_registry()
 
-        # Register a bundled catalogue under an arbitrary name.
-        text: str = ConfigurationStore(registry_file.parent).prepare_registration("alpha", "bundled", False)
+        # Register a local catalogue under an arbitrary name.
+        text: str = ConfigurationStore(registry_file.parent).prepare_registration("alpha", "local", False)
 
         # Require the conventional comment and the requested registration.
         self.assertTrue(text.startswith("# Registered development `sandbox` catalogues.\n"))
         configuration: tomlkit.TOMLDocument = tomlkit.parse(text)
-        self.assertEqual(dict(configuration["catalogues"]["alpha"]), {"type": "bundled", "path": "catalogues/alpha"})
+        self.assertEqual(dict(configuration["catalogues"]["alpha"]), {"type": "local", "path": "catalogues/alpha"})
 
     # Register an arbitrary name without removing other entries or comments.
     def test_registers_an_arbitrary_name_and_preserves_the_registry(self) -> None:
         # Prepare a registry with an existing catalogue and comment.
         registry_file: Path = self.make_registry()
         registry_file.write_text(
-            '# Existing comment.\n[catalogues.other]\ntype = "bundled"\npath = "catalogues/other"\n',
+            '# Existing comment.\n[catalogues.other]\ntype = "local"\npath = "catalogues/other"\n',
             encoding = "utf-8",
         )
 
-        # Register a bundled catalogue under a non-default name.
-        text: str = ConfigurationStore(registry_file.parent).prepare_registration("team-alpha", "bundled", False)
+        # Register a local catalogue under a non-default name.
+        text: str = ConfigurationStore(registry_file.parent).prepare_registration("team-alpha", "local", False)
 
         # Require the requested registration, the unchanged sibling, and the comment.
         configuration: tomlkit.TOMLDocument = tomlkit.parse(text)
-        self.assertEqual(dict(configuration["catalogues"]["team-alpha"]), {"type": "bundled", "path": "catalogues/team-alpha"})
-        self.assertEqual(dict(configuration["catalogues"]["other"]), {"type": "bundled", "path": "catalogues/other"})
+        self.assertEqual(dict(configuration["catalogues"]["team-alpha"]), {"type": "local", "path": "catalogues/team-alpha"})
+        self.assertEqual(dict(configuration["catalogues"]["other"]), {"type": "local", "path": "catalogues/other"})
         self.assertIn("# Existing comment.", text)
 
     # Separate a new registration from following top-level tables.
@@ -380,13 +329,13 @@ class PrepareCatalogueRegistryTests(PrepareRegistryTestCase):
         registry_file: Path = self.make_registry()
         registry_file.write_text(
             '# Registered development `sandbox` catalogues.\n\n'
-            '[catalogues.default]\ntype = "bundled"\npath = "catalogues/default"\n\n'
+            '[catalogues.default]\ntype = "local"\npath = "catalogues/default"\n\n'
             '[secrets.default.openai]\nfile = "/keys/openai"\n',
             encoding = "utf-8",
         )
 
-        # Register another bundled catalogue.
-        text: str = ConfigurationStore(registry_file.parent).prepare_registration("default2", "bundled", False)
+        # Register another local catalogue.
+        text: str = ConfigurationStore(registry_file.parent).prepare_registration("default2", "local", False)
 
         # Require a blank line between the new registration and the secret table.
         self.assertIn('path = "catalogues/default2"\n\n[secrets.default.openai]', text)
@@ -398,23 +347,23 @@ class PrepareCatalogueRegistryTests(PrepareRegistryTestCase):
         registry_file.write_text("# Catalogues.\n", encoding = "utf-8")
 
         # Prepare the same registration twice.
-        first: str = ConfigurationStore(registry_file.parent).prepare_registration("alpha", "bundled", False)
+        first: str = ConfigurationStore(registry_file.parent).prepare_registration("alpha", "local", False)
         registry_file.write_text(first, encoding = "utf-8")
-        second: str = ConfigurationStore(registry_file.parent).prepare_registration("alpha", "bundled", False)
+        second: str = ConfigurationStore(registry_file.parent).prepare_registration("alpha", "local", False)
 
         # Require the registration to appear exactly once and the document to remain stable.
         configuration: tomlkit.TOMLDocument = tomlkit.parse(second)
         self.assertEqual(list(configuration["catalogues"]), ["alpha"])
-        self.assertEqual(dict(configuration["catalogues"]["alpha"]), {"type": "bundled", "path": "catalogues/alpha"})
+        self.assertEqual(dict(configuration["catalogues"]["alpha"]), {"type": "local", "path": "catalogues/alpha"})
         self.assertEqual(second, first)
 
-    # Reject registrations that differ from the expected bundled shape.
+    # Reject registrations that differ from the expected local shape.
     def test_conflicting_registration_is_rejected_without_changing_the_document(self) -> None:
         # Cover a different type, a different path, and an extra key.
         registrations: tuple[str, ...] = (
-            '[catalogues.alpha]\ntype = "local"\npath = "catalogues/alpha"\n',
-            '[catalogues.alpha]\ntype = "bundled"\npath = "catalogues/beta"\n',
-            '[catalogues.alpha]\ntype = "bundled"\npath = "catalogues/alpha"\nversion = "1"\n',
+            '[catalogues.alpha]\ntype = "git"\npath = "catalogues/alpha"\n',
+            '[catalogues.alpha]\ntype = "local"\npath = "catalogues/beta"\n',
+            '[catalogues.alpha]\ntype = "local"\npath = "catalogues/alpha"\nversion = "1"\n',
         )
         for registry in registrations:
             with self.subTest(registry = registry):
@@ -424,14 +373,14 @@ class PrepareCatalogueRegistryTests(PrepareRegistryTestCase):
 
                 # Require the conflict to be rejected and the registry to stay unchanged.
                 with self.assertRaises(RegistryError):
-                    ConfigurationStore(registry_file.parent).prepare_registration("alpha", "bundled", False)
+                    ConfigurationStore(registry_file.parent).prepare_registration("alpha", "local", False)
                 self.assertEqual(registry_file.read_text(encoding = "utf-8"), registry)
 
     # Update the recorded origin when replacement is forced.
     def test_force_updates_the_origin(self) -> None:
-        # Prepare a registry with a bundled registration.
+        # Prepare a registry with a different origin.
         registry_file: Path = self.make_registry()
-        registry_file.write_text('[catalogues.alpha]\ntype = "bundled"\npath = "catalogues/alpha"\n', encoding = "utf-8")
+        registry_file.write_text('[catalogues.alpha]\ntype = "git"\npath = "catalogues/alpha"\n', encoding = "utf-8")
 
         # Prepare the registration for a local source with force.
         text: str = ConfigurationStore(registry_file.parent).prepare_registration("alpha", "local", True)
@@ -490,12 +439,12 @@ class PrepareCatalogueRegistryTests(PrepareRegistryTestCase):
     def test_invalid_name_is_rejected_without_changing_the_document(self) -> None:
         # Prepare a registry with an existing registration.
         registry_file: Path = self.make_registry()
-        original: str = '[catalogues.other]\ntype = "bundled"\npath = "catalogues/other"\n'
+        original: str = '[catalogues.other]\ntype = "local"\npath = "catalogues/other"\n'
         registry_file.write_text(original, encoding = "utf-8")
 
         # Require an invalid name to be rejected as a configuration error.
         with self.assertRaises(ConfigurationError):
-            ConfigurationStore(registry_file.parent).prepare_registration("Not Valid", "bundled", False)
+            ConfigurationStore(registry_file.parent).prepare_registration("Not Valid", "local", False)
 
         # Require the registry to remain unchanged.
         self.assertEqual(registry_file.read_text(encoding = "utf-8"), original)
@@ -508,7 +457,7 @@ class PrepareCatalogueRegistryTests(PrepareRegistryTestCase):
 
         # Require a non-mapping catalogue section to be rejected.
         with self.assertRaises(RegistryError):
-            ConfigurationStore(registry_file.parent).prepare_registration("alpha", "bundled", False)
+            ConfigurationStore(registry_file.parent).prepare_registration("alpha", "local", False)
 
 
 # Verify atomic registry replacement.
@@ -521,7 +470,7 @@ class WriteRegistryAtomicTests(unittest.TestCase):
 
         # Prepare the registry file.
         registry_file: Path = Path(temporary.name) / "catalogues.toml"
-        registry_file.write_text('[catalogues.default]\ntype = "bundled"\npath = "catalogues/default"\n', encoding = "utf-8")
+        registry_file.write_text('[catalogues.default]\ntype = "local"\npath = "catalogues/default"\n', encoding = "utf-8")
         registry_file.chmod(0o640)
 
         # Return the registry file path.
@@ -531,7 +480,7 @@ class WriteRegistryAtomicTests(unittest.TestCase):
     def test_replaces_the_registry_and_preserves_its_mode(self) -> None:
         # Prepare the replacement registry.
         registry_file: Path = self.make_registry()
-        registry: tomlkit.TOMLDocument = tomlkit.parse('[catalogues.other]\ntype = "bundled"\npath = "catalogues/other"\n')
+        registry: tomlkit.TOMLDocument = tomlkit.parse('[catalogues.other]\ntype = "local"\npath = "catalogues/other"\n')
 
         # Replace the registry atomically.
         write_registry_atomic(registry_file, registry)
@@ -547,7 +496,7 @@ class WriteRegistryAtomicTests(unittest.TestCase):
         # Prepare the replacement registry and capture the original content.
         registry_file: Path = self.make_registry()
         original: str = registry_file.read_text(encoding = "utf-8")
-        registry: tomlkit.TOMLDocument = tomlkit.parse('[catalogues.other]\ntype = "bundled"\npath = "catalogues/other"\n')
+        registry: tomlkit.TOMLDocument = tomlkit.parse('[catalogues.other]\ntype = "local"\npath = "catalogues/other"\n')
 
         # Require replacement failures to leave the original registry intact.
         with (

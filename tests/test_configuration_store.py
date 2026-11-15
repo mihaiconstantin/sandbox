@@ -60,7 +60,7 @@ class RegistrationReadTests(ConfigurationStoreTestCase):
         # Register two catalogues out of name order.
         home: Path = self.make_home(
             '[catalogues.zeta]\ntype = "local"\npath = "catalogues/zeta"\n\n'
-            '[catalogues.alpha]\ntype = "bundled"\npath = "catalogues/alpha"\n'
+            '[catalogues.alpha]\ntype = "git"\npath = "catalogues/alpha"\n'
         )
         alpha_dir: Path = self.make_catalogue(home, "alpha")
 
@@ -70,8 +70,9 @@ class RegistrationReadTests(ConfigurationStoreTestCase):
         # Require name order and absolute resolved registration paths.
         registrations = store.registrations()
         self.assertEqual([registration.name for registration in registrations], ["alpha", "zeta"])
-        self.assertEqual(registrations[0].type, "bundled")
+        self.assertEqual(registrations[0].type, "git")
         self.assertEqual(registrations[0].path, alpha_dir)
+        self.assertEqual(registrations[1].type, "local")
         self.assertEqual(registrations[1].path, home / "catalogues" / "zeta")
 
         # Require single registration lookup and the unregistered result.
@@ -107,13 +108,13 @@ class RegistrationReadTests(ConfigurationStoreTestCase):
         self.assertIn(str(missing_home / "catalogues.toml"), str(raised.exception))
 
         # Require an unregistered catalogue to be reported.
-        unregistered_home: Path = self.make_home('[catalogues.other]\ntype = "bundled"\npath = "catalogues/other"\n')
+        unregistered_home: Path = self.make_home('[catalogues.other]\ntype = "local"\npath = "catalogues/other"\n')
         with self.assertRaises(RegistryError) as raised:
             ConfigurationStore(unregistered_home).resolve("default")
         self.assertIn("Catalogue `default` is not registered", str(raised.exception))
 
         # Require a canonical registration that targets a file to be refused.
-        file_home: Path = self.make_home('[catalogues.broken]\ntype = "bundled"\npath = "catalogues/broken"\n')
+        file_home: Path = self.make_home('[catalogues.broken]\ntype = "local"\npath = "catalogues/broken"\n')
         (file_home / "catalogues").mkdir()
         (file_home / "catalogues" / "broken").write_text("not a directory\n", encoding = "utf-8")
         with self.assertRaises(RegistryError) as raised:
@@ -132,10 +133,10 @@ class RegistrationReadTests(ConfigurationStoreTestCase):
             "catalogues = 5\n",
             '[catalogues]\nbroken = "catalogues/default"\n',
             '[catalogues.broken]\npath = "catalogues/default"\n',
-            '[catalogues.broken]\ntype = "bundled"\n',
+            '[catalogues.broken]\ntype = "local"\n',
             '[catalogues.broken]\ntype = 5\npath = "catalogues/default"\n',
-            '[catalogues.broken]\ntype = "bundled"\npath = 5\n',
-            '[catalogues."Broken Name"]\ntype = "bundled"\npath = "catalogues/default"\n',
+            '[catalogues.broken]\ntype = "local"\npath = 5\n',
+            '[catalogues."Broken Name"]\ntype = "local"\npath = "catalogues/default"\n',
             "[catalogues.default\n",
         )
         for registry in registries:
@@ -155,18 +156,18 @@ class RegistrationWriteTests(ConfigurationStoreTestCase):
         store: ConfigurationStore = ConfigurationStore(home)
 
         # Register a catalogue.
-        registration = store.register("alpha", "bundled", False)
+        registration = store.register("alpha", "local", False)
 
         # Require the resolved registration value.
         self.assertEqual(registration.name, "alpha")
-        self.assertEqual(registration.type, "bundled")
+        self.assertEqual(registration.type, "local")
         self.assertEqual(registration.path, (home / "catalogues" / "alpha").resolve())
 
         # Require the conventional comment and registration fields.
         text: str = store.registry_file.read_text(encoding = "utf-8")
         self.assertTrue(text.startswith("# Registered development `sandbox` catalogues.\n"))
         configuration = tomlkit.parse(text)
-        self.assertEqual(dict(configuration["catalogues"]["alpha"]), {"type": "bundled", "path": "catalogues/alpha"})
+        self.assertEqual(dict(configuration["catalogues"]["alpha"]), {"type": "local", "path": "catalogues/alpha"})
 
         # Require a new registry to use the install-compatible file mode.
         self.assertEqual(store.registry_file.stat().st_mode & 0o777, 0o644)
@@ -179,7 +180,7 @@ class RegistrationWriteTests(ConfigurationStoreTestCase):
 
         # Register a catalogue while the umask denies group and other access.
         with mock.patch("os.umask", return_value = 0o077):
-            store.register("team", "bundled", force = False)
+            store.register("team", "local", force = False)
 
         # Require the umask-derived mode.
         self.assertEqual(store.registry_file.stat().st_mode & 0o777, 0o600)
@@ -196,7 +197,7 @@ class RegistrationWriteTests(ConfigurationStoreTestCase):
         store.registry_file.chmod(0o640)
 
         # Register another catalogue.
-        store.register("alpha", "bundled", False)
+        store.register("alpha", "local", False)
 
         # Require the sibling, comment, and unrelated table to survive.
         text: str = store.registry_file.read_text(encoding = "utf-8")
@@ -204,7 +205,7 @@ class RegistrationWriteTests(ConfigurationStoreTestCase):
         self.assertIn("# Preserve this comment.", text)
         self.assertEqual(configuration["custom"]["value"], 1)
         self.assertEqual(dict(configuration["catalogues"]["other"]), {"type": "local", "path": "catalogues/other"})
-        self.assertEqual(dict(configuration["catalogues"]["alpha"]), {"type": "bundled", "path": "catalogues/alpha"})
+        self.assertEqual(dict(configuration["catalogues"]["alpha"]), {"type": "local", "path": "catalogues/alpha"})
 
         # Require the existing registry mode to survive.
         self.assertEqual(store.registry_file.stat().st_mode & 0o777, 0o640)
@@ -213,8 +214,8 @@ class RegistrationWriteTests(ConfigurationStoreTestCase):
     def test_register_rejects_conflicts_without_writing(self) -> None:
         # Cover a different origin, a different path, a noncanonical path, and an extra field.
         registrations: tuple[tuple[str, bool], ...] = (
-            ('[catalogues.alpha]\ntype = "local"\npath = "catalogues/alpha"\n', False),
-            ('[catalogues.alpha]\ntype = "bundled"\npath = "catalogues/beta"\n', False),
+            ('[catalogues.alpha]\ntype = "git"\npath = "catalogues/alpha"\n', False),
+            ('[catalogues.alpha]\ntype = "local"\npath = "catalogues/beta"\n', False),
             ('[catalogues.alpha]\ntype = "local"\npath = "../outside/alpha"\n', True),
             ('[catalogues.alpha]\ntype = "local"\npath = "catalogues/alpha"\nversion = "1"\n', True),
         )
@@ -226,15 +227,15 @@ class RegistrationWriteTests(ConfigurationStoreTestCase):
 
                 # Require the conflict to be rejected and the registry to stay unchanged.
                 with self.assertRaises(RegistryError):
-                    store.check_registration("alpha", "bundled", force)
+                    store.check_registration("alpha", "local", force)
                 with self.assertRaises(RegistryError):
-                    store.register("alpha", "bundled", force)
+                    store.register("alpha", "local", force)
                 self.assertEqual(store.registry_file.read_text(encoding = "utf-8"), registry)
 
     # Update the recorded origin when replacement is forced.
     def test_register_updates_the_origin_when_forced(self) -> None:
-        # Prepare a bundled registration.
-        home: Path = self.make_home('[catalogues.alpha]\ntype = "bundled"\npath = "catalogues/alpha"\n')
+        # Prepare a registration with a different origin.
+        home: Path = self.make_home('[catalogues.alpha]\ntype = "git"\npath = "catalogues/alpha"\n')
         store: ConfigurationStore = ConfigurationStore(home)
 
         # Register the same catalogue from a local source with force.
@@ -251,7 +252,7 @@ class RegistrationWriteTests(ConfigurationStoreTestCase):
             "# Preserve this comment.\n"
             "[custom]\nvalue = 1\n\n"
             '[catalogues.team]\ntype = "local"\npath = "catalogues/team"\n\n'
-            '[catalogues.other]\ntype = "bundled"\npath = "catalogues/other"\n\n'
+            '[catalogues.other]\ntype = "local"\npath = "catalogues/other"\n\n'
             '[secrets.team.api_key]\nfile = "keys/api_key"\n\n'
             '[secrets.other.github]\nfile = "keys/github"\n'
         )
@@ -281,7 +282,7 @@ class RegistrationWriteTests(ConfigurationStoreTestCase):
     # Preserve the document and remove the temporary file when publication fails.
     def test_failed_publication_preserves_the_document_and_removes_the_temporary_file(self) -> None:
         # Prepare a registry with an existing registration.
-        original: str = '[catalogues.other]\ntype = "bundled"\npath = "catalogues/other"\n'
+        original: str = '[catalogues.other]\ntype = "local"\npath = "catalogues/other"\n'
         home: Path = self.make_home(original)
         store: ConfigurationStore = ConfigurationStore(home)
 
@@ -290,7 +291,7 @@ class RegistrationWriteTests(ConfigurationStoreTestCase):
             mock.patch("sandbox.configuration.registry.os.replace", side_effect = OSError("replace failed")),
             self.assertRaises(OSError),
         ):
-            store.register("alpha", "bundled", False)
+            store.register("alpha", "local", False)
 
         # Require the original content and no leftover temporary file.
         self.assertEqual(store.registry_file.read_text(encoding = "utf-8"), original)
@@ -302,7 +303,7 @@ class SecretBindingTests(ConfigurationStoreTestCase):
     # Save, load, list, and remove a binding.
     def test_saves_loads_lists_and_removes_a_binding(self) -> None:
         # Prepare a registered catalogue and secret file.
-        home: Path = self.make_home('[catalogues.default]\ntype = "bundled"\npath = "catalogues/default"\n')
+        home: Path = self.make_home('[catalogues.default]\ntype = "local"\npath = "catalogues/default"\n')
         secret_file: Path = self.make_secret(home)
         store: ConfigurationStore = ConfigurationStore(home)
 
@@ -315,7 +316,7 @@ class SecretBindingTests(ConfigurationStoreTestCase):
         # Require the stored binding and registration to coexist.
         configuration = tomlkit.parse(store.registry_file.read_text(encoding = "utf-8"))
         self.assertEqual(configuration["secrets"]["default"]["example-secret"]["file"], str(secret_file.resolve()))
-        self.assertEqual(configuration["catalogues"]["default"]["type"], "bundled")
+        self.assertEqual(configuration["catalogues"]["default"]["type"], "local")
 
         # Require load and list to return the saved binding.
         self.assertEqual(store.load_secret("default", "example-secret"), secret_file.resolve())
@@ -378,7 +379,7 @@ class SecretBindingTests(ConfigurationStoreTestCase):
         home: Path = self.make_home(
             "# Preserve this comment.\n"
             "[custom]\nvalue = 1\n\n"
-            '[catalogues.default]\ntype = "bundled"\npath = "catalogues/default"\n\n'
+            '[catalogues.default]\ntype = "local"\npath = "catalogues/default"\n\n'
             '[secrets.other.github]\nfile = "keys/github"\n'
         )
         secret_file: Path = self.make_secret(home)
@@ -405,7 +406,7 @@ class SecretBindingTests(ConfigurationStoreTestCase):
             store.save_secret("default", "example-secret", home / "missing")
 
         # Prepare a registry and require invalid host files to be rejected.
-        home = self.make_home('[catalogues.default]\ntype = "bundled"\npath = "catalogues/default"\n')
+        home = self.make_home('[catalogues.default]\ntype = "local"\npath = "catalogues/default"\n')
         store = ConfigurationStore(home)
         with self.assertRaises(SecretFileError):
             store.save_secret("default", "example-secret", home / "missing")
@@ -418,7 +419,7 @@ class SecretBindingTests(ConfigurationStoreTestCase):
     # Reject invalid identifiers and malformed secret sections.
     def test_rejects_invalid_identifiers_and_malformed_sections(self) -> None:
         # Prepare a registered catalogue and secret file.
-        home: Path = self.make_home('[catalogues.default]\ntype = "bundled"\npath = "catalogues/default"\n')
+        home: Path = self.make_home('[catalogues.default]\ntype = "local"\npath = "catalogues/default"\n')
         secret_file: Path = self.make_secret(home)
         store: ConfigurationStore = ConfigurationStore(home)
 
@@ -430,7 +431,7 @@ class SecretBindingTests(ConfigurationStoreTestCase):
 
         # Cover a scalar section and a scalar catalogue entry.
         configurations: tuple[str, ...] = (
-            'secrets = 5\n[catalogues.default]\ntype = "bundled"\npath = "catalogues/default"\n',
+            'secrets = 5\n[catalogues.default]\ntype = "local"\npath = "catalogues/default"\n',
             '[secrets]\ndefault = "invalid"\n',
         )
         for configuration in configurations:
@@ -452,7 +453,7 @@ class SecretBindingTests(ConfigurationStoreTestCase):
     # Preserve the document and binding when a removal write fails.
     def test_failed_removal_preserves_the_binding_and_removes_the_temporary_file(self) -> None:
         # Prepare a saved binding and capture the original document.
-        home: Path = self.make_home('[catalogues.default]\ntype = "bundled"\npath = "catalogues/default"\n')
+        home: Path = self.make_home('[catalogues.default]\ntype = "local"\npath = "catalogues/default"\n')
         secret_file: Path = self.make_secret(home)
         store: ConfigurationStore = ConfigurationStore(home)
         store.save_secret("default", "example-secret", secret_file)

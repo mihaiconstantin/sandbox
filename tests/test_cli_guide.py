@@ -43,25 +43,19 @@ EXPECTED_GUIDE: tuple[str, ...] = (
     '',
     'Getting Started',
     '',
-    '  # Create a catalogue with the built-in recipes.',
-    '  sb create catalogue default',
+    '  # Create a catalogue named `my-catalogue` from a local catalogue directory.',
+    '  sb create catalogue my-catalogue --source ./catalogue',
     '',
     '  # Create a box for the project `my-project` in the directory',
     '  `~/Repositories/my-project` using the default recipe of the catalogue.',
     '  sb create box my-project \\',
     '      --project-dir ~/Repositories/my-project \\',
-    '      --catalogue default',
+    '      --catalogue my-catalogue',
     '',
     '  # Enter the box for the project `my-project`.',
     '  sb enter my-project',
     '',
     'Managing Catalogues',
-    '',
-    '  # Create a catalogue named `my-catalogue` from the bundled recipes.',
-    '  sb create catalogue my-catalogue --source bundled',
-    '',
-    '  # Create a catalogue named `team` from a local catalogue directory.',
-    '  sb create catalogue team --source ./catalogue',
     '',
     '  # Create a catalogue named `team` from a `git` repository.',
     '  sb create catalogue team --source https://example.com/catalogue.git',
@@ -108,13 +102,13 @@ EXPECTED_GUIDE: tuple[str, ...] = (
     '  # Set the secret `example-secret` to the file `~/.keys/example-secret`.',
     '  sb create secret example-secret \\',
     '      --file ~/.keys/example-secret \\',
-    '      --catalogue default',
+    '      --catalogue team',
     '',
     '  # List all available secrets.',
     '  sb list secrets',
     '',
     '  # Remove the secret `example-secret`.',
-    '  sb remove secret example-secret --catalogue default',
+    '  sb remove secret example-secret --catalogue team',
     '',
     'More Information',
     '',
@@ -167,8 +161,8 @@ def test_guide_preserves_the_fixed_text_and_wrapping() -> None:
     # Require plain output with no ANSI escapes and wrapped prose.
     assert "\x1b" not in result.stdout
     assert max(len(line) for line in result.stdout.splitlines()) <= 80
-    assert "  sb create box my-project \\\n      --project-dir ~/Repositories/my-project \\\n      --catalogue default\n" in result.stdout
-    assert "  sb create secret example-secret \\\n      --file ~/.keys/example-secret \\\n      --catalogue default\n" in result.stdout
+    assert "  sb create box my-project \\\n      --project-dir ~/Repositories/my-project \\\n      --catalogue my-catalogue\n" in result.stdout
+    assert "  sb create secret example-secret \\\n      --file ~/.keys/example-secret \\\n      --catalogue team\n" in result.stdout
 
 
 # Verify guide help and the root epilog keep their preserved references.
