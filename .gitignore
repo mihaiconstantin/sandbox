@@ -156,18 +156,14 @@ cache/
 # Archives.
 archive/
 
-# Ignore agent documentation files.
-docs/agents/
-docs/adr/
-docs/architecture.md
-GLOSSARY.md
+# Ignore agent files.
 .agents/
+
+# Ignore agents workspace files.
+.scratch/
 
 # Ignore `AGENTS.md`.
 AGENTS.md
-
-# Ignore `.scratch/`.
-.scratch
 
 # Ignore `.worktrees/`.
 .worktrees/
