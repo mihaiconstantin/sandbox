@@ -69,7 +69,7 @@
                         class="logo-background absolute inset-10 -z-10 border-0 bg-[linear-gradient(-45deg,var(--color-sandbox-200)_10%,var(--color-sandbox-400)_10%)] blur-[45px] dark:inset-8 dark:blur-[70px]"
                     ></div>
                     <img
-                        class="mx-auto w-80 max-w-full rounded-4xl drop-shadow-xl select-none dark:drop-shadow-xl"
+                        class="mx-auto w-80 max-w-full rounded-4xl drop-shadow-xl select-none"
                         src="/images/sandbox-logo.png"
                         alt="sandbox logo"
                         draggable="false"
