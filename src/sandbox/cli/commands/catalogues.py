@@ -38,7 +38,7 @@ def _locate(client: SandboxClient, name: str) -> Path:
     help = "The name of the catalogue to create.",
 )
 @click.option(
-    "--source",
+    "-s", "--source",
     type = str,
     required = True,
     help = "The local directory or `git` URL of the catalogue.",
