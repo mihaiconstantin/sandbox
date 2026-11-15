@@ -1,39 +1,52 @@
 // Imports.
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vitepress";
+
+
+// Define the website description string.
+const description = "sandbox is a tool to create and manage isolated development boxes for local projects.";
 
 
 // The site configuration.
 export default defineConfig({
-    // The site metadata.
+    // Website configuration.
     title: "sandbox",
-    description: "Isolated development environments for local projects.",
     lang: "en-US",
-
-    // The URL and build behavior.
-    cleanUrls: true,
-
-    // Keep repository agent configuration out of the public site.
-    srcExclude: ["agents/**"],
+    description: description,
+    srcDir: "content",
     lastUpdated: true,
+    cleanUrls: true,
+    metaChunk: true,
     sitemap: {
         hostname: "https://sandbox.mihaiconstantin.com"
     },
 
+    // `vite` configuration.
+    vite: {
+        // Plugins.
+        plugins: [tailwindcss()]
+    },
+
     // The document head.
     head: [
-        ["link", { rel: "icon", href: "/sandbox-logo.png" }],
-        ["meta", { name: "theme-color", content: "#ffffff" }]
+        // Icons links.
+        ["link", { rel: "icon", href: "/favicon.ico", sizes: "any" }],
+        ["link", { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32x32.png" }],
+        ["link", { rel: "icon", type: "image/png", sizes: "16x16", href: "/favicon-16x16.png" }],
+        ["link", { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" }],
+        ["link", { rel: "manifest", href: "/site.webmanifest" }],
+        ["meta", { name: "theme-color", content: "#ffffff" }],
     ],
 
     // The theme configuration.
     themeConfig: {
         // The site branding.
-        logo: "/sandbox-logo.png",
+        logo: "/images/sandbox-logo.png",
         siteTitle: "sandbox",
 
         // The top navigation.
         nav: [
-            { text: "Guide", link: "/guide/installation" },
+            { text: "Guide", link: "/guide/overview" },
             { text: "GitHub", link: "https://github.com/mihaiconstantin/sandbox" }
         ],
 
@@ -43,7 +56,9 @@ export default defineConfig({
                 {
                     text: "Guide",
                     items: [
-                        { text: "Installation", link: "/guide/installation" }
+                        { text: "Overview", link: "/guide/overview" },
+                        { text: "Installation", link: "/guide/installation" },
+                        { text: "Usage", link: "/guide/usage" },
                     ]
                 }
             ]
@@ -56,13 +71,8 @@ export default defineConfig({
 
         // The page edit link.
         editLink: {
-            pattern: "https://github.com/mihaiconstantin/sandbox/edit/main/docs/:path",
+            pattern: "https://github.com/mihaiconstantin/sandbox/edit/main/docs/content/:path",
             text: "Edit this page on GitHub"
-        },
-
-        // The social links.
-        socialLinks: [
-            { icon: "github", link: "https://github.com/mihaiconstantin/sandbox" }
-        ]
+        }
     }
 });

@@ -161,6 +161,7 @@ docs/agents/
 docs/adr/
 docs/architecture.md
 GLOSSARY.md
+.agents/
 
 # Ignore `AGENTS.md`.
 AGENTS.md

@@ -1,10 +1,11 @@
-/* Imports. */
+/* Import the font. */
 @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap');
 
-/* Tailwind layers, without Preflight so VitePress styles remain intact. */
+/* Import `Tailwind` theme variables. */
 @import "tailwindcss/theme.css" layer(theme);
-@import "tailwindcss/utilities.css" layer(utilities);
 
+/* Import `Tailwind` utilities. */
+@import "tailwindcss/utilities.css" source("../../..");
 
 /* Trigger dark mode via the `dark` class on the `html` element. */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -25,6 +26,10 @@
     --color-sandbox-800: #53350f;
     --color-sandbox-900: #2e1e08;
     --color-sandbox-950: #170f04;
+
+    /* The custom breakpoints. */
+    --breakpoint-xs: 28.75rem;
+    --breakpoint-vp-lg: 60rem;
 
     /* The wordmark font. */
     --font-sandbox: "Comic Neue", sans-serif;
