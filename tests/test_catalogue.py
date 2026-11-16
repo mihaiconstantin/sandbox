@@ -4,6 +4,7 @@ from typing import Any
 
 # Import catalogue declarations.
 from sandbox.catalogue.catalogue import Catalogue
+from sandbox.catalogue.loader import CatalogueLoader
 from sandbox.catalogue.recipe import Recipe
 from sandbox.domain.volume import VolumeDeclaration
 
@@ -23,13 +24,13 @@ def catalogue_configuration() -> dict[str, Any]:
     }
 
 
-# Verify manifest structure, diagnostics, and immutable declaration ownership.
+# Verify manifest structure, diagnostics, and source declaration isolation.
 class CatalogueTests(unittest.TestCase):
     # Require the configuration to fail at the named field.
     def assert_invalid_configuration(self, configuration: object, field: str) -> None:
         # Parse the configuration and require a configuration error.
         with self.assertRaises(ConfigurationError) as raised:
-            Catalogue.from_mapping(configuration)
+            CatalogueLoader().parse_catalogue(configuration)
 
         # Retain the field attribution used by manifest diagnostics.
         self.assertEqual(raised.exception.field, field)
@@ -43,12 +44,12 @@ class CatalogueTests(unittest.TestCase):
         }
 
         # Parse the catalogue.
-        catalogue: Catalogue = Catalogue.from_mapping(configuration)
+        catalogue: Catalogue = CatalogueLoader().parse_catalogue(configuration)
 
         # Require no implicit base recipe, parent, volume, or root permission.
         self.assertNotIn("base", catalogue.recipes)
         self.assertIsNone(catalogue.recipes["minimal"].extends)
-        self.assertEqual(catalogue.recipes["minimal"].volumes, ())
+        self.assertEqual(catalogue.recipes["minimal"].volumes, [])
         self.assertEqual(dict(catalogue.volumes), {})
         self.assertFalse(catalogue.recipes["minimal"].allow_root)
 
@@ -59,7 +60,7 @@ class CatalogueTests(unittest.TestCase):
         configuration["recipes"]["base"]["allow_root"] = True
 
         # Parse both recipes.
-        catalogue: Catalogue = Catalogue.from_mapping(configuration)
+        catalogue: Catalogue = CatalogueLoader().parse_catalogue(configuration)
 
         # Require the permission to remain local to the base recipe.
         self.assertTrue(catalogue.recipes["base"].allow_root)
@@ -89,7 +90,7 @@ class CatalogueTests(unittest.TestCase):
         configuration["catalogue"]["default_recipe"] = "r"
 
         # Parse the catalogue.
-        catalogue: Catalogue = Catalogue.from_mapping(configuration)
+        catalogue: Catalogue = CatalogueLoader().parse_catalogue(configuration)
 
         # Require the schema version and declared default recipe.
         self.assertEqual(catalogue.schema_version, 1)
@@ -98,7 +99,7 @@ class CatalogueTests(unittest.TestCase):
     # Verify a schema version 1 catalogue may omit the default recipe.
     def test_omitted_default_recipe_has_no_implicit_value(self) -> None:
         # Parse a catalogue without a default recipe.
-        catalogue: Catalogue = Catalogue.from_mapping(catalogue_configuration())
+        catalogue: Catalogue = CatalogueLoader().parse_catalogue(catalogue_configuration())
 
         # Require no implicit default recipe.
         self.assertIsNone(catalogue.default_recipe)
@@ -128,7 +129,7 @@ class CatalogueTests(unittest.TestCase):
 
         # Require the default recipe field and the undeclared name.
         with self.assertRaises(ConfigurationError) as raised:
-            Catalogue.from_mapping(configuration)
+            CatalogueLoader().parse_catalogue(configuration)
         self.assertEqual(raised.exception.field, "catalogue.default_recipe")
         self.assertIn("`missing`", raised.exception.message)
 
@@ -277,52 +278,23 @@ class CatalogueTests(unittest.TestCase):
         configuration["recipes"]["r"]["volumes"] = ["state", "sessions"]
 
         # Parse the aliased declarations.
-        catalogue: Catalogue = Catalogue.from_mapping(configuration)
+        catalogue: Catalogue = CatalogueLoader().parse_catalogue(configuration)
 
         # Require both aliases to resolve to the same declaration.
         self.assertEqual(catalogue.volumes["state"], catalogue.volumes["sessions"])
-        self.assertEqual(catalogue.recipes["r"].volumes, ("state", "sessions"))
-
-    # Verify declaration fields and tables cannot be mutated.
-    def test_declaration_fields_and_tables_cannot_be_mutated(self) -> None:
-        # Parse a generic catalogue.
-        catalogue: Catalogue = Catalogue.from_mapping(catalogue_configuration())
-
-        # Include one immutable field on each declaration.
-        declarations: tuple[tuple[object, str, object], ...] = (
-            (catalogue, "name", "changed"),
-            (catalogue.recipes["base"], "allow_root", True),
-            (catalogue.volumes["state"], "scope", "project"),
-        )
-
-        # Require every declaration field to reject assignment.
-        declaration: object
-        name: str
-        value: object
-        for declaration, name, value in declarations:
-            # Identify the declaration type.
-            with self.subTest(declaration = type(declaration).__name__):
-                # Attempt to replace the declaration field.
-                with self.assertRaises(AttributeError):
-                    setattr(declaration, name, value)
-
-        # Require the recipe and volume tables to reject new entries.
-        with self.assertRaises(TypeError):
-            catalogue.recipes["new"] = catalogue.recipes["base"]  # pyright: ignore[reportIndexIssue]
-        with self.assertRaises(TypeError):
-            catalogue.volumes["new"] = catalogue.volumes["state"]  # pyright: ignore[reportIndexIssue]
+        self.assertEqual(catalogue.recipes["r"].volumes, ["state", "sessions"])
 
     # Verify mutating the source array cannot invalidate a parsed recipe.
     def test_source_array_mutation_cannot_invalidate_a_recipe(self) -> None:
         # Parse the catalogue while retaining its source data.
         configuration: dict[str, Any] = catalogue_configuration()
-        catalogue: Catalogue = Catalogue.from_mapping(configuration)
+        catalogue: Catalogue = CatalogueLoader().parse_catalogue(configuration)
 
         # Append a duplicate alias to the caller's source array.
         configuration["recipes"]["base"]["volumes"].append("state")
 
-        # Require the parsed tuple to remain an independent snapshot.
-        self.assertEqual(catalogue.recipes["base"].volumes, ("state",))
+        # Require the parsed list to remain an independent snapshot.
+        self.assertEqual(catalogue.recipes["base"].volumes, ["state"])
 
     # Verify clearing source tables cannot remove validated declarations.
     def test_source_table_mutation_cannot_remove_validated_declarations(self) -> None:
@@ -378,7 +350,7 @@ class RecipeTests(unittest.TestCase):
             with self.subTest(parent = parent):
                 # Parse a recipe with the invalid parent value.
                 with self.assertRaises(ConfigurationError) as raised:
-                    Recipe.from_mapping({"compose": "compose.yaml", "service": "workspace", "extends": parent})
+                    CatalogueLoader().parse_recipe({"compose": "compose.yaml", "service": "workspace", "extends": parent})
 
                 # Require the parent field to report the failure.
                 self.assertEqual(raised.exception.field, "extends")
@@ -404,7 +376,7 @@ class RecipeTests(unittest.TestCase):
             with self.subTest(allow_root = allow_root):
                 # Parse a recipe with the non-Boolean value.
                 with self.assertRaises(ConfigurationError) as raised:
-                    Recipe.from_mapping({"compose": "compose.yaml", "service": "workspace", "allow_root": allow_root})
+                    CatalogueLoader().parse_recipe({"compose": "compose.yaml", "service": "workspace", "allow_root": allow_root})
 
                 # Require the root permission field to report the failure.
                 self.assertEqual(raised.exception.field, "allow_root")
@@ -421,7 +393,7 @@ class RecipeTests(unittest.TestCase):
             with self.subTest(volumes = volumes):
                 # Parse a recipe with the scalar value.
                 with self.assertRaises(ConfigurationError) as raised:
-                    Recipe.from_mapping({"compose": "compose.yaml", "service": "workspace", "volumes": volumes})
+                    CatalogueLoader().parse_recipe({"compose": "compose.yaml", "service": "workspace", "volumes": volumes})
 
                 # Require the volume requirements field to report the failure.
                 self.assertEqual(raised.exception.field, "volumes")
@@ -430,7 +402,7 @@ class RecipeTests(unittest.TestCase):
     def test_duplicate_requirements_are_rejected_within_one_recipe(self) -> None:
         # Declare the same volume alias twice.
         with self.assertRaises(ConfigurationError) as raised:
-            Recipe.from_mapping({"compose": "compose.yaml", "service": "workspace", "volumes": ["state", "state"]})
+            CatalogueLoader().parse_recipe({"compose": "compose.yaml", "service": "workspace", "volumes": ["state", "state"]})
 
         # Require the duplicate item to be attributed.
         self.assertEqual(raised.exception.field, "volumes[1]")
@@ -439,18 +411,18 @@ class RecipeTests(unittest.TestCase):
     def test_volume_requirement_items_must_be_identifiers(self) -> None:
         # Declare a numeric volume alias.
         with self.assertRaises(ConfigurationError) as raised:
-            Recipe.from_mapping({"compose": "compose.yaml", "service": "workspace", "volumes": [1]})
+            CatalogueLoader().parse_recipe({"compose": "compose.yaml", "service": "workspace", "volumes": [1]})
 
         # Require the failing item to be attributed.
         self.assertEqual(raised.exception.field, "volumes[0]")
 
-    # Verify secret requirements are parsed into an immutable tuple.
-    def test_secret_requirements_are_parsed_into_a_tuple(self) -> None:
+    # Verify secret requirements are parsed into an ordered list.
+    def test_secret_requirements_are_parsed_into_a_list(self) -> None:
         # Parse two ordered secret aliases.
-        recipe: Recipe = Recipe.from_mapping({"compose": "compose.yaml", "service": "workspace", "secrets": ["example-secret", "github"]})
+        recipe: Recipe = CatalogueLoader().parse_recipe({"compose": "compose.yaml", "service": "workspace", "secrets": ["example-secret", "github"]})
 
-        # Require the parsed order and tuple representation.
-        self.assertEqual(recipe.secrets, ("example-secret", "github"))
+        # Require the parsed order and list representation.
+        self.assertEqual(recipe.secrets, ["example-secret", "github"])
 
     # Verify secret requirements must be arrays, not scalars.
     def test_secret_requirements_must_be_arrays(self) -> None:
@@ -464,7 +436,7 @@ class RecipeTests(unittest.TestCase):
             with self.subTest(secrets = secrets):
                 # Parse a recipe with the scalar value.
                 with self.assertRaises(ConfigurationError) as raised:
-                    Recipe.from_mapping({"compose": "compose.yaml", "service": "workspace", "secrets": secrets})
+                    CatalogueLoader().parse_recipe({"compose": "compose.yaml", "service": "workspace", "secrets": secrets})
 
                 # Require the secret requirements field to report the failure.
                 self.assertEqual(raised.exception.field, "secrets")
@@ -473,7 +445,7 @@ class RecipeTests(unittest.TestCase):
     def test_duplicate_secret_requirements_are_rejected_within_one_recipe(self) -> None:
         # Declare the same secret alias twice.
         with self.assertRaises(ConfigurationError) as raised:
-            Recipe.from_mapping({"compose": "compose.yaml", "service": "workspace", "secrets": ["example-secret", "example-secret"]})
+            CatalogueLoader().parse_recipe({"compose": "compose.yaml", "service": "workspace", "secrets": ["example-secret", "example-secret"]})
 
         # Require the duplicate item to be attributed.
         self.assertEqual(raised.exception.field, "secrets[1]")
@@ -490,7 +462,7 @@ class RecipeTests(unittest.TestCase):
             with self.subTest(secret = secret):
                 # Parse a recipe with the invalid alias.
                 with self.assertRaises(ConfigurationError) as raised:
-                    Recipe.from_mapping({"compose": "compose.yaml", "service": "workspace", "secrets": [secret]})
+                    CatalogueLoader().parse_recipe({"compose": "compose.yaml", "service": "workspace", "secrets": [secret]})
 
                 # Require the failing item to be attributed.
                 self.assertEqual(raised.exception.field, "secrets[0]")
@@ -543,7 +515,7 @@ class VolumeDeclarationTests(unittest.TestCase):
     # Parse one volume declaration through the manifest schema.
     def parse_volume(self, volume: dict[str, object]) -> Catalogue:
         # Build a minimal catalogue around the supplied volume declaration.
-        return Catalogue.from_mapping({
+        return CatalogueLoader().parse_catalogue({
             "catalogue": {"name": "default", "version": "0.1.0", "schema_version": 1},
             "recipes": {"base": {"compose": "compose.yaml", "service": "workspace"}},
             "volumes": {"state": volume},

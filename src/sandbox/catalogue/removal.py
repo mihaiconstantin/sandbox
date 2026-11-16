@@ -1,97 +1,149 @@
 # Imports.
 import shutil
-from dataclasses import replace
 from pathlib import Path
 
-# Import the registry module so tests can replace its atomic writer.
-from sandbox.configuration import registry
+from sandbox.catalogue.registration import CatalogueRegistrationReader
 
-# Import the neutral registry-facing values.
-from sandbox.domain.registry import CatalogueBinding, CatalogueRegistration
+# Import registry values.
+from sandbox.configuration.store import ConfigurationStore
+from sandbox.domain.registry import CatalogueRemovalPlan
 
-# Import typed configuration errors and the shared removal postcondition error.
+# Import errors.
 from sandbox.errors.catalogues import RegistryError
 from sandbox.errors.removal import IncompleteRemoval
+from sandbox.validation.identifiers import validate_identifier
 
 
-# Load a registered catalogue with its validated secret bindings.
-def load_catalogue_registration(home: Path, name: str) -> CatalogueRegistration | None:
-    # Import the store lazily to keep the filesystem module importable alone.
-    from sandbox.configuration.store import ConfigurationStore
+# Remove catalogues from one sandbox directory.
+class CatalogueRemover:
+    # Configuration store.
+    store: ConfigurationStore
 
-    # Read the requested registration.
-    store: ConfigurationStore = ConfigurationStore(home)
-    registration: CatalogueRegistration | None = store.registration(name)
+    # Registration reader.
+    reader: CatalogueRegistrationReader
 
-    # If the catalogue is not registered.
-    if registration is None:
-        # Return no registration.
-        return None
+    # Apply one validated catalogue removal plan.
+    def _remove_plan(self: "CatalogueRemover", plan: CatalogueRemovalPlan) -> None:
+        # Require the plan to belong to this sandbox directory.
+        if plan.home.expanduser().resolve() != self.store.home:
+            # Throw.
+            raise RegistryError(f"Catalogue removal plan belongs to `{plan.home}`, but this remover is bound to `{self.store.home}`.")
 
-    # Collect the catalogue-scoped secret bindings.
-    bindings: tuple[CatalogueBinding, ...] = tuple(
-        CatalogueBinding(binding.alias, binding.host_path)
-        for binding in store.secret_bindings(name)
-    )
+        # Reload the registration to detect changes since planning.
+        current = self.reader.read(plan.registration.name)
 
-    # Return the registration enriched with its bindings.
-    return replace(registration, bindings = bindings)
+        # If the catalogue is no longer registered.
+        if current is None:
+            # Throw.
+            raise RegistryError(f"Catalogue `{plan.registration.name}` is no longer registered.")
 
+        # If the registration changed since planning.
+        if current.type != plan.registration.type or current.path != plan.registration.path:
+            # Throw.
+            raise RegistryError(f"Catalogue `{plan.registration.name}` changed while planning removal.")
 
-# Validate a registered catalogue and return its canonical directory.
-def canonical_catalogue_directory(registration: CatalogueRegistration, home: Path) -> Path:
-    # Resolve the `sandbox` and managed catalogue roots without requiring either to exist.
-    sandbox_root: Path = home.expanduser().resolve()
-    catalogue_root: Path = sandbox_root / registry.CATALOGUE_ROOT
+        # Require the reloaded registration to use the canonical path.
+        catalogue_dir: Path = self.reader.resolve_canonical_directory(current)
 
-    # If the managed catalogue root resolves outside the `sandbox`.
-    if not catalogue_root.resolve().is_relative_to(sandbox_root):
-        # Throw.
-        raise RegistryError(f"Catalogue `{registration.name}` is not stored inside the `sandbox` directory.")
+        # Remove the catalogue files before changing the registry.
+        self._remove_directory(catalogue_dir, current.name)
 
-    # Compute the canonical catalogue directory.
-    catalogue_dir: Path = catalogue_root / registration.name
+        # Remove the registration and bindings atomically.
+        try:
+            # Apply the registry change.
+            self.store.unregister(current.name)
 
-    # If the registered path is not the canonical catalogue directory.
-    if registration.path.expanduser().resolve() != catalogue_dir.resolve():
-        # Throw.
-        raise RegistryError(f"Catalogue `{registration.name}` is registered at the noncanonical path `{registration.path}`.")
+        # If the registration cannot be updated.
+        except OSError as error:
+            # Report the partial removal.
+            raise IncompleteRemoval(
+                "catalogue",
+                current.name,
+                f"Catalogue `{current.name}` could not be fully removed because the registry `{self.store.registry_file}` could not be updated: {error}. Rerun the command to finish.",
+            ) from error
 
-    # Return the canonical catalogue directory.
-    return catalogue_dir
+    # Remove one catalogue directory with filesystem checks.
+    def _remove_directory(self: "CatalogueRemover", catalogue_dir: Path, name: str) -> None:
+        # If the path is a symbolic link.
+        if catalogue_dir.is_symlink():
+            # Throw.
+            raise RegistryError(f"Catalogue `{name}` path `{catalogue_dir}` is a symbolic link.")
 
+        # If the directory does not exist.
+        if not catalogue_dir.exists():
+            # Return.
+            return
 
-# Remove the files of a registered catalogue.
-def remove_catalogue_directory(catalogue_dir: Path, name: str) -> None:
-    # If the path is a symbolic link.
-    if catalogue_dir.is_symlink():
-        # Throw.
-        raise RegistryError(f"Catalogue `{name}` path `{catalogue_dir}` is a symbolic link.")
+        # If the path is not a directory.
+        if not catalogue_dir.is_dir():
+            # Throw.
+            raise RegistryError(f"Catalogue `{name}` path `{catalogue_dir}` is not a directory.")
 
-    # If the directory does not exist.
-    if not catalogue_dir.exists():
-        # Return.
-        return
+        # Remove the directory.
+        try:
+            # Delete the catalogue files.
+            shutil.rmtree(catalogue_dir)
 
-    # If the path is not a directory.
-    if not catalogue_dir.is_dir():
-        # Throw.
-        raise RegistryError(f"Catalogue `{name}` path `{catalogue_dir}` is not a directory.")
+        # If deletion fails.
+        except OSError as error:
+            # Throw.
+            raise IncompleteRemoval(
+                "catalogue",
+                name,
+                detail = f"Catalogue `{name}` could not be deleted from `{catalogue_dir}`: {error}. The registry was not changed; rerun the command to finish.",
+            ) from error
 
-    # Remove the directory.
-    try:
-        # Delete the catalogue files.
-        shutil.rmtree(catalogue_dir)
+    # Initialize the remover.
+    def __init__(self: "CatalogueRemover", home: Path, store: ConfigurationStore | None = None) -> None:
+        # Bind and retain the configuration store.
+        self.store = store if store is not None else ConfigurationStore(home.expanduser().resolve())
 
-    # If deletion fails.
-    except OSError as error:
-        # Throw.
-        raise IncompleteRemoval(
-            "catalogue",
-            name,
-            detail = f"Catalogue `{name}` could not be deleted from `{catalogue_dir}`: {error}. The registry was not changed; rerun the command to finish.",
-        ) from error
+        # Bind and retain the registration reader.
+        self.reader = CatalogueRegistrationReader(self.store.home, self.store)
 
+    # Plan one catalogue removal without changing anything.
+    def plan(self: "CatalogueRemover", name: str) -> CatalogueRemovalPlan | None:
+        # Validate the catalogue name.
+        validate_identifier(name, "catalogue")
 
-# Define the public API of the catalogue removal helpers.
-__all__ = ["canonical_catalogue_directory", "load_catalogue_registration", "remove_catalogue_directory"]
+        # Read the requested registration.
+        registration = self.reader.read(name)
+
+        # If the catalogue is not registered.
+        if registration is None:
+            # Return no plan.
+            return None
+
+        # Require a canonical path before planning any change.
+        self.reader.resolve_canonical_directory(registration)
+
+        # Return the validated plan.
+        return CatalogueRemovalPlan(home = self.store.home, registration = registration)
+
+    # Remove a catalogue by name or by a validated plan.
+    def remove(self: "CatalogueRemover", target: str | CatalogueRemovalPlan) -> bool:
+        # If the caller supplied a name.
+        if isinstance(target, str):
+            # Plan the removal.
+            plan: CatalogueRemovalPlan | None = self.plan(target)
+
+            # If the catalogue is not registered.
+            if plan is None:
+                # Report no removal.
+                return False
+
+        # If the caller supplied a plan.
+        elif isinstance(target, CatalogueRemovalPlan):
+            # Use the validated plan.
+            plan = target
+
+        # Otherwise.
+        else:
+            # Throw.
+            raise TypeError("target must be a catalogue name or a CatalogueRemovalPlan.")
+
+        # Apply the plan.
+        self._remove_plan(plan)
+
+        # Report the removal.
+        return True

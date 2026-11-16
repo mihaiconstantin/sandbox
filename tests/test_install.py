@@ -14,15 +14,24 @@ from unittest import mock
 import tomlkit
 
 # Import fixtures.
-from catalogue_fixtures import SOURCE_NAME, write_catalogue_source
-from git_fixtures import GIT_AVAILABLE, GIT_ENVIRONMENT, make_git_repository
+from catalogue_fixtures import (
+    SOURCE_NAME,
+    write_catalogue_repository,
+    write_catalogue_source,
+)
 
 # Import helpers.
-import sandbox.catalogue.install as catalogue_helper
-import sandbox.catalogue.sources as source_helper
+from catalogue_services import install_catalogue, load_catalogue, source_for
+from git_fixtures import (
+    GIT_AVAILABLE,
+    GIT_ENVIRONMENT,
+    initialize_git_repository,
+    make_git_repository,
+)
 
-# Import models.
-from sandbox.catalogue.manifest import load_catalogue
+from sandbox.catalogue.sources.git import GitCatalogueSource
+from sandbox.catalogue.sources.local import LocalCatalogueSource
+from sandbox.catalogue.sources.source import CatalogueSource
 from sandbox.configuration.registry import load_registry
 from sandbox.configuration.store import ConfigurationStore
 
@@ -33,7 +42,7 @@ from sandbox.errors.prerequisites import PrerequisiteError, PrerequisiteKind
 
 
 # Create an isolated sandbox and local source for installation tests.
-def make_install_sandbox(test: unittest.TestCase) -> tuple[Path, Path, Path]:
+def make_install_sandbox(test: unittest.TestCase, catalogues: tuple[str, ...] | None = None) -> tuple[Path, Path, Path]:
     # Create a temporary directory and register its cleanup on the test.
     temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
     test.addCleanup(temporary.cleanup)
@@ -41,7 +50,9 @@ def make_install_sandbox(test: unittest.TestCase) -> tuple[Path, Path, Path]:
     # Derive the test root, installation home, and local source.
     root: Path = Path(temporary.name)
     home: Path = root / "sandbox"
-    source: Path = write_catalogue_source(root / "source")
+
+    # Build either a single catalogue root or a repository of child catalogues.
+    source: Path = write_catalogue_source(root / "source") if catalogues is None else write_catalogue_repository(root / "source", catalogues)
     return root, home, source
 
 
@@ -53,14 +64,14 @@ class InstallCatalogueTests(unittest.TestCase):
         root, home, source = make_install_sandbox(self)
 
         # Install the local catalogue under a custom name.
-        installed: Path = catalogue_helper.install_catalogue(home, "alpha", str(source))
+        installed: Path = install_catalogue(home, "alpha", str(source))
 
         # Require an existing installation to reject replacement without force.
         with self.assertRaises(CatalogueInstallError):
-            catalogue_helper.install_catalogue(home, "alpha", str(source))
+            install_catalogue(home, "alpha", str(source))
 
         # Require a forced reinstall to replace the existing catalogue.
-        replaced: Path = catalogue_helper.install_catalogue(home, "alpha", str(source), force = True)
+        replaced: Path = install_catalogue(home, "alpha", str(source), force = True)
         self.assertEqual(replaced, installed)
         self.assertEqual(load_catalogue(replaced).name, "alpha")
         self.assertEqual(ConfigurationStore(home).resolve("alpha"), replaced)
@@ -71,17 +82,17 @@ class InstallCatalogueTests(unittest.TestCase):
         root, home, source = make_install_sandbox(self)
 
         # Install the local catalogue under a custom name with a stale file.
-        installed: Path = catalogue_helper.install_catalogue(home, "alpha", str(source))
+        installed: Path = install_catalogue(home, "alpha", str(source))
         stale_file: Path = installed / "stale.txt"
         stale_file.write_text("stale", encoding = "utf-8")
 
         # Require a refused reinstall to leave the stale file untouched.
         with self.assertRaises(CatalogueInstallError):
-            catalogue_helper.install_catalogue(home, "alpha", str(source))
+            install_catalogue(home, "alpha", str(source))
         self.assertTrue(stale_file.exists())
 
         # Require a forced reinstall to remove the stale file.
-        catalogue_helper.install_catalogue(home, "alpha", str(source), force = True)
+        install_catalogue(home, "alpha", str(source), force = True)
         self.assertFalse(stale_file.exists())
         self.assertEqual(load_catalogue(installed).name, "alpha")
 
@@ -91,12 +102,12 @@ class InstallCatalogueTests(unittest.TestCase):
         root, home, source = make_install_sandbox(self)
 
         # Install the local catalogue and restrict the registry permissions.
-        catalogue_helper.install_catalogue(home, "team", str(source))
+        install_catalogue(home, "team", str(source))
         registry_file: Path = home.resolve() / "catalogues.toml"
         registry_file.chmod(0o600)
 
         # Require a forced reinstall to preserve the registry permissions.
-        catalogue_helper.install_catalogue(home, "team", str(source), force = True)
+        install_catalogue(home, "team", str(source), force = True)
         self.assertEqual(registry_file.stat().st_mode & 0o777, 0o600)
 
     # Verify a failed forced reinstall preserves the previous catalogue and registry.
@@ -105,7 +116,7 @@ class InstallCatalogueTests(unittest.TestCase):
         root, home, source = make_install_sandbox(self)
 
         # Install the local catalogue under a custom name.
-        installed: Path = catalogue_helper.install_catalogue(home, "alpha", str(source))
+        installed: Path = install_catalogue(home, "alpha", str(source))
 
         # Mark the previous catalogue to distinguish a rollback from a fresh copy.
         marker_file: Path = installed / "marker.txt"
@@ -137,7 +148,7 @@ class InstallCatalogueTests(unittest.TestCase):
         # Require the forced reinstall to fail while publishing the registry.
         with mock.patch("sandbox.catalogue.install.os.replace", side_effect = fail_registry_publish):
             with self.assertRaises(CatalogueInstallError):
-                catalogue_helper.install_catalogue(home, "alpha", str(source), force = True)
+                install_catalogue(home, "alpha", str(source), force = True)
 
         # Require the catalogue directory to be replaced before the registry is published.
         self.assertLess(destinations.index(installed), destinations.index(registry_file))
@@ -161,7 +172,7 @@ class InstallCatalogueTests(unittest.TestCase):
         root, home, source = make_install_sandbox(self)
 
         # Install the local catalogue under a custom name.
-        installed: Path = catalogue_helper.install_catalogue(home, "alpha", str(source))
+        installed: Path = install_catalogue(home, "alpha", str(source))
 
         # Mark the previous catalogue to distinguish a rollback from a fresh copy.
         marker_file: Path = installed / "marker.txt"
@@ -187,7 +198,7 @@ class InstallCatalogueTests(unittest.TestCase):
         # Require the forced reinstall to fail between the backup and the staged installation.
         with mock.patch("sandbox.catalogue.install.os.replace", side_effect = fail_staged_install):
             with self.assertRaises(CatalogueInstallError):
-                catalogue_helper.install_catalogue(home, "alpha", str(source), force = True)
+                install_catalogue(home, "alpha", str(source), force = True)
 
         # Require the marker of the previous catalogue to be restored with its original content.
         self.assertEqual(marker_file.read_text(encoding = "utf-8"), "original catalogue")
@@ -223,7 +234,7 @@ class InstallCatalogueTests(unittest.TestCase):
         # Require the fresh install to fail while publishing the registry.
         with mock.patch("sandbox.catalogue.install.os.replace", side_effect = fail_registry_publish):
             with self.assertRaises(CatalogueInstallError):
-                catalogue_helper.install_catalogue(home, "alpha", str(source))
+                install_catalogue(home, "alpha", str(source))
 
         # Require no catalogue directory and no registry file to remain.
         self.assertFalse((home / "catalogues" / "alpha").exists())
@@ -238,7 +249,7 @@ class InstallCatalogueTests(unittest.TestCase):
         root, home, source = make_install_sandbox(self)
 
         # Install the local catalogue under a custom name.
-        installed: Path = catalogue_helper.install_catalogue(home, "alpha", str(source))
+        installed: Path = install_catalogue(home, "alpha", str(source))
         manifest_text: str = (installed / "catalogue.toml").read_text(encoding = "utf-8")
 
         # Require the name to be rewritten and the original comments to survive.
@@ -261,7 +272,7 @@ class InstallCatalogueTests(unittest.TestCase):
         )
 
         # Install the local catalogue under a custom name.
-        catalogue_helper.install_catalogue(home, "alpha", str(source))
+        install_catalogue(home, "alpha", str(source))
 
         # Require the unrelated registration to survive.
         registry_document: tomlkit.TOMLDocument = load_registry(home / "catalogues.toml")
@@ -275,7 +286,7 @@ class InstallCatalogueTests(unittest.TestCase):
 
         # Require an invalid name to be rejected.
         with self.assertRaises(ConfigurationError):
-            catalogue_helper.install_catalogue(home, "Invalid Name", str(source))
+            install_catalogue(home, "Invalid Name", str(source))
 
         # Require no catalogue directory or registry.
         self.assertFalse((home / "catalogues").exists())
@@ -294,13 +305,13 @@ class InstallCatalogueTests(unittest.TestCase):
         # Require malformed TOML to be reported as an installation error.
         (source / "catalogue.toml").write_text("[catalogue\n", encoding = "utf-8")
         with self.assertRaises(CatalogueInstallError):
-            catalogue_helper.install_catalogue(home, "alpha", str(source))
+            install_catalogue(home, "alpha", str(source))
 
         # Require a missing catalogue table to be reported as an installation error.
         (source / "catalogue.toml").write_text('[recipes.base]\ncompose = "compose.yaml"\n', encoding = "utf-8")
         (source / "compose.yaml").write_text("services: {}\n", encoding = "utf-8")
         with self.assertRaises(CatalogueInstallError):
-            catalogue_helper.install_catalogue(root / "missing", "alpha", str(source))
+            install_catalogue(root / "missing", "alpha", str(source))
 
         # Require no published catalogue or registry.
         self.assertFalse((home / "catalogues" / "alpha").exists())
@@ -314,9 +325,9 @@ class InstallCatalogueTests(unittest.TestCase):
         root, home, source = make_install_sandbox(self)
 
         # Require validation failures to abort publication.
-        with mock.patch.object(catalogue_helper.manifest, "load_catalogue", side_effect = ConfigurationError("", "Invalid catalogue.")):
+        with mock.patch("sandbox.catalogue.loader.CatalogueLoader.load", side_effect = ConfigurationError("", "Invalid catalogue.")):
             with self.assertRaises(ConfigurationError):
-                catalogue_helper.install_catalogue(home, "team", str(source))
+                install_catalogue(home, "team", str(source))
 
         # Require no published catalogue or registry.
         self.assertFalse((home / "catalogues" / "team").exists())
@@ -331,7 +342,7 @@ class LocalCatalogueInstallTests(unittest.TestCase):
         root, home, source = make_install_sandbox(self)
 
         # Install the local catalogue under a different name.
-        installed: Path = catalogue_helper.install_catalogue(home, "team", str(source))
+        installed: Path = install_catalogue(home, "team", str(source))
 
         # Require the installed copy and rewritten manifest name.
         self.assertEqual(installed, home.resolve() / "catalogues" / "team")
@@ -352,7 +363,7 @@ class LocalCatalogueInstallTests(unittest.TestCase):
         (source / "linked.toml").symlink_to("catalogue.toml")
 
         # Install the local catalogue.
-        installed: Path = catalogue_helper.install_catalogue(home, "team", str(source))
+        installed: Path = install_catalogue(home, "team", str(source))
 
         # Require the symbolic link to be copied as a link.
         self.assertTrue((installed / "linked.toml").is_symlink())
@@ -364,7 +375,7 @@ class LocalCatalogueInstallTests(unittest.TestCase):
         root, home, source = make_install_sandbox(self)
 
         # Install the local catalogue under its existing name.
-        installed: Path = catalogue_helper.install_catalogue(home, SOURCE_NAME, str(source))
+        installed: Path = install_catalogue(home, SOURCE_NAME, str(source))
 
         # Require the manifest to remain byte-identical.
         self.assertEqual((installed / "catalogue.toml").read_bytes(), (source / "catalogue.toml").read_bytes())
@@ -389,7 +400,7 @@ class LocalCatalogueInstallTests(unittest.TestCase):
             with self.subTest(source = source):
                 # Require the invalid source to be rejected.
                 with self.assertRaises(CatalogueInstallError):
-                    catalogue_helper.install_catalogue(home, "team", source)
+                    install_catalogue(home, "team", source)
 
         # Require no sandbox content.
         self.assertFalse(home.exists())
@@ -411,7 +422,7 @@ class LocalCatalogueInstallTests(unittest.TestCase):
 
                 # Require the invalid manifest to be rejected.
                 with self.assertRaises(CatalogueInstallError):
-                    catalogue_helper.install_catalogue(home, "team", str(source))
+                    install_catalogue(home, "team", str(source))
 
                 # Require no published catalogue or registry.
                 self.assertFalse((home / "catalogues" / "team").exists())
@@ -429,7 +440,7 @@ class LocalCatalogueInstallTests(unittest.TestCase):
 
         # Require the self-copy to be rejected despite force.
         with self.assertRaises(CatalogueInstallError) as raised:
-            catalogue_helper.install_catalogue(home, "team", str(source), force = True)
+            install_catalogue(home, "team", str(source), force = True)
         self.assertIn("overlaps the catalogue destination", str(raised.exception))
         self.assertIn(str(source.resolve()), str(raised.exception))
 
@@ -449,7 +460,7 @@ class LocalCatalogueInstallTests(unittest.TestCase):
 
         # Require the nested source to be rejected despite force.
         with self.assertRaises(CatalogueInstallError) as raised:
-            catalogue_helper.install_catalogue(home, "team", str(source), force = True)
+            install_catalogue(home, "team", str(source), force = True)
         self.assertIn("overlaps the catalogue destination", str(raised.exception))
 
         # Require the source and its absence of registration to survive.
@@ -469,7 +480,7 @@ class LocalCatalogueInstallTests(unittest.TestCase):
 
         # Require the containing source to be rejected despite force.
         with self.assertRaises(CatalogueInstallError) as raised:
-            catalogue_helper.install_catalogue(home, "team", str(source), force = True)
+            install_catalogue(home, "team", str(source), force = True)
         self.assertIn("overlaps the catalogue destination", str(raised.exception))
 
         # Require the source and its absence of registration to survive.
@@ -488,7 +499,7 @@ class LocalCatalogueInstallTests(unittest.TestCase):
 
         # Require the existing registration to be refused.
         with self.assertRaises(CatalogueInstallError):
-            catalogue_helper.install_catalogue(home, "team", str(source))
+            install_catalogue(home, "team", str(source))
 
         # Require the registry to remain unchanged.
         self.assertEqual(registry_file.read_text(encoding = "utf-8"), original)
@@ -504,11 +515,144 @@ class LocalCatalogueInstallTests(unittest.TestCase):
 
         # Require the noncanonical registration to be refused despite force.
         with self.assertRaises(RegistryError):
-            catalogue_helper.install_catalogue(home, "team", str(source), force = True)
+            install_catalogue(home, "team", str(source), force = True)
 
         # Require no catalogue and no registry change.
         self.assertFalse((home / "catalogues" / "team").exists())
         self.assertEqual(registry_file.read_text(encoding = "utf-8"), original)
+
+
+# Verify installation selects one catalogue from a multi-catalogue source.
+class MultiCatalogueInstallTests(unittest.TestCase):
+    # Install only the explicitly selected catalogue.
+    def test_installs_an_explicitly_selected_local_catalogue_only(self) -> None:
+        # Create a multi-catalogue source with distinct markers.
+        _root, home, source = make_install_sandbox(self, ("base", "latex"))
+        (source / "base" / "base-marker.txt").write_text("base", encoding = "utf-8")
+        (source / "latex" / "latex-marker.txt").write_text("latex", encoding = "utf-8")
+
+        # Install the selected catalogue under a custom name.
+        installed: Path = install_catalogue(home, "team", str(source), which = "base")
+
+        # Require only the selected catalogue content and the rewritten name.
+        self.assertEqual(installed, home.resolve() / "catalogues" / "team")
+        self.assertEqual(load_catalogue(installed).name, "team")
+        self.assertTrue((installed / "base-marker.txt").is_file())
+        self.assertFalse((installed / "latex").exists())
+        self.assertEqual(ConfigurationStore(home).resolve("team"), installed)
+
+    # Install a catalogue selected through a nested relative path.
+    def test_installs_a_catalogue_from_a_nested_relative_selector(self) -> None:
+        # Create an isolated sandbox and a nested catalogue.
+        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root: Path = Path(temporary.name)
+        home: Path = root / "sandbox"
+        source: Path = write_catalogue_source(root / "source" / "catalogues" / "base", name = "base")
+
+        # Install the nested catalogue relative to the source root.
+        installed: Path = install_catalogue(home, "team", str(source.parents[1]), which = "catalogues/base")
+
+        # Require the selected catalogue and rewritten name.
+        self.assertEqual(load_catalogue(installed).name, "team")
+
+    # Require explicit selection for a child catalogue even when it is the only one.
+    def test_requires_explicit_selection_for_a_sole_child_catalogue(self) -> None:
+        # Create a source with one child catalogue and unrelated entries.
+        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root: Path = Path(temporary.name)
+        home: Path = root / "sandbox"
+        source: Path = write_catalogue_repository(root / "source", ("base",))
+        (source / "notes.txt").write_text("not a catalogue", encoding = "utf-8")
+        (source / "empty").mkdir()
+
+        # Require an explicit selector instead of installing the only child.
+        with self.assertRaises(CatalogueInstallError) as raised:
+            install_catalogue(home, "team", str(source))
+        message: str = str(raised.exception)
+        self.assertIn("`base`", message)
+        self.assertIn("--which", message)
+        self.assertFalse((home / "catalogues" / "team").exists())
+        self.assertFalse((home / "catalogues.toml").exists())
+        self.assertEqual(list((home / "catalogues").glob(".team-*")), [])
+
+    # Report child catalogues in deterministic order when selection is required.
+    def test_reports_child_catalogues_with_candidate_directories(self) -> None:
+        # Create a multi-catalogue source.
+        _root, home, source = make_install_sandbox(self, ("base", "latex"))
+
+        # Require the explicit-selection error before publishing anything.
+        with self.assertRaises(CatalogueInstallError) as raised:
+            install_catalogue(home, "team", str(source))
+        message: str = str(raised.exception)
+        self.assertIn("Available catalogues are `base` and `latex`", message)
+        self.assertIn("--which", message)
+        self.assertFalse((home / "catalogues" / "team").exists())
+        self.assertFalse((home / "catalogues.toml").exists())
+        self.assertEqual(list((home / "catalogues").glob(".team-*")), [])
+
+    # Require explicit selection when a root catalogue and child catalogues coexist.
+    def test_requires_explicit_selection_when_root_and_child_catalogues_exist(self) -> None:
+        # Create a root catalogue with a child catalogue.
+        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root: Path = Path(temporary.name)
+        home: Path = root / "sandbox"
+        source: Path = write_catalogue_source(root / "source", name = "root")
+        write_catalogue_source(source / "base", name = "base")
+
+        # Require the explicit-selection error instead of preferring the root.
+        with self.assertRaises(CatalogueInstallError) as raised:
+            install_catalogue(home, "team", str(source))
+        self.assertIn("Source root is a catalogue", str(raised.exception))
+        self.assertIn("`base`", str(raised.exception))
+        self.assertFalse((home / "catalogues" / "team").exists())
+        self.assertFalse((home / "catalogues.toml").exists())
+
+    # Install the root catalogue subtree through an explicit root selector.
+    def test_explicit_root_selector_installs_the_root_catalogue(self) -> None:
+        # Create a root catalogue with a child catalogue.
+        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root: Path = Path(temporary.name)
+        home: Path = root / "sandbox"
+        source: Path = write_catalogue_source(root / "source", name = "root")
+        write_catalogue_source(source / "base", name = "base")
+        (source / "base" / "child-marker.txt").write_text("child", encoding = "utf-8")
+
+        # Install the root through the explicit root selector.
+        installed: Path = install_catalogue(home, "team", str(source), which = ".")
+
+        # Require the root catalogue subtree, including nested catalogue content.
+        self.assertEqual(load_catalogue(installed).name, "team")
+        self.assertTrue((installed / "base" / "child-marker.txt").is_file())
+
+    # Reject invalid selectors before publishing anything.
+    def test_rejects_invalid_selectors_without_publishing(self) -> None:
+        # Create a multi-catalogue source and an outside catalogue.
+        root, home, source = make_install_sandbox(self, ("base", "latex"))
+        write_catalogue_source(root / "outside", name = "outside")
+        (source / "empty").mkdir()
+
+        # Cover blank, absolute, traversal, missing, and manifest-less selectors.
+        selectors: tuple[tuple[str, str], ...] = (
+            ("blank", " "),
+            ("absolute", str(source / "base")),
+            ("traversal", "../outside"),
+            ("missing", "missing"),
+            ("manifest-less", "empty"),
+        )
+        for label, which in selectors:
+            with self.subTest(selector = label):
+                # Require the typed installation error.
+                with self.assertRaises(CatalogueInstallError):
+                    install_catalogue(home, "team", str(source), which = which)
+
+                # Require no published catalogue, registration, or staging directory.
+                self.assertFalse((home / "catalogues" / "team").exists())
+                self.assertFalse((home / "catalogues.toml").exists())
+                self.assertEqual(list((home / "catalogues").glob(".team-*")), [])
 
 
 # Verify unsupported `git` source schemes are rejected clearly.
@@ -524,7 +668,7 @@ class GitSourceValidationTests(unittest.TestCase):
             with self.subTest(source = source):
                 # Require an actionable unsupported-source error.
                 with self.assertRaises(CatalogueInstallError) as raised:
-                    source_helper.source_for(source)
+                    source_for(source)
                 self.assertIn("supported", str(raised.exception))
 
 
@@ -535,8 +679,8 @@ class CatalogueSourceClassificationTests(unittest.TestCase):
     def test_classifies_supported_source_values(self) -> None:
         # Require a local directory source.
         repository_root: Path = Path(__file__).resolve().parents[1]
-        local: source_helper.CatalogueSource = source_helper.source_for(str(repository_root))
-        self.assertIsInstance(local, source_helper.LocalSource)
+        local: CatalogueSource = source_for(str(repository_root))
+        self.assertIsInstance(local, LocalCatalogueSource)
         self.assertEqual(local.origin, "local")
 
         # Cover every supported `git` URL form.
@@ -551,8 +695,8 @@ class CatalogueSourceClassificationTests(unittest.TestCase):
         for source in git_sources:
             with self.subTest(source = source):
                 # Require the `git` source and origin.
-                classified: source_helper.CatalogueSource = source_helper.source_for(source)
-                self.assertIsInstance(classified, source_helper.GitSource)
+                classified: CatalogueSource = source_for(source)
+                self.assertIsInstance(classified, GitCatalogueSource)
                 self.assertEqual(classified.origin, "git")
 
 
@@ -566,13 +710,13 @@ class GitAvailabilityTests(unittest.TestCase):
         home: Path = Path(temporary.name) / "sandbox"
 
         # Require the typed prerequisite when `git` is unavailable.
-        with mock.patch("sandbox.catalogue.sources.shutil.which", return_value = None):
+        with mock.patch("sandbox.catalogue.sources.git.shutil.which", return_value = None):
             with self.assertRaises(PrerequisiteError) as raised:
-                catalogue_helper.install_catalogue(home, "team", "https://example.com/team/catalogue.git")
+                install_catalogue(home, "team", "https://example.com/team/catalogue.git")
         self.assertEqual(raised.exception.tool, "git")
         self.assertIs(raised.exception.kind, PrerequisiteKind.MISSING)
         self.assertEqual(raised.exception.operation, "catalogue.install")
-        self.assertIn("Install git", raised.exception.hint or "")
+        self.assertIn("Install `git`", raised.exception.hint or "")
 
         # Require no sandbox content.
         self.assertFalse(home.exists())
@@ -586,11 +730,11 @@ class GitAvailabilityTests(unittest.TestCase):
 
         # Require the typed prerequisite when `git` cannot be launched.
         with (
-            mock.patch("sandbox.catalogue.sources.shutil.which", return_value = "/usr/bin/git"),
-            mock.patch("sandbox.catalogue.sources.subprocess.Popen", side_effect = PermissionError("denied")),
+            mock.patch("sandbox.catalogue.sources.git.shutil.which", return_value = "/usr/bin/git"),
+            mock.patch("sandbox.catalogue.sources.git.subprocess.Popen", side_effect = PermissionError("denied")),
         ):
             with self.assertRaises(PrerequisiteError) as raised:
-                catalogue_helper.install_catalogue(home, "team", "https://example.com/team/catalogue.git")
+                install_catalogue(home, "team", "https://example.com/team/catalogue.git")
         self.assertEqual(raised.exception.tool, "git")
         self.assertIs(raised.exception.kind, PrerequisiteKind.UNUSABLE)
         self.assertEqual(raised.exception.operation, "catalogue.install")
@@ -623,7 +767,7 @@ class GitCatalogueInstallTests(unittest.TestCase):
         repository: Path = make_git_repository(root)
 
         # Install the `git` catalogue under a different name.
-        installed: Path = catalogue_helper.install_catalogue(home, "team", repository.as_uri())
+        installed: Path = install_catalogue(home, "team", repository.as_uri())
 
         # Require the installed copy, retained repository, and rewritten manifest.
         self.assertEqual(installed, home.resolve() / "catalogues" / "team")
@@ -639,6 +783,28 @@ class GitCatalogueInstallTests(unittest.TestCase):
         self.assertEqual(dict(registration), {"type": "git", "path": "catalogues/team"})
         self.assertEqual(ConfigurationStore(home).resolve("team"), installed)
 
+    # Install one selected catalogue from a multi-catalogue `git` repository.
+    def test_installs_a_selected_catalogue_from_a_git_repository(self) -> None:
+        # Create an offline repository with distinct child catalogue markers.
+        temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root: Path = Path(temporary.name)
+        home: Path = root / "sandbox"
+        repository: Path = write_catalogue_repository(root / "repository", ("base", "latex"))
+        (repository / "base" / "base-marker.txt").write_text("base", encoding = "utf-8")
+        (repository / "latex" / "latex-marker.txt").write_text("latex", encoding = "utf-8")
+        initialize_git_repository(repository)
+
+        # Install the selected catalogue from the repository URL.
+        installed: Path = install_catalogue(home, "team", repository.as_uri(), which = "latex")
+
+        # Require only the selected catalogue content and the rewritten name.
+        self.assertEqual(load_catalogue(installed).name, "team")
+        self.assertTrue((installed / "latex-marker.txt").is_file())
+        self.assertFalse((installed / "base-marker.txt").exists())
+        registration: Any = load_registry(home / "catalogues.toml")["catalogues"]["team"]
+        self.assertEqual(dict(registration), {"type": "git", "path": "catalogues/team"})
+
     # Preserve the manifest bytes when the `git` catalogue name already matches.
     def test_git_install_preserves_matching_manifest_bytes(self) -> None:
         # Create an isolated sandbox and offline repository.
@@ -649,7 +815,7 @@ class GitCatalogueInstallTests(unittest.TestCase):
         repository: Path = make_git_repository(root)
 
         # Install the `git` catalogue under its existing name.
-        installed: Path = catalogue_helper.install_catalogue(home, SOURCE_NAME, repository.as_uri())
+        installed: Path = install_catalogue(home, SOURCE_NAME, repository.as_uri())
 
         # Require the manifest to remain byte-identical.
         self.assertEqual((installed / "catalogue.toml").read_bytes(), (repository / "catalogue.toml").read_bytes())
@@ -669,7 +835,7 @@ class GitCatalogueInstallTests(unittest.TestCase):
 
         # Require the clone failure to report only its exit code.
         with self.assertRaises(CatalogueInstallError) as raised:
-            catalogue_helper.install_catalogue(home, "team", missing_url)
+            install_catalogue(home, "team", missing_url)
         message: str = str(raised.exception)
         self.assertIn("exit code", message)
         self.assertNotIn(missing_url, message)
@@ -686,7 +852,7 @@ class GitCatalogueInstallTests(unittest.TestCase):
     def test_clone_failure_during_forced_replacement_preserves_the_previous_state(self) -> None:
         # Create an isolated sandbox and install a local catalogue.
         root, home, source = make_install_sandbox(self)
-        installed: Path = catalogue_helper.install_catalogue(home, "team", str(source))
+        installed: Path = install_catalogue(home, "team", str(source))
         marker_file: Path = installed / "marker.txt"
         marker_file.write_text("original catalogue", encoding = "utf-8")
         registry_file: Path = home.resolve() / "catalogues.toml"
@@ -694,7 +860,7 @@ class GitCatalogueInstallTests(unittest.TestCase):
 
         # Require the forced replacement to fail while cloning.
         with self.assertRaises(CatalogueInstallError):
-            catalogue_helper.install_catalogue(home, "team", (root / "missing").as_uri(), force = True)
+            install_catalogue(home, "team", (root / "missing").as_uri(), force = True)
 
         # Require the previous catalogue, marker, and registry to survive.
         self.assertEqual(marker_file.read_text(encoding = "utf-8"), "original catalogue")
@@ -719,12 +885,12 @@ class GitCatalogueInstallTests(unittest.TestCase):
         process.returncode = -signal.SIGKILL
         process.communicate.side_effect = [subprocess.TimeoutExpired(["git", "clone"], 120), None]
         with (
-            mock.patch("sandbox.catalogue.sources.subprocess.Popen", return_value = process),
-            mock.patch("sandbox.catalogue.sources.os.getpgid", return_value = 5678),
-            mock.patch("sandbox.catalogue.sources.os.killpg") as killpg,
+            mock.patch("sandbox.catalogue.sources.git.subprocess.Popen", return_value = process),
+            mock.patch("sandbox.catalogue.sources.git.os.getpgid", return_value = 5678),
+            mock.patch("sandbox.catalogue.sources.git.os.killpg") as killpg,
         ):
             with self.assertRaises(CatalogueInstallError) as raised:
-                catalogue_helper.install_catalogue(home, "team", repository.as_uri())
+                install_catalogue(home, "team", repository.as_uri())
 
         # Require the process group to be killed and the process to be reaped.
         killpg.assert_called_once_with(5678, signal.SIGKILL)
@@ -732,7 +898,7 @@ class GitCatalogueInstallTests(unittest.TestCase):
 
         # Require the timeout to be reported without the URL.
         message: str = str(raised.exception)
-        self.assertIn("timed out after 120 seconds", message)
+        self.assertIn("timed out after 30 seconds", message)
         self.assertNotIn(repository.as_uri(), message)
 
         # Require no published catalogue or registry.
@@ -748,16 +914,16 @@ class GitCatalogueInstallTests(unittest.TestCase):
         temporary: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         root: Path = Path(temporary.name)
-        source: source_helper.GitSource = source_helper.GitSource("https://example.com/team/catalogue.git")
+        source: GitCatalogueSource = GitCatalogueSource("https://example.com/team/catalogue.git")
         process: mock.Mock = mock.Mock()
         process.pid = 4321
         process.communicate.side_effect = [KeyboardInterrupt(), None]
 
         # Interrupt the clone while it is waiting.
         with (
-            mock.patch("sandbox.catalogue.sources.subprocess.Popen", return_value = process),
-            mock.patch("sandbox.catalogue.sources.os.getpgid", return_value = 5678),
-            mock.patch("sandbox.catalogue.sources.os.killpg") as killpg,
+            mock.patch("sandbox.catalogue.sources.git.subprocess.Popen", return_value = process),
+            mock.patch("sandbox.catalogue.sources.git.os.getpgid", return_value = 5678),
+            mock.patch("sandbox.catalogue.sources.git.os.killpg") as killpg,
         ):
             with self.assertRaises(KeyboardInterrupt):
                 source.materialize(root / "staging", root / "destination")
@@ -773,7 +939,7 @@ class GitCatalogueInstallTests(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         root: Path = Path(temporary.name)
         url: str = "https://user:secret@example.com/team/catalogue.git"
-        source: source_helper.GitSource = source_helper.GitSource(url)
+        source: GitCatalogueSource = GitCatalogueSource(url)
         process: mock.Mock = mock.Mock()
         process.pid = 12345
         process.returncode = 0
@@ -782,7 +948,7 @@ class GitCatalogueInstallTests(unittest.TestCase):
         # Record the clone invocation while inherited askpass helpers are set.
         with (
             mock.patch.dict(os.environ, {"GIT_ASKPASS": "/tmp/askpass", "SSH_ASKPASS": "/tmp/ssh"}),
-            mock.patch("sandbox.catalogue.sources.subprocess.Popen", return_value = process) as popen,
+            mock.patch("sandbox.catalogue.sources.git.subprocess.Popen", return_value = process) as popen,
         ):
             source.materialize(root / "staging", root / "destination")
 
@@ -805,7 +971,7 @@ class GitCatalogueInstallTests(unittest.TestCase):
         failure.pid = 12345
         failure.returncode = 128
         failure.communicate.return_value = None
-        with mock.patch("sandbox.catalogue.sources.subprocess.Popen", return_value = failure):
+        with mock.patch("sandbox.catalogue.sources.git.subprocess.Popen", return_value = failure):
             with self.assertRaises(CatalogueInstallError) as raised:
                 source.materialize(root / "staging", root / "destination")
         message: str = str(raised.exception)
@@ -850,10 +1016,10 @@ time.sleep(60)
         try:
             with (
                 mock.patch.dict(os.environ, {"PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}"}),
-                mock.patch.object(source_helper, "GIT_CLONE_TIMEOUT", 2.0),
+                mock.patch.object(GitCatalogueSource, "_clone_timeout", 2.0),
             ):
                 with self.assertRaises(CatalogueInstallError) as raised:
-                    catalogue_helper.install_catalogue(home, "team", "https://example.com/team/catalogue.git")
+                    install_catalogue(home, "team", "https://example.com/team/catalogue.git")
             self.assertIn("timed out", str(raised.exception))
 
             # Require both the clone and its child to be gone.
@@ -894,12 +1060,12 @@ time.sleep(60)
         repository: Path = make_git_repository(root)
 
         # Install the local catalogue with a stale file.
-        installed: Path = catalogue_helper.install_catalogue(home, "team", str(source))
+        installed: Path = install_catalogue(home, "team", str(source))
         stale_file: Path = installed / "stale.txt"
         stale_file.write_text("stale", encoding = "utf-8")
 
         # Replace the local catalogue with the `git` source.
-        replaced: Path = catalogue_helper.install_catalogue(home, "team", repository.as_uri(), force = True)
+        replaced: Path = install_catalogue(home, "team", repository.as_uri(), force = True)
 
         # Require the `git` content and origin to replace the local installation.
         self.assertEqual(replaced, installed)

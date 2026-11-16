@@ -7,7 +7,7 @@ from typing import Any
 from unittest import mock
 
 # Import SDK and configuration helpers.
-from sandbox.catalogue.removal import load_catalogue_registration
+from catalogue_services import load_catalogue_registration
 from sandbox.domain.registry import CatalogueBinding, CatalogueRegistration, CatalogueRemovalPlan
 
 # Import errors.
@@ -278,7 +278,7 @@ class RemoveCatalogueTests(CatalogueRemovalTestCase):
         self.assertIsNotNone(plan)
         if plan is None:
             self.fail("Expected the registered catalogue to produce a plan.")
-        with mock.patch("sandbox.catalogue.removal.registry.write_registry_atomic", side_effect = OSError("write failed")):
+        with mock.patch("sandbox.configuration.registry.write_registry_atomic", side_effect = OSError("write failed")):
             with self.assertRaises(IncompleteRemoval):
                 remove_catalogue(plan)
 
@@ -315,6 +315,28 @@ class RemoveCatalogueTests(CatalogueRemovalTestCase):
         self.assertTrue(team_dir.exists())
         self.assertIn("team", tomllib.loads((home / "catalogues.toml").read_text(encoding = "utf-8"))["catalogues"])
 
+    # Refuse a plan bound to another sandbox directory.
+    def test_refuses_a_plan_from_another_sandbox(self) -> None:
+        # Prepare two sandboxes with the same catalogue registration.
+        home: Path = self.make_sandbox('[catalogues.team]\ntype = "local"\npath = "catalogues/team"\n')
+        (home / "catalogues" / "team").mkdir(parents = True)
+        other: Path = self.make_sandbox('[catalogues.team]\ntype = "local"\npath = "catalogues/team"\n')
+        (other / "catalogues" / "team").mkdir(parents = True)
+
+        # Plan the removal in the first sandbox.
+        plan: CatalogueRemovalPlan | None = plan_catalogue_removal(home, "team")
+        self.assertIsNotNone(plan)
+        if plan is None:
+            self.fail("Expected the registered catalogue to produce a plan.")
+
+        # Require the second sandbox to refuse the foreign plan.
+        with self.assertRaisesRegex(RegistryError, "removal plan belongs to"):
+            make_client(other).catalogues.remove(plan)
+
+        # Require both catalogue directories to remain.
+        self.assertTrue((home / "catalogues" / "team").is_dir())
+        self.assertTrue((other / "catalogues" / "team").is_dir())
+
     # Reject a symbolic link at the canonical catalogue path before deletion.
     def test_rejects_a_symbolic_link_before_deletion(self) -> None:
         # Prepare a local catalogue registration and an external directory.
@@ -328,13 +350,9 @@ class RemoveCatalogueTests(CatalogueRemovalTestCase):
         registry_file: Path = home / "catalogues.toml"
         original: str = registry_file.read_text(encoding = "utf-8")
 
-        # Plan the removal and require the symbolic link to be refused.
-        plan: CatalogueRemovalPlan | None = plan_catalogue_removal(home, "team")
-        self.assertIsNotNone(plan)
-        if plan is None:
-            self.fail("Expected the registered catalogue to produce a plan.")
+        # Require planning the removal to refuse the symbolic link.
         with self.assertRaises(RegistryError):
-            remove_catalogue(plan)
+            plan_catalogue_removal(home, "team")
 
         # Require the external directory, symbolic link, and registry to remain.
         self.assertTrue((external_dir / "marker.txt").is_file())

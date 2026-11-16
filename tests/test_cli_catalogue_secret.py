@@ -31,7 +31,7 @@ from sandbox.testing.builder import FakeBuilder
 from sandbox.testing.runtime import FakeRuntime
 
 # Import test fixtures.
-from catalogue_fixtures import write_catalogue_source
+from catalogue_fixtures import write_catalogue_repository, write_catalogue_source
 from git_fixtures import GIT_AVAILABLE, GIT_ENVIRONMENT, make_git_repository
 
 # Define the Docker-compatible vocabulary used by composition in production.
@@ -164,9 +164,76 @@ def test_create_catalogue_requires_a_source(tmp_path: Path) -> None:
 
     # Require a Click usage error before any client or configuration is created.
     assert result.exit_code == 2
-    assert "Missing option '--source'" in result.stderr
+    assert "Missing option" in result.stderr
+    assert "--source" in result.stderr
     assert calls == []
     assert not home.exists()
+
+
+# Verify a selected subdirectory installs from a multi-catalogue source.
+def test_create_catalogue_installs_a_selected_subdirectory(tmp_path: Path) -> None:
+    # Prepare an absent home and a multi-catalogue source.
+    home: Path = tmp_path / "home"
+    context, _calls, _buffer = make_context()
+    source: Path = write_catalogue_repository(tmp_path / "source", ("base", "latex"))
+    (source / "base" / "base-marker.txt").write_text("base", encoding = "utf-8")
+    (source / "latex" / "latex-marker.txt").write_text("latex", encoding = "utf-8")
+
+    # Install the selected catalogue under a custom name.
+    result: Result = invoke(["create", "catalogue", "team", "--source", str(source), "--which", "base", "--home", str(home)], context)
+
+    # Require only the selected catalogue content and the registration.
+    assert result.exit_code == 0, result.stderr
+    installed: Path = home.resolve() / "catalogues" / "team"
+    assert (installed / "base-marker.txt").is_file()
+    assert not (installed / "latex").exists()
+    assert read_toml(home / "catalogues.toml")["catalogues"]["team"] == {"type": "local", "path": "catalogues/team"}
+
+
+# Verify a sole child catalogue requires `--which`.
+def test_create_catalogue_requires_which_for_a_sole_child(tmp_path: Path) -> None:
+    # Prepare an absent home and a source with one child catalogue.
+    home: Path = tmp_path / "home"
+    context, _calls, _buffer = make_context()
+    source: Path = write_catalogue_repository(tmp_path / "source", ("base",))
+
+    # Require explicit selection instead of installing the only child.
+    result: Result = invoke(["create", "catalogue", "team", "--source", str(source), "--home", str(home)], context)
+    assert result.exit_code == 1
+    assert "`base`" in result.stderr
+    assert "--which" in result.stderr
+    assert not (home.resolve() / "catalogues" / "team").exists()
+    assert not (home / "catalogues.toml").exists()
+
+
+# Verify child catalogues require `--which` and are listed in deterministic order.
+def test_create_catalogue_requires_which_for_child_catalogues(tmp_path: Path) -> None:
+    # Prepare an absent home and a multi-catalogue source.
+    home: Path = tmp_path / "home"
+    context, _calls, _buffer = make_context()
+    source: Path = write_catalogue_repository(tmp_path / "source", ("base", "latex"))
+
+    # Require the explicit-selection error without publishing anything.
+    result: Result = invoke(["create", "catalogue", "team", "--source", str(source), "--home", str(home)], context)
+    assert result.exit_code == 1
+    assert "Available catalogues are `base` and `latex`" in result.stderr
+    assert "--which" in result.stderr
+    assert not (home.resolve() / "catalogues" / "team").exists()
+    assert not (home / "catalogues.toml").exists()
+
+
+# Verify catalogue creation help documents the selector.
+def test_create_catalogue_help_documents_which() -> None:
+    # Invoke help with a client factory that must not run.
+    context, calls, _buffer = make_context()
+
+    # Require the selector and its source-relative meaning.
+    result: Result = invoke(["create", "catalogue", "--help"], context)
+    assert result.exit_code == 0, result.stderr
+    assert "--which" in result.stdout
+    assert "relative to" in result.stdout
+    assert "required for child catalogues." in result.stdout
+    assert calls == []
 
 
 # Verify a `git` source installs and registers its origin.

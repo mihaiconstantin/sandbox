@@ -6,13 +6,14 @@ from pathlib import Path
 import pytest
 
 # Import typed errors.
-from sandbox.errors.catalogues import RegistryError
+from sandbox.errors.catalogues import CatalogueInstallError, RegistryError
 from sandbox.errors.configuration import ConfigurationError
 
 # Import the public SDK.
 from sandbox.sdk import RecipeListing
 
 # Import the test fixtures.
+from catalogue_fixtures import write_catalogue_repository
 from sdk_fixtures import bind_secret, make_client, write_catalogue
 
 
@@ -38,15 +39,15 @@ def test_catalogue_read_operations(tmp_path: Path) -> None:
     assert registrations[0].path == directory
 
     # Require registered and present states.
-    state = client.catalogues.installation("default")
+    state = client.catalogues.inspect_installation("default")
     assert state.registered is True
     assert state.directory_present is True
 
     # Require absent and present-only states.
-    missing = client.catalogues.installation("missing")
+    missing = client.catalogues.inspect_installation("missing")
     assert missing.registered is False
     assert missing.directory_present is False
-    present = client.catalogues.installation("present")
+    present = client.catalogues.inspect_installation("present")
     assert present.registered is False
     assert present.directory_present is True
 
@@ -55,7 +56,7 @@ def test_catalogue_read_operations(tmp_path: Path) -> None:
     assert client.catalogues.validate("default") is None
 
     # Require the sorted recipe listing with the default marker.
-    assert client.catalogues.recipes("default") == (RecipeListing(name = "base", is_default = True),)
+    assert client.catalogues.list_recipes("default") == (RecipeListing(name = "base", is_default = True),)
 
 
 # Verify install returns the installed path and publishes the registration.
@@ -75,7 +76,72 @@ def test_install_returns_the_installed_path(tmp_path: Path) -> None:
     assert installed == home / "catalogues" / "local"
     assert installed.is_dir()
     assert [registration.name for registration in client.catalogues.list()] == ["local"]
-    assert client.catalogues.installation("local").registered is True
+    assert client.catalogues.inspect_installation("local").registered is True
+
+
+# Verify the SDK installs one explicitly selected catalogue from a repository.
+def test_install_selects_a_catalogue_from_a_multi_catalogue_source(tmp_path: Path) -> None:
+    # Prepare a multi-catalogue source with distinct markers.
+    source: Path = write_catalogue_repository(tmp_path / "source", ("base", "latex"))
+    (source / "base" / "base-marker.txt").write_text("base", encoding = "utf-8")
+    (source / "latex" / "latex-marker.txt").write_text("latex", encoding = "utf-8")
+    home: Path = tmp_path / "home"
+    home.mkdir()
+    client = make_client(home)
+
+    # Install the selected catalogue under a custom name.
+    installed: Path = client.catalogues.install("team", str(source), which = "base")
+
+    # Require only the selected catalogue content and the registration.
+    assert installed == home / "catalogues" / "team"
+    assert (installed / "base-marker.txt").is_file()
+    assert not (installed / "latex").exists()
+    assert [registration.name for registration in client.catalogues.list()] == ["team"]
+
+
+# Verify the SDK requires explicit selection for every child catalogue.
+def test_install_requires_explicit_selection_for_child_catalogues(tmp_path: Path) -> None:
+    # Require a sole child catalogue to reject installation without a selector.
+    sole_source: Path = write_catalogue_repository(tmp_path / "sole", ("base",))
+    sole_home: Path = tmp_path / "sole-home"
+    sole_home.mkdir()
+    sole_client = make_client(sole_home)
+    with pytest.raises(CatalogueInstallError) as raised:
+        sole_client.catalogues.install("team", str(sole_source))
+    assert "`base`" in str(raised.value)
+    assert "--which" in str(raised.value)
+    assert not (sole_home / "catalogues.toml").exists()
+
+    # Require a multi-catalogue source to list every available directory.
+    source: Path = write_catalogue_repository(tmp_path / "multi", ("base", "latex"))
+    home: Path = tmp_path / "multi-home"
+    home.mkdir()
+    client = make_client(home)
+    with pytest.raises(CatalogueInstallError) as raised:
+        client.catalogues.install("team", str(source))
+    assert "Available catalogues are `base` and `latex`" in str(raised.value)
+    assert not (home / "catalogues.toml").exists()
+
+
+# Verify the SDK rejects invalid selector types and values before publishing.
+def test_install_validates_the_catalogue_selector(tmp_path: Path) -> None:
+    # Prepare a multi-catalogue source and an absent home.
+    source: Path = write_catalogue_repository(tmp_path / "source", ("base", "latex"))
+    home: Path = tmp_path / "home"
+    home.mkdir()
+    client = make_client(home)
+
+    # Require Python to reject a non-string selector.
+    with pytest.raises(TypeError):
+        client.catalogues.install("team", str(source), which = 1)  # pyright: ignore[reportArgumentType]
+
+    # Require invalid selector values to use the typed catalogue error.
+    with pytest.raises(CatalogueInstallError):
+        client.catalogues.install("team", str(source), which = " ")
+
+    # Require no configuration or registration to be created.
+    assert not (home / "catalogues.toml").exists()
+    assert client.catalogues.list() == ()
 
 
 # Verify the SDK requires an explicit source for every installation.
@@ -144,10 +210,10 @@ def test_invalid_catalogue_identifiers_are_rejected(tmp_path: Path) -> None:
 
     # Require the typed input error on every name-taking operation.
     operations = (
-        client.catalogues.installation,
+        client.catalogues.inspect_installation,
         client.catalogues.locate,
         client.catalogues.validate,
-        client.catalogues.recipes,
+        client.catalogues.list_recipes,
         client.catalogues.plan_removal,
         client.catalogues.remove,
     )
@@ -174,4 +240,4 @@ def test_unknown_catalogue_and_recipe_raise_typed_errors(tmp_path: Path) -> None
         client.catalogues.locate("missing")
 
     # Require the recipe listing for the known catalogue.
-    assert [listing.name for listing in client.catalogues.recipes("default")] == ["base"]
+    assert [listing.name for listing in client.catalogues.list_recipes("default")] == ["base"]

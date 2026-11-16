@@ -8,11 +8,7 @@ from textwrap import dedent
 from sandbox.catalogue.catalogue import Catalogue
 
 # Import manifest helpers.
-from sandbox.catalogue.manifest import (
-    MANIFEST_FILENAME,
-    load_catalogue,
-    resolve_compose_file,
-)
+from catalogue_services import MANIFEST_FILENAME, load_catalogue, resolve_compose_file
 
 # Import errors.
 from sandbox.errors.configuration import ConfigurationError

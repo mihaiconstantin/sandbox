@@ -5,7 +5,7 @@ from unittest import mock
 import pytest
 
 # Import catalogue and configuration seams.
-from sandbox.catalogue.manifest import load_catalogue
+from catalogue_services import load_catalogue
 from sandbox.configuration.registry import load_registry
 from sandbox.configuration.store import ConfigurationStore
 
