@@ -82,7 +82,7 @@ class CatalogueOperations:
         return self._store.registrations()
 
     # Report whether a catalogue is registered and present on disk.
-    def installation(self, name: str) -> CatalogueInstallState:
+    def inspect_installation(self, name: str) -> CatalogueInstallState:
         # Validate the catalogue name before using it in a path.
         validate_identifier(name, "catalogue")
 
@@ -129,7 +129,7 @@ class CatalogueOperations:
         self._load(name)
 
     # Return the recipes of a registered catalogue in name order.
-    def recipes(self, catalogue: str) -> tuple[RecipeListing, ...]:
+    def list_recipes(self, catalogue: str) -> tuple[RecipeListing, ...]:
         # Load the catalogue declarations.
         declaration: Catalogue = self._load(catalogue)
 
