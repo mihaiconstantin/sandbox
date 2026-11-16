@@ -20,7 +20,7 @@ from sandbox.errors.prerequisites import PrerequisiteError, PrerequisiteKind
 # Represent one catalogue cloned from a git repository.
 class GitCatalogueSource(CatalogueSource):
     # Define the clone timeout in seconds.
-    _clone_timeout: int = 120
+    _clone_timeout: int = 30
 
     # Define the supported git URL schemes.
     _url_schemes: ClassVar[list[str]] = ["https", "http", "ssh", "git", "file"]
