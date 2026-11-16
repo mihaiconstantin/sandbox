@@ -43,6 +43,12 @@ def _locate(client: SandboxClient, name: str) -> Path:
     required = True,
     help = "The local directory or `git` URL of the catalogue.",
 )
+@click.option(
+    "--which",
+    type = str,
+    default = None,
+    help = "The catalogue directory inside the source, relative to its root; required for child catalogues.",
+)
 @home_option()
 @click.option(
     "-f", "--force",
@@ -57,7 +63,7 @@ def _locate(client: SandboxClient, name: str) -> Path:
     help = "Skip the replacement confirmation prompt.",
 )
 @click.pass_context
-def create_catalogue(ctx: click.Context, name: str, source: str, home: Path, force: bool, yes: bool) -> None:
+def create_catalogue(ctx: click.Context, name: str, source: str, which: str | None, home: Path, force: bool, yes: bool) -> None:
     """Install a `sandbox` catalogue of development recipes."""
 
     # Resolve the client for the selected home.
@@ -81,7 +87,7 @@ def create_catalogue(ctx: click.Context, name: str, source: str, home: Path, for
     click.secho(f"Installing catalogue `{name}`...", fg = "yellow", italic = True, color = ctx.color)
 
     # Install the catalogue under the requested name, replacing it only when requested.
-    installed_dir: Path = client.catalogues.install(name, source, force = force)
+    installed_dir: Path = client.catalogues.install(name, source, which = which, force = force)
 
     # User feedback.
     click.secho(f"Successfully installed catalogue `{name}` at `{installed_dir}`.", fg = "green", bold = True, color = ctx.color)
