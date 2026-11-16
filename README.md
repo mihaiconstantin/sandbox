@@ -39,7 +39,7 @@ To use `sb` you need the following:
 Before running commands, `sb` checks and reports a missing or unsupported tool
 with the required version. It, however, never installs other tools on your host.
 
-> [!Warning] Security Boundary
+> [!WARNING]
 >
 > `sb` provides convenience for local development. It is not intended as a
 > security boundary to contain unsupervised rouge AI agents or other untrusted
