@@ -4,15 +4,18 @@ import unittest
 from pathlib import Path
 from textwrap import dedent
 
+# Import catalogue service helpers.
+from catalogue_services import (
+    MANIFEST_FILENAME,
+    load_catalogue,
+    resolve_recipe,
+    select_recipe,
+)
+
 # Import catalogue declarations.
 from sandbox.catalogue.catalogue import Catalogue
-
-# Import manifest helpers.
-from sandbox.catalogue.manifest import MANIFEST_FILENAME, load_catalogue
 from sandbox.catalogue.recipe import Recipe
-
-# Import recipe resolution.
-from sandbox.catalogue.resolve import ResolvedCatalogueRecipe, resolve_recipe, select_recipe
+from sandbox.catalogue.resolved_recipe import ResolvedCatalogueRecipe
 
 # Import errors.
 from sandbox.errors.configuration import ConfigurationError
@@ -89,8 +92,8 @@ class ResolveRecipeTests(unittest.TestCase):
         # Require parent-first recipe and compose order and a single shared volume.
         self.assertEqual(resolved.name, "r")
         self.assertEqual(resolved.service, "workspace")
-        self.assertEqual(resolved.recipes, ("base", "r"))
-        self.assertEqual(resolved.compose, (directory / "compose.yaml", directory / "r" / "compose.yaml"))
+        self.assertEqual(resolved.recipes, ["base", "r"])
+        self.assertEqual(resolved.compose, [directory / "compose.yaml", directory / "r" / "compose.yaml"])
         self.assertEqual(tuple(volume.name for volume in resolved.volumes), ("example-state",))
 
     # Verify an independent recipe resolves without implicit requirements.
@@ -110,10 +113,10 @@ class ResolveRecipeTests(unittest.TestCase):
         resolved: ResolvedCatalogueRecipe = resolve_recipe(catalogue, directory, "base")
 
         # Require a single-recipe plan with no volumes or secrets.
-        self.assertEqual(resolved.recipes, ("base",))
-        self.assertEqual(resolved.compose, (directory / "compose.yaml",))
-        self.assertEqual(resolved.volumes, ())
-        self.assertEqual(resolved.secrets, ())
+        self.assertEqual(resolved.recipes, ["base"])
+        self.assertEqual(resolved.compose, [directory / "compose.yaml"])
+        self.assertEqual(resolved.volumes, [])
+        self.assertEqual(resolved.secrets, [])
 
     # Verify transitive parents resolve in parent-first order.
     def test_resolves_transitive_parents_in_order(self) -> None:
@@ -142,8 +145,8 @@ class ResolveRecipeTests(unittest.TestCase):
         resolved: ResolvedCatalogueRecipe = resolve_recipe(catalogue, directory, "c")
 
         # Require the full parent-first chain and its compose order.
-        self.assertEqual(resolved.recipes, ("a", "b", "c"))
-        self.assertEqual(resolved.compose, (directory / "a" / "compose.yaml", directory / "b" / "compose.yaml", directory / "c" / "compose.yaml"))
+        self.assertEqual(resolved.recipes, ["a", "b", "c"])
+        self.assertEqual(resolved.compose, [directory / "a" / "compose.yaml", directory / "b" / "compose.yaml", directory / "c" / "compose.yaml"])
 
         # Require the selected recipe's service.
         self.assertEqual(resolved.service, "c-service")
@@ -428,7 +431,7 @@ class ResolveRecipeTests(unittest.TestCase):
         resolved: ResolvedCatalogueRecipe = resolve_recipe(catalogue, directory, "r")
 
         # Require parent-first order with the repeated secret kept in place.
-        self.assertEqual(resolved.secrets, ("example-secret", "shared", "github"))
+        self.assertEqual(resolved.secrets, ["example-secret", "shared", "github"])
 
     # Verify an independent recipe can require secrets without a parent.
     def test_independent_recipe_can_require_secrets(self) -> None:
@@ -448,8 +451,8 @@ class ResolveRecipeTests(unittest.TestCase):
         resolved: ResolvedCatalogueRecipe = resolve_recipe(catalogue, directory, "frontend")
 
         # Require the independent chain and its declared secret.
-        self.assertEqual(resolved.recipes, ("frontend",))
-        self.assertEqual(resolved.secrets, ("npm",))
+        self.assertEqual(resolved.recipes, ["frontend"])
+        self.assertEqual(resolved.secrets, ["npm"])
 
     # Verify an undeclared volume alias is reported at its recipe position.
     def test_undeclared_volume_alias_is_reported(self) -> None:
