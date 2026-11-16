@@ -1,21 +1,12 @@
-# `sandbox`
+<p align="center">
+    <img src="https://raw.githubusercontent.com/mihaiconstantin/sandbox/main/docs/content/public/images/sandbox-logo.png" alt="sandbox logo" width="150">
+</p>
 
-<table>
-    <tr>
-        <td width="25%">
-            <img width="100%" src="https://raw.githubusercontent.com/mihaiconstantin/sandbox/main/docs/content/public/images/sandbox-logo.png" alt="sandbox logo"/>
-        </td>
-        <td width="75%">
-            <p>
-                <strong><code>sandbox</code></strong> • or <strong><code>sb</code></strong>
-                • is a tool for creating and
-                managing isolated local development <i>boxes</i>.
-                It simplifies the process of setting up and maintaining project-specific
-                development environments using reusable and customizable recipes based on Docker images.
-            </p>
-        </td>
-    </tr>
-</table>
+<h1 align="center"><code>sandbox</code></h1>
+
+<p align="center">
+    <strong><code>sandbox</code></strong> • or <strong><code>sb</code></strong> • is a tool for creating and managing isolated local development <i>boxes</i>. It simplifies the process of setting up and maintaining project-specific development environments using reusable and customizable recipes based on Docker images.
+</p>
 
 <!-- badges: start -->
 <p align="center">
