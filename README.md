@@ -3,7 +3,7 @@
 <table>
     <tr>
         <td width="25%">
-            <img width="100%" src="https://raw.githubusercontent.com/mihaiconstantin/sandbox/refs/heads/main/docs/content/images/sandbox-logo.png" alt="sandbox logo"/>
+            <img width="100%" src="https://raw.githubusercontent.com/mihaiconstantin/sandbox/main/docs/content/public/images/sandbox-logo.png" alt="sandbox logo"/>
         </td>
         <td width="75%">
             <p>
