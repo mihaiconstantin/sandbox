@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 
 # Import the neutral artifact and plan values.
-from sandbox.catalogue.resolve import ResolvedCatalogueRecipe
+from sandbox.catalogue.resolved_recipe import ResolvedCatalogueRecipe
 from sandbox.domain.artifact import ArtifactTransport, BuildArtifact
 from sandbox.domain.observation import BoxObservation, RemovalPlan
 from sandbox.domain.paths import project_target
@@ -110,7 +110,7 @@ class BoxOperations:
             catalogue = request.catalogue,
             recipe = recipe.name,
             catalogue_root = catalogue_root,
-            files = recipe.compose,
+            files = tuple(recipe.compose),
             service = recipe.service,
         )
 
