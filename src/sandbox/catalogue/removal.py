@@ -24,6 +24,11 @@ class CatalogueRemover:
 
     # Apply one validated catalogue removal plan.
     def _remove_plan(self: "CatalogueRemover", plan: CatalogueRemovalPlan) -> None:
+        # Require the plan to belong to this sandbox directory.
+        if plan.home.expanduser().resolve() != self.store.home:
+            # Throw.
+            raise RegistryError(f"Catalogue removal plan belongs to `{plan.home}`, but this remover is bound to `{self.store.home}`.")
+
         # Reload the registration to detect changes since planning.
         current = self.reader.read(plan.registration.name)
 
