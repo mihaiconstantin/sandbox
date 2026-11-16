@@ -77,14 +77,13 @@ export default defineConfig({
                         { text: "Volumes", link: "/guide/volumes" },
                         { text: "Secrets", link: "/guide/secrets" },
                     ]
-                },
+                }
+            ],
             "/reference/": [
                 {
                     text: "Reference",
                     items: [
                         { text: "Commands", link: "/reference/" }
-                    ]
-                },
                     ]
                 }
             ]
