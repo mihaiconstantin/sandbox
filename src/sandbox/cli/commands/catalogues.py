@@ -64,7 +64,7 @@ def create_catalogue(ctx: click.Context, name: str, source: str, home: Path, for
     client: SandboxClient = client_for(ctx, home)
 
     # Report whether the catalogue is already registered or present.
-    state: CatalogueInstallState = client.catalogues.installation(name)
+    state: CatalogueInstallState = client.catalogues.inspect_installation(name)
 
     # Determine whether the catalogue directory or registration exists.
     exists: bool = state.directory_present or state.registered
@@ -170,7 +170,7 @@ def recipes(ctx: click.Context, catalogue: str, home: Path) -> None:
     """List the recipes declared by a registered `sandbox` catalogue."""
 
     # Load the recipe declarations through the SDK.
-    listings: tuple[RecipeListing, ...] = client_for(ctx, home).catalogues.recipes(catalogue)
+    listings: tuple[RecipeListing, ...] = client_for(ctx, home).catalogues.list_recipes(catalogue)
 
     # Define the compatibility table columns.
     headers: tuple[str, ...] = ("NAME", "DEFAULT")
