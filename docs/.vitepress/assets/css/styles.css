@@ -83,6 +83,30 @@ html.dark .VPNavBarTitle span {
 }
 
 
+/* The inline sandbox wordmark. */
+.sandbox-wordmark {
+    font-family: var(--font-sandbox);
+    font-weight: 700;
+    background-image: linear-gradient(
+        to right,
+        var(--color-sandbox-500) 15px,
+        var(--vp-c-text-1) 35px
+    );
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+}
+
+/* The inline sandbox wordmark in dark mode. */
+html.dark .sandbox-wordmark {
+    background-image: linear-gradient(
+        to right,
+        var(--color-sandbox-400) 15px,
+        var(--vp-c-text-1) 35px
+    );
+}
+
+
 /* The brand colors in light mode. */
 html:not(.dark) {
     --vp-c-brand-1: var(--color-sandbox-600);
