@@ -51,6 +51,9 @@ GUIDE_TEXT = inspect.cleandoc(f"""
       {click.style("# Create a catalogue named `team` from a `git` repository.", fg = "bright_black", italic = True)}
       {click.style("sb", bold = True, fg = "blue")} {click.style("create", bold = True, fg = "green")} catalogue team --source https://example.com/catalogue.git
 
+      {click.style("# Create the `base` catalogue from a repository with one self-contained catalogue per directory.", fg = "bright_black", italic = True)}
+      {click.style("sb", bold = True, fg = "blue")} {click.style("create", bold = True, fg = "green")} catalogue base -s ./catalogues --which base
+
       {click.style("# List all registered catalogues.", fg = "bright_black", italic = True)}
       {click.style("sb", bold = True, fg = "blue")} {click.style("list", bold = True, fg = "green")} catalogues
 
