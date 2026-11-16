@@ -8,50 +8,36 @@ from pathlib import Path
 import tomlkit
 from tomlkit.exceptions import TOMLKitError
 
-from sandbox.catalogue import manifest, sources
-
-# Import models.
+# Import catalogue declarations.
 from sandbox.catalogue.catalogue import Catalogue
+from sandbox.catalogue.loader import CatalogueLoader
+from sandbox.catalogue.manifest import manifest_path
+from sandbox.catalogue.sources.source import CatalogueSource
+
+# Import configuration.
 from sandbox.configuration.store import ConfigurationStore
 
-# Import errors and helpers.
+# Import errors.
 from sandbox.errors.catalogues import CatalogueInstallError
 
 
-# Install catalogues below the `sandbox` catalogue root.
+# Install catalogues below the managed catalogue root.
 class CatalogueInstaller:
-    # Prepare an installer for a `sandbox` directory.
-    def __init__(self, home: Path, store: ConfigurationStore | None = None) -> None:
-        # Resolve the `sandbox` directory.
-        self.home: Path = home.expanduser().resolve()
+    # Configuration store.
+    store: ConfigurationStore
 
-        # Bind the installer to the configuration store.
-        self.store: ConfigurationStore = store if store is not None else ConfigurationStore(self.home)
-
-    # Install a catalogue under the requested name.
-    def install(self, name: str, source: sources.CatalogueSource, force: bool = False) -> Path:
-        # Wrap expected filesystem failures in a domain error.
-        try:
-            # Install the catalogue and publish its files and registration.
-            return self._install(name, source, force)
-
-        # If the filesystem cannot complete the installation.
-        except (OSError, shutil.Error) as error:
-            # Throw.
-            raise CatalogueInstallError(f"Unable to install catalogue `{name}`: {error}") from error
-
-    # Install and publish a catalogue under the requested name.
-    def _install(self, name: str, source: sources.CatalogueSource, force: bool = False) -> Path:
-        # Compute the catalogue destination, validating the name.
+    # Install and publish one catalogue under the requested name.
+    def _install(self: "CatalogueInstaller", name: str, source: CatalogueSource, force: bool = False) -> Path:
+        # Compute the destination, validating the name.
         catalogue_dir: Path = self.store.destination(name)
 
-        # Determine whether the catalogue directory already exists.
+        # Determine whether the directory already exists.
         directory_exists: bool = catalogue_dir.exists() or catalogue_dir.is_symlink()
 
         # Determine whether the catalogue is already registered.
-        registered: bool = any(item.name == name for item in self.store.registrations())
+        registered: bool = self.store.registration(name) is not None
 
-        # If an existing catalogue would be replaced without permission.
+        # If replacing an existing installation without permission.
         if (directory_exists or registered) and not force:
             # Throw.
             raise CatalogueInstallError(f"Catalogue `{name}` is already installed. Use `--force` to replace it.")
@@ -67,66 +53,66 @@ class CatalogueInstaller:
         # Create the catalogue root before staging.
         catalogue_dir.parent.mkdir(parents = True, exist_ok = True)
 
-        # Create a temporary directory for staging and backup.
+        # Create the staging directory.
         staging_dir: Path = Path(tempfile.mkdtemp(prefix = f".{name}-", dir = catalogue_dir.parent))
 
-        # Prepare paths for the staged catalogue and the previous installation.
+        # Prepare the staged catalogue and backup paths.
         staged_catalogue: Path = staging_dir / "catalogue"
         backup_catalogue: Path = staging_dir / "backup"
 
-        # Track whether the previous installation was moved to backup.
+        # Track whether the previous installation was backed up.
         backed_up: bool = False
 
-        # Track whether the new catalogue was installed.
+        # Track whether the new catalogue was published.
         installed: bool = False
 
-        # Track whether the installation completed successfully.
+        # Track whether the installation completed.
         completed: bool = False
 
         # Prepare and publish the catalogue.
         try:
-            # Materialize the catalogue into the staging directory.
+            # Materialize the source into the staging directory.
             source.materialize(staged_catalogue, catalogue_dir)
 
-            # Rewrite the manifest name when it differs from the requested name.
-            _rewrite_manifest_name(staged_catalogue / manifest.MANIFEST_FILENAME, name)
+            # Rewrite the manifest name when required.
+            self._rewrite_manifest_name(staged_catalogue, name)
 
-            # Validate the staged catalogue before publishing it.
-            staged: Catalogue = manifest.load_catalogue(staged_catalogue)
+            # Validate the staged catalogue.
+            staged: Catalogue = CatalogueLoader().load(staged_catalogue)
 
             # If the validated name differs from the requested name.
             if staged.name != name:
                 # Throw.
-                raise CatalogueInstallError(f"Catalogue manifest `{staged_catalogue / manifest.MANIFEST_FILENAME}` declares the name `{staged.name}` instead of `{name}`.")
+                raise CatalogueInstallError(f"Catalogue manifest `{manifest_path(staged_catalogue)}` declares the name `{staged.name}` instead of `{name}`.")
 
             # If an existing catalogue must be preserved.
             if catalogue_dir.exists():
                 # Move the previous catalogue into the backup directory.
                 os.replace(catalogue_dir, backup_catalogue)
 
-                # Mark that a backup was created.
+                # Mark the backup.
                 backed_up = True
 
-            # Install the staged catalogue.
+            # Publish the staged catalogue.
             os.replace(staged_catalogue, catalogue_dir)
 
-            # Mark the new catalogue as installed.
+            # Mark the installation.
             installed = True
 
-            # Publish the registration after installing the catalogue.
+            # Publish the registration after the catalogue files.
             self.store.register(name, source.origin, force, replace = os.replace)
 
-            # Mark the installation as successfully completed.
+            # Mark the completion.
             completed = True
 
         # If installation fails.
         except Exception:
-            # Remove the newly installed catalogue if necessary.
-            # If the new catalogue was installed before the failure.
+            # Remove the newly installed catalogue.
             if installed:
+                # Delete the partial installation.
                 shutil.rmtree(catalogue_dir)
 
-            # If a backup was created.
+            # If a backup exists.
             if backed_up:
                 # Restore the previous catalogue.
                 os.replace(backup_catalogue, catalogue_dir)
@@ -134,53 +120,63 @@ class CatalogueInstaller:
             # Propagate the original failure.
             raise
 
-        # Remove the staging directory after success or successful rollback.
+        # Remove the staging directory after success or rollback.
         finally:
-            # If installation completed or no backup remains.
+            # If the installation completed or no backup remains.
             if completed or not backup_catalogue.exists():
-                # Remove the staging directory.
+                # Delete the staging directory.
                 shutil.rmtree(staging_dir)
 
         # Return the installed catalogue directory.
         return catalogue_dir
 
+    # Rewrite a staged manifest name while preserving its comments.
+    def _rewrite_manifest_name(self: "CatalogueInstaller", catalogue_dir: Path, name: str) -> None:
+        # Compute the manifest path.
+        manifest_file: Path = manifest_path(catalogue_dir)
 
-# Install a catalogue from a source value.
-def install_catalogue(home: Path, name: str, source: str, force: bool = False) -> Path:
-    # Build the catalogue installer and source.
-    installer: CatalogueInstaller = CatalogueInstaller(home)
-    catalogue_source: sources.CatalogueSource = sources.source_for(source)
+        # Read and parse the manifest.
+        try:
+            # Parse the manifest while preserving formatting.
+            document: tomlkit.TOMLDocument = tomlkit.parse(manifest_file.read_text(encoding = "utf-8"))
 
-    # Install the catalogue.
-    return installer.install(name, catalogue_source, force)
+        # If the manifest cannot be read or parsed.
+        except (OSError, UnicodeDecodeError, TOMLKitError) as error:
+            # Throw.
+            raise CatalogueInstallError(f"Unable to rewrite the catalogue manifest `{manifest_file}`: {error}") from error
 
+        # Get the catalogue metadata.
+        catalogue: object = document.get("catalogue")
 
-# Rewrite a staged catalogue manifest name while preserving its comments.
-def _rewrite_manifest_name(manifest_file: Path, name: str) -> None:
-    # Read and parse the manifest while preserving its formatting.
-    try:
-        document: tomlkit.TOMLDocument = tomlkit.parse(manifest_file.read_text(encoding = "utf-8"))
+        # If the catalogue metadata is not a table.
+        if not isinstance(catalogue, MutableMapping):
+            # Throw.
+            raise CatalogueInstallError(f"Catalogue manifest `{manifest_file}` is missing a `[catalogue]` table.")
 
-    # If the manifest cannot be read or parsed.
-    except (OSError, UnicodeDecodeError, TOMLKitError) as error:
-        # Throw.
-        raise CatalogueInstallError(f"Unable to rewrite the catalogue manifest `{manifest_file}`: {error}") from error
+        # If the manifest name already matches.
+        if catalogue.get("name") == name:
+            # Return without rewriting.
+            return
 
-    # Get the catalogue metadata.
-    catalogue = document.get("catalogue")
+        # Rewrite the catalogue name.
+        catalogue["name"] = name
 
-    # If the catalogue metadata is not a table.
-    if not isinstance(catalogue, MutableMapping):
-        # Throw.
-        raise CatalogueInstallError(f"Catalogue manifest `{manifest_file}` is missing a `[catalogue]` table.")
+        # Write the updated manifest.
+        manifest_file.write_text(tomlkit.dumps(document), encoding = "utf-8")
 
-    # If the manifest name already matches.
-    if catalogue.get("name") == name:
-        # Return without rewriting the manifest.
-        return
+    # Initialize the installer.
+    def __init__(self: "CatalogueInstaller", home: Path, store: ConfigurationStore | None = None) -> None:
+        # Bind and retain the configuration store.
+        self.store = store if store is not None else ConfigurationStore(home.expanduser().resolve())
 
-    # Rewrite the catalogue name.
-    catalogue["name"] = name
+    # Install one catalogue source under the requested name.
+    def install(self: "CatalogueInstaller", name: str, source: CatalogueSource, force: bool = False) -> Path:
+        # Wrap expected filesystem failures in a domain error.
+        try:
+            # Install the catalogue and publish its files and registration.
+            return self._install(name, source, force = force)
 
-    # Write the updated manifest.
-    manifest_file.write_text(tomlkit.dumps(document), encoding = "utf-8")
+        # If the filesystem cannot complete the installation.
+        except (OSError, shutil.Error) as error:
+            # Throw.
+            raise CatalogueInstallError(f"Unable to install catalogue `{name}`: {error}") from error
