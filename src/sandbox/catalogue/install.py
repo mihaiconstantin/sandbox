@@ -12,6 +12,7 @@ from tomlkit.exceptions import TOMLKitError
 from sandbox.catalogue.catalogue import Catalogue
 from sandbox.catalogue.loader import CatalogueLoader
 from sandbox.catalogue.manifest import manifest_path
+from sandbox.catalogue.sources.layout import SourceLayout
 from sandbox.catalogue.sources.source import CatalogueSource
 
 # Import configuration.
@@ -27,7 +28,7 @@ class CatalogueInstaller:
     store: ConfigurationStore
 
     # Install and publish one catalogue under the requested name.
-    def _install(self: "CatalogueInstaller", name: str, source: CatalogueSource, force: bool = False) -> Path:
+    def _install(self: "CatalogueInstaller", name: str, source: CatalogueSource, *, which: str | None = None, force: bool = False) -> Path:
         # Compute the destination, validating the name.
         catalogue_dir: Path = self.store.destination(name)
 
@@ -56,8 +57,8 @@ class CatalogueInstaller:
         # Create the staging directory.
         staging_dir: Path = Path(tempfile.mkdtemp(prefix = f".{name}-", dir = catalogue_dir.parent))
 
-        # Prepare the staged catalogue and backup paths.
-        staged_catalogue: Path = staging_dir / "catalogue"
+        # Prepare the staged source and backup paths.
+        staged_source: Path = staging_dir / "catalogue"
         backup_catalogue: Path = staging_dir / "backup"
 
         # Track whether the previous installation was backed up.
@@ -72,7 +73,10 @@ class CatalogueInstaller:
         # Prepare and publish the catalogue.
         try:
             # Materialize the source into the staging directory.
-            source.materialize(staged_catalogue, catalogue_dir)
+            source.materialize(staged_source, catalogue_dir)
+
+            # Resolve the catalogue root inside the materialized source.
+            staged_catalogue: Path = SourceLayout(staged_source).resolve(which)
 
             # Rewrite the manifest name when required.
             self._rewrite_manifest_name(staged_catalogue, name)
@@ -170,11 +174,11 @@ class CatalogueInstaller:
         self.store = store if store is not None else ConfigurationStore(home.expanduser().resolve())
 
     # Install one catalogue source under the requested name.
-    def install(self: "CatalogueInstaller", name: str, source: CatalogueSource, force: bool = False) -> Path:
+    def install(self: "CatalogueInstaller", name: str, source: CatalogueSource, *, which: str | None = None, force: bool = False) -> Path:
         # Wrap expected filesystem failures in a domain error.
         try:
             # Install the catalogue and publish its files and registration.
-            return self._install(name, source, force = force)
+            return self._install(name, source, which = which, force = force)
 
         # If the filesystem cannot complete the installation.
         except (OSError, shutil.Error) as error:
