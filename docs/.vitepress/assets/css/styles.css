@@ -95,3 +95,11 @@ html.dark {
     --vp-c-brand-1: var(--color-sandbox-400);
     --vp-c-brand-2: var(--color-sandbox-500);
 }
+
+/* The inline underline in the documentation. */
+.vp-doc u,
+.vp-doc ins {
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+    text-decoration-thickness: 0.08em;
+}
