@@ -27,6 +27,14 @@ export default defineConfig({
         plugins: [tailwindcss()]
     },
 
+    // The Markdown configuration.
+    markdown: {
+        // Treat the `sandbox` wordmark as an inline component.
+        component: {
+            inlineTags: ["Sandbox"]
+        }
+    },
+
     // The document head.
     head: [
         // Icons links.
