@@ -1,39 +1,80 @@
 # Imports.
-from __future__ import annotations
-
-from dataclasses import replace
 from pathlib import Path
 
-# Import the catalogue declarations, loaders, sources, installer, and removal helpers.
-from sandbox.catalogue import manifest, removal, sources
+# Import the catalogue declarations and services.
 from sandbox.catalogue.catalogue import Catalogue
 from sandbox.catalogue.install import CatalogueInstaller
-from sandbox.catalogue.resolve import ResolvedCatalogueRecipe, resolve_recipe, select_recipe
+from sandbox.catalogue.loader import CatalogueLoader
+from sandbox.catalogue.recipe_service import CatalogueRecipeService
+from sandbox.catalogue.removal import CatalogueRemover
+from sandbox.catalogue.resolved_recipe import ResolvedCatalogueRecipe
+from sandbox.catalogue.sources.factory import create_source
+from sandbox.catalogue.sources.source import CatalogueSource
 
 # Import the internal configuration facade.
 from sandbox.configuration.store import ConfigurationStore
 
 # Import the registry-facing values.
-from sandbox.domain.registry import CatalogueBinding, CatalogueRegistration, CatalogueRemovalPlan
+from sandbox.domain.registry import CatalogueRegistration, CatalogueRemovalPlan
 
 # Import the typed catalogue errors.
-from sandbox.errors.catalogues import RegistryError
 from sandbox.errors.recipes import RecipeUnresolved
-from sandbox.errors.removal import IncompleteRemoval
-
-# Import the shared identifier rule.
-from sandbox.validation.identifiers import validate_identifier
 
 # Import the SDK result values.
 from sandbox.sdk.results import CatalogueInstallState, RecipeListing
 
+# Import the shared identifier rule.
+from sandbox.validation.identifiers import validate_identifier
+
 
 # Expose catalogue discovery, installation, validation, and removal.
 class CatalogueOperations:
+    # Configuration store.
+    _store: ConfigurationStore
+
+    # Catalogue loader.
+    _loader: CatalogueLoader
+
+    # Recipe service.
+    _resolver: CatalogueRecipeService
+
+    # Create one store-bound catalogue installer.
+    def _create_installer(self) -> CatalogueInstaller:
+        # Return the installer bound to the current store.
+        return CatalogueInstaller(self._store.home, self._store)
+
+    # Create one store-bound catalogue remover.
+    def _create_remover(self) -> CatalogueRemover:
+        # Return the remover bound to the current store.
+        return CatalogueRemover(self._store.home, self._store)
+
+    # Load and validate a registered catalogue.
+    def _load(self, name: str) -> Catalogue:
+        # Validate the catalogue name before resolving it.
+        validate_identifier(name, "catalogue")
+
+        # Load the manifest from the registered catalogue directory.
+        return self._loader.load(self._store.resolve(name))
+
+    # Select and resolve a recipe from a loaded catalogue.
+    def _resolve(self, catalogue: Catalogue, recipe: str | None) -> ResolvedCatalogueRecipe:
+        # Resolve the registered catalogue directory.
+        directory: Path = self._store.resolve(catalogue.name)
+
+        # Select the effective recipe from the explicit request or catalogue default.
+        effective: str = self._resolver.select(catalogue, recipe)
+
+        # Resolve the selected recipe into its parent-first plan.
+        return self._resolver.resolve(catalogue, directory, effective)
+
     # Bind the operations to the client-owned configuration store.
     def __init__(self, store: ConfigurationStore) -> None:
         # Retain the configuration store.
-        self._store: ConfigurationStore = store
+        self._store = store
+
+        # Bind the catalogue services.
+        self._loader = CatalogueLoader()
+        self._resolver = CatalogueRecipeService()
 
     # List every registered catalogue in name order.
     def list(self) -> tuple[CatalogueRegistration, ...]:
@@ -49,7 +90,7 @@ class CatalogueOperations:
         destination: Path = self._store.destination(name)
 
         # Determine whether the catalogue is registered.
-        registered: bool = any(item.name == name for item in self._store.registrations())
+        registered: bool = self._store.registration(name) is not None
 
         # Determine whether the canonical directory exists or is a symlink.
         directory_present: bool = destination.exists() or destination.is_symlink()
@@ -68,7 +109,7 @@ class CatalogueOperations:
             raise TypeError("force must be a Boolean.")
 
         # Classify the source before checking the registration.
-        catalogue_source: sources.CatalogueSource = sources.source_for(source)
+        catalogue_source: CatalogueSource = create_source(source)
 
         # Install the catalogue through the store-bound installer.
         installer: CatalogueInstaller = CatalogueInstaller(self._store.home, self._store)
@@ -116,119 +157,13 @@ class CatalogueOperations:
 
     # Plan the removal of a registered catalogue without changing anything.
     def plan_removal(self, name: str) -> CatalogueRemovalPlan | None:
-        # Validate the catalogue name before planning its removal.
-        validate_identifier(name, "catalogue")
-
-        # Find the registration in name order.
-        registration: CatalogueRegistration | None = next(
-            (item for item in self._store.registrations() if item.name == name),
-            None,
-        )
-
-        # If the catalogue is not registered.
-        if registration is None:
-            # Return no plan.
-            return None
-
-        # Collect the catalogue-scoped secret bindings.
-        bindings: tuple[CatalogueBinding, ...] = tuple(
-            CatalogueBinding(binding.alias, binding.host_path)
-            for binding in self._store.secret_bindings(name)
-        )
-
-        # Enrich the registration with its bindings.
-        enriched: CatalogueRegistration = replace(registration, bindings = bindings)
-
-        # Require the registered path to be canonical before planning any change.
-        removal.canonical_catalogue_directory(enriched, self._store.home)
-
-        # Return the validated plan.
-        return CatalogueRemovalPlan(home = self._store.home, registration = enriched)
+        # Delegate removal planning to the catalogue service.
+        return self._create_remover().plan(name)
 
     # Remove a catalogue by name or by its validated removal plan.
     def remove(self, target: str | CatalogueRemovalPlan) -> bool:
-        # If the caller supplied a catalogue name.
-        if isinstance(target, str):
-            # Validate the name and re-plan the removal.
-            plan: CatalogueRemovalPlan | None = self.plan_removal(target)
-
-            # If the catalogue is not registered.
-            if plan is None:
-                # Report no removal.
-                return False
-
-        # If the caller supplied a validated removal plan.
-        elif isinstance(target, CatalogueRemovalPlan):
-            # Use the plan as the revalidation target.
-            plan = target
-
-        # Otherwise.
-        else:
-            # Throw a programming error for Python API misuse.
-            raise TypeError("target must be a catalogue name or a CatalogueRemovalPlan.")
-
-        # Apply the removal plan.
-        self._remove_plan(plan)
-
-        # Report that the catalogue was removed.
-        return True
-
-    # Load and validate a registered catalogue.
-    def _load(self, name: str) -> Catalogue:
-        # Validate the catalogue name before resolving it.
-        validate_identifier(name, "catalogue")
-
-        # Load the manifest from the registered catalogue directory.
-        return manifest.load_catalogue(self._store.resolve(name))
-
-    # Select and resolve a recipe from a loaded catalogue.
-    def _resolve(self, catalogue: Catalogue, recipe: str | None) -> ResolvedCatalogueRecipe:
-        # Resolve the registered catalogue directory.
-        directory: Path = self._store.resolve(catalogue.name)
-
-        # Select the effective recipe from the explicit request or catalogue default.
-        effective: str = select_recipe(catalogue, recipe)
-
-        # Resolve the selected recipe into its parent-first plan.
-        return resolve_recipe(catalogue, directory, effective)
-
-    # Apply one validated catalogue removal plan.
-    def _remove_plan(self, plan: CatalogueRemovalPlan) -> None:
-        # Reload the registration to detect any change since planning.
-        current: CatalogueRegistration | None = next(
-            (item for item in self._store.registrations() if item.name == plan.registration.name),
-            None,
-        )
-
-        # If the catalogue is no longer registered.
-        if current is None:
-            # Throw.
-            raise RegistryError(f"Catalogue `{plan.registration.name}` is no longer registered.")
-
-        # If the registration changed since planning.
-        if current.type != plan.registration.type or current.path != plan.registration.path:
-            # Throw.
-            raise RegistryError(f"Catalogue `{plan.registration.name}` changed while planning removal.")
-
-        # Require the reloaded registration to use the canonical path.
-        catalogue_dir: Path = removal.canonical_catalogue_directory(current, self._store.home)
-
-        # Remove the catalogue files before changing the registration.
-        removal.remove_catalogue_directory(catalogue_dir, current.name)
-
-        # Remove the registration and bindings atomically.
-        try:
-            # Apply the registry change after the filesystem change.
-            self._store.unregister(current.name)
-
-        # If the registration cannot be updated.
-        except OSError as error:
-            # Report the partial removal with the recovery instruction.
-            raise IncompleteRemoval(
-                "catalogue",
-                current.name,
-                f"Catalogue `{current.name}` could not be fully removed because the registry `{self._store.registry_file}` could not be updated: {error}. Rerun the command to finish.",
-            ) from error
+        # Delegate removal to the catalogue service.
+        return self._create_remover().remove(target)
 
 
 # Define the public API of the `sandbox.sdk.catalogues` module.
