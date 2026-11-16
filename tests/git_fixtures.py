@@ -22,12 +22,9 @@ GIT_ENVIRONMENT: dict[str, str] = {
 }
 
 
-# Create an offline `git` repository containing a minimal catalogue.
-def make_git_repository(root: Path) -> Path:
-    # Build the minimal catalogue source as the repository content.
-    repository: Path = write_catalogue_source(root / "repository")
-
-    # Initialize the repository and commit the catalogue without signing or line-ending conversion.
+# Initialize an existing directory as an offline `git` repository.
+def initialize_git_repository(repository: Path) -> Path:
+    # Initialize the repository and commit its content without signing or line-ending conversion.
     commands: tuple[list[str], ...] = (
         ["git", "init", "--quiet"],
         ["git", "-c", "core.autocrlf=false", "add", "."],
@@ -39,3 +36,12 @@ def make_git_repository(root: Path) -> Path:
 
     # Return the repository directory.
     return repository
+
+
+# Create an offline `git` repository containing a minimal catalogue.
+def make_git_repository(root: Path) -> Path:
+    # Build the minimal catalogue source as the repository content.
+    repository: Path = write_catalogue_source(root / "repository")
+
+    # Initialize and return the repository.
+    return initialize_git_repository(repository)

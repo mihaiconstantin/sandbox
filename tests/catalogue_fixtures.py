@@ -41,6 +41,21 @@ CATALOGUE_MANIFEST: str = dedent("""\
 """)
 
 
+# Build a minimal repository containing one catalogue per immediate child.
+def write_catalogue_repository(directory: Path, names: tuple[str, ...] = ("base", "r")) -> Path:
+    # Create the repository root.
+    directory.mkdir(parents = True, exist_ok = True)
+
+    # Build each child catalogue with its own manifest and recipes.
+    name: str
+    for name in names:
+        # Build the child catalogue under its directory name.
+        write_catalogue_source(directory / name, name = name)
+
+    # Return the repository root.
+    return directory
+
+
 # Build a minimal valid catalogue source directory.
 def write_catalogue_source(directory: Path, name: str = SOURCE_NAME) -> Path:
     # Create the source directory.
