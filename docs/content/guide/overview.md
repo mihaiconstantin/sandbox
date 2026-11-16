@@ -1,9 +1,9 @@
 # Overview
 
-<Sandbox /> is a command-line tool and Python SDK for managing isolated local
-development environments, which I call _boxes_. In a nutshell, a box belongs to
-one project directory. The project stays on the host. The tools and state needed
-to work on it live inside the box.
+<Sandbox /> is a command-line interface (CLI) and Python SDK for managing
+isolated local development environments, which I call _boxes_. In a nutshell, a
+box belongs to one project directory. The project stays on the host. The tools
+and state needed to work on it live inside the box.
 
 > [!Note]
 >
