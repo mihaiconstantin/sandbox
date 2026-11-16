@@ -35,10 +35,14 @@ GUIDE_TEXT = inspect.cleandoc(f"""
 
     Getting Started
 
-      {click.style("# Create a catalogue named `my-catalogue` from a local catalogue directory.", fg = "bright_black", italic = True)}
-      {click.style("sb", bold = True, fg = "blue")} {click.style("create", bold = True, fg = "green")} catalogue my-catalogue --source ./catalogue
+      {click.style("# Create a catalogue named `my-catalogue`.", fg = "bright_black", italic = True)}
+      {click.style("# Select the `base` catalogue from the public catalogue repository.", fg = "bright_black", italic = True)}
+      {click.style("sb", bold = True, fg = "blue")} {click.style("create", bold = True, fg = "green")} catalogue my-catalogue \\
+          --source https://github.com/mihaiconstantin/sandbox-catalogues.git \\
+          --which base
 
-      {click.style("# Create a box for the project `my-project` in the directory `~/Repositories/my-project` using the default recipe of the catalogue.", fg = "bright_black", italic = True)}
+      {click.style("# Create a box for the project `my-project`.", fg = "bright_black", italic = True)}
+      {click.style("# Use the default recipe from `my-catalogue`.", fg = "bright_black", italic = True)}
       {click.style("sb", bold = True, fg = "blue")} {click.style("create", bold = True, fg = "green")} box my-project \\
           --project-dir ~/Repositories/my-project \\
           --catalogue my-catalogue
@@ -47,12 +51,6 @@ GUIDE_TEXT = inspect.cleandoc(f"""
       {click.style("sb", bold = True, fg = "blue")} {click.style("enter", bold = True, fg = "green")} my-project
 
     Managing Catalogues
-
-      {click.style("# Create a catalogue named `team` from a `git` repository.", fg = "bright_black", italic = True)}
-      {click.style("sb", bold = True, fg = "blue")} {click.style("create", bold = True, fg = "green")} catalogue team --source https://example.com/catalogue.git
-
-      {click.style("# Create the `base` catalogue from a repository with one self-contained catalogue per directory.", fg = "bright_black", italic = True)}
-      {click.style("sb", bold = True, fg = "blue")} {click.style("create", bold = True, fg = "green")} catalogue base -s ./catalogues --which base
 
       {click.style("# List all registered catalogues.", fg = "bright_black", italic = True)}
       {click.style("sb", bold = True, fg = "blue")} {click.style("list", bold = True, fg = "green")} catalogues
