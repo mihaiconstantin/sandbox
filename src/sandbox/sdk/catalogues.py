@@ -99,9 +99,14 @@ class CatalogueOperations:
         return CatalogueInstallState(registered = registered, directory_present = directory_present)
 
     # Install a catalogue and return its installed path.
-    def install(self, name: str, source: str, *, force: bool = False) -> Path:
+    def install(self, name: str, source: str, *, which: str | None = None, force: bool = False) -> Path:
         # Validate the catalogue name before installing it.
         validate_identifier(name, "catalogue")
+
+        # Require a string selector when one is supplied.
+        if which is not None and not isinstance(which, str):
+            # Throw a programming error for Python API misuse.
+            raise TypeError("which must be a string or None.")
 
         # Require exact replacement intent.
         if type(force) is not bool:
@@ -112,8 +117,7 @@ class CatalogueOperations:
         catalogue_source: CatalogueSource = create_source(source)
 
         # Install the catalogue through the store-bound installer.
-        installer: CatalogueInstaller = CatalogueInstaller(self._store.home, self._store)
-        return installer.install(name, catalogue_source, force)
+        return self._create_installer().install(name, catalogue_source, which = which, force = force)
 
     # Resolve a registered catalogue to its absolute directory.
     def locate(self, name: str) -> Path:
