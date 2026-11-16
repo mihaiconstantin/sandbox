@@ -18,6 +18,10 @@
   recipe validation, parent resolution, registration, secret bindings, and
   installation from bundled, local, and `git` sources. Sources are staged and
   validated before registration, leaving the original source untouched.
+  Installation accepts a source-relative catalogue selector, so one local
+  directory or `git` repository can host several catalogues. Child catalogues
+  require an explicit selector and only a sole source-root catalogue installs by
+  default.
 - Add the `Docker` command runner and builder with `Compose` configuration
   resolution, image existence checks, local builds, image pulls, image reuse,
   `Buildx` and `Compose` preflight, and `local-image` and `docker-archive`
