@@ -55,6 +55,7 @@ export default defineConfig({
         // The top navigation.
         nav: [
             { text: "Guide", link: "/guide/overview" },
+            { text: "Reference", link: "/reference/" },
             { text: "GitHub", link: "https://github.com/mihaiconstantin/sandbox" }
         ],
 
@@ -66,7 +67,24 @@ export default defineConfig({
                     items: [
                         { text: "Overview", link: "/guide/overview" },
                         { text: "Installation", link: "/guide/installation" },
-                        { text: "Usage", link: "/guide/usage" },
+                    ]
+                },
+                {
+                    text: "CLI Usage",
+                    items: [
+                        { text: "Catalogues", link: "/guide/catalogues" },
+                        { text: "Boxes", link: "/guide/boxes" },
+                        { text: "Volumes", link: "/guide/volumes" },
+                        { text: "Secrets", link: "/guide/secrets" },
+                    ]
+                },
+            "/reference/": [
+                {
+                    text: "Reference",
+                    items: [
+                        { text: "Commands", link: "/reference/" }
+                    ]
+                },
                     ]
                 }
             ]
