@@ -1,4 +1,4 @@
-# Installing <span class="font-sandbox font-bold from-sandbox-500 dark:from-sandbox-400 bg-linear-to-r from-[15px] to-(--vp-c-text-1) to-[35px] bg-clip-text text-transparent">sandbox</span>
+# Installing <Sandbox />
 
 On this page you can find instructions on how to get started with `sandbox`, or
 `sb` in short.
@@ -48,10 +48,22 @@ You can upgrade an existing installation by running:
 uv tool upgrade sandbox
 ```
 
-To get started you can check out the CLI guide as show below, or keep reading
-the documentation.
+## Configuration
+
+`sb` keeps its configuration in `~/.sandbox` by default. The `catalogues.toml`
+file in `~/.sandbox` records installed catalogues and secret bindings. Each
+catalogue has a managed copy under `~/.sandbox/catalogues/<name>`. Docker
+retains ownership of the images, volumes, containers, and networks for boxes.
+
+Use `--home` to select another root.
+
+
+To get started right away, you can check out the CLI guide as show below
 
 ```bash
 # Print the getting started guide.
 sb guide
 ```
+
+The remaining sections of this guide provide more details on the concepts and
+usage of `sb`, starting with [Boxes](/guide/boxes).
