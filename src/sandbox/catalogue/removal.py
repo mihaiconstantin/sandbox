@@ -114,6 +114,9 @@ class CatalogueRemover:
             # Return no plan.
             return None
 
+        # Require a canonical path before planning any change.
+        self.reader.resolve_canonical_directory(registration)
+
         # Return the validated plan.
         return CatalogueRemovalPlan(home = self.store.home, registration = registration)
 
