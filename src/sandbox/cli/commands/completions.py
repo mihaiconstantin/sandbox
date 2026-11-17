@@ -10,6 +10,7 @@ from click.shell_completion import shell_complete
 @click.argument(
     "shell",
     type = click.Choice(["bash", "zsh", "powershell"]),
+    help = "The shell to generate completion for.",
 )
 @click.pass_context
 def completions(context: click.Context, shell: str) -> None:

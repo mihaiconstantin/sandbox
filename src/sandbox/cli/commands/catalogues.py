@@ -17,6 +17,7 @@ from sandbox.domain import CatalogueBinding, CatalogueRegistration, CatalogueRem
 from sandbox.errors.catalogues import RegistryError
 from sandbox.sdk import CatalogueInstallState, RecipeListing, SandboxClient
 
+
 # Locate a registered catalogue and add the discovery hint to its absence.
 def _locate(client: SandboxClient, name: str) -> Path:
     # Resolve the registered catalogue directory.
@@ -47,7 +48,7 @@ def _locate(client: SandboxClient, name: str) -> Path:
     "--which",
     type = str,
     default = None,
-    help = "The catalogue directory inside the source, relative to its root; required for child catalogues.",
+    help = "The catalogue directory inside the source, relative to its root. Required for child catalogues.",
 )
 @home_option()
 @click.option(

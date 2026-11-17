@@ -20,6 +20,7 @@ from sandbox.domain import secret_target
     "secret",
     type = str,
     callback = secret_argument,
+    help = "The secret alias to bind.",
 )
 @click.option(
     "-f", "--file",
@@ -91,6 +92,7 @@ def secrets(ctx: click.Context, home: Path) -> None:
     "secret",
     type = str,
     callback = secret_argument,
+    help = "The secret alias to remove.",
 )
 @click.option(
     "-c", "--catalogue",
