@@ -7,10 +7,10 @@ On this page you can find instructions on how to get started with `sandbox`, or
 
 To use `sb` you need the following:
 
-- [Python](https://www.python.org/) `3.11` or newer
+- [Python](https://www.python.org/) `v3.11` or newer
 - [Docker Engine](https://docs.docker.com/engine/install/) with
-  [Compose](https://docs.docker.com/compose/) `5.6.0` or newer and
-  [Buildx](https://docs.docker.com/reference/cli/docker/buildx/) `0.17.0` or
+  [Compose](https://docs.docker.com/compose/) `v5.6.0` or newer and
+  [Buildx](https://docs.docker.com/reference/cli/docker/buildx/) `v0.17.0` or
   newer
 - [`uv`](https://docs.astral.sh/uv/) for easy installation and upgrade
 
