@@ -1,7 +1,7 @@
 # Installing <Sandbox />
 
 On this page you can find instructions on how to get started with `sandbox`, or
-`sb` in short.
+`sb` in short. For a conceptual description, check the [Overview](/guide/overview) page.
 
 ## Requirements
 
