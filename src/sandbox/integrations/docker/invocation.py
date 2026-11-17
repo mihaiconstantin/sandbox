@@ -9,6 +9,18 @@ from pathlib import Path
 from sandbox.domain import RecipeDefinition
 
 
+# Prepare one Docker child environment without mutating process state.
+def docker_environment(base: Mapping[str, str] | None = None) -> dict[str, str]:
+    # Copy the caller's environment without mutating process state.
+    environment: dict[str, str] = dict(os.environ if base is None else base)
+
+    # Disable the Docker CLI hints printed after interactive commands.
+    environment["DOCKER_CLI_HINTS"] = "false"
+
+    # Return the prepared environment.
+    return environment
+
+
 # Prepare the environment used for `docker` compose interpolation and project identity.
 def compose_environment(
     project: str,
@@ -16,8 +28,8 @@ def compose_environment(
     *,
     base: Mapping[str, str] | None = None,
 ) -> dict[str, str]:
-    # Copy the caller's environment without mutating process state.
-    environment: dict[str, str] = dict(os.environ if base is None else base)
+    # Start from the shared Docker child environment.
+    environment: dict[str, str] = docker_environment(base)
 
     # Export the project identity and directory for `docker` compose interpolation.
     environment["SB_PROJECT_NAME"] = project
@@ -25,9 +37,6 @@ def compose_environment(
 
     # Select the Compose project name used by every current resource label.
     environment["COMPOSE_PROJECT_NAME"] = project
-
-    # Disable disruptive Docker CLI hints for every child.
-    environment["DOCKER_CLI_HINTS"] = "false"
 
     # Return the prepared environment.
     return environment
@@ -129,5 +138,6 @@ __all__: list[str] = [
     "compose_environment",
     "compose_up_arguments",
     "compose_version_arguments",
+    "docker_environment",
     "user_probe_arguments",
 ]
