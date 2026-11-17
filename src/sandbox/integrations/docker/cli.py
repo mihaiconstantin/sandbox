@@ -14,6 +14,9 @@ from sandbox.errors.prerequisites import PrerequisiteError, PrerequisiteKind
 # Import the process seam and its result value.
 from sandbox.integrations.docker.command import CommandResult, CommandRunner
 
+# Import the shared Docker child environment.
+from sandbox.integrations.docker.invocation import docker_environment
+
 # Import the neutral output contract.
 from sandbox.ports.output import SILENT, OutputSink
 
@@ -68,7 +71,7 @@ class DockerCli:
         # Execute through the injected runner with inherited streams.
         try:
             # Preserve the terminal and the child status unchanged.
-            return self._runner.run_interactive(tuple(arguments), environment = environment)
+            return self._runner.run_interactive(tuple(arguments), environment = docker_environment(environment))
 
         # Translate a missing executable once.
         except (FileNotFoundError, PermissionError, OSError) as error:
